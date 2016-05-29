@@ -5,41 +5,31 @@ document.getElementById("demo").innerHTML =
 "The total is: " + total;
 
 var client = new Keen({
-  projectId: "5368fa5436bf5a5623000000",
-  readKey: "3f324dcb5636316d6865ab0ebbbbc725224c7f8f3e8899c7733439965d6d4a2c7f13bf7765458790bd50ec76b4361687f51cf626314585dc246bb51aeb455c0a1dd6ce77a993d9c953c5fc554d1d3530ca5d17bdc6d1333ef3d8146a990c79435bb2c7d936f259a22647a75407921056"
-});
-Keen.ready(function(){
-  // ----------------------------------------
-  // Sample one
-  // ----------------------------------------
-  var pageviews_timeline = new Keen.Query("count", {
-    eventCollection: "pageviews",
-    interval: "hourly",
-    groupBy: "user.device_info.browser.family",
-    timeframe: {
-      start: "2014-05-04T00:00:00.000Z",
-      end: "2014-05-05T00:00:00.000Z"
-    }
-  });
-  client.draw(pageviews_timeline, document.getElementById("chart-01"), {
-    chartType: "areachart",
-    title: false,
-    height: 250,
-    width: "auto",
-    chartOptions: {
-      chartArea: {
-        height: "85%",
-        left: "5%",
-        top: "5%",
-        width: "80%"
-      },
-      isStacked: true
-    }
-  });
-  // ----------------------------------------
-  //  End sample one
-  // ----------------------------------------
+  projectId: "563a13c896773d4a75c3bf93",
+  readKey: "9d45d36b3d3040533eb3a9f2e8bcc9e317d6b4e7e2cbb413ce959e7c0f8b926a7b82523fc0acd774ef024a0f4bddcc2bd8e992e2f61d9aed7b7f09bcb63bc0a1ebee2e0ebd0e2792dba3dc4ae1ae9c11c19e54753574a726dea4eec16e463aa06196d6876d167a9d668f236f25a8857d"
 
+});
+
+Keen.ready(function(){
+  
+  var query = new Keen.Query("count", {
+    eventCollection: "collect",
+    filters: [
+    {
+        "operator": "eq",
+        "property_name": "coreid",
+        "property_value": "51ff67065067545711360687"
+    }
+],
+    timeframe: "this_14_days",
+    timezone: "UTC"
+  });
+  
+  client.draw(query, document.getElementById("my_chart"), {
+    // Custom configuration here
+  });
+  
+});
 
 
 
