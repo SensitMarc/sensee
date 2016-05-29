@@ -26,7 +26,9 @@ Keen.ready(function(){
   });
   
   client.draw(query, document.getElementById("my_chart"), {
-    // Custom configuration here
+    chartType: "metric",
+  title: "Total Pageviews",
+  colors: ["#49c5b1"]
   });
   
 });
