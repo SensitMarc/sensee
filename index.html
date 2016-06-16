@@ -1,27 +1,339 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="UTF-8">
-    <title>Sensit.GitHub.io by SensitMarc</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" type="text/css" href="stylesheets/normalize.css" media="screen">
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" type="text/css" href="stylesheets/stylesheet.css" media="screen">
-    <link rel="stylesheet" type="text/css" href="stylesheets/github-light.css" media="screen">
-  </head>
-  <body>
+<html>
+<head>
+  <title>Layouts &raquo; Hero-Thirds</title>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+  <link rel="stylesheet" type="text/css" href="../../assets/lib/bootstrap/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" type="text/css" href="../../assets/css/keen-dashboards.css" />
 
-
-<p id="demo"></p>
-
-
-  <script type="text/javascript" src="javascripts/main.js"></script>
+<meta charset='utf-8' />
+    <title></title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.20.0/mapbox-gl.css' rel='stylesheet' />
 
 
 
 
+</head>
+    
+<body class="application">
+  <div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+    <div class="container-fluid">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="sr-only">Toggle navigation</span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../">
+          <span class="glyphicon glyphicon-chevron-left"></span>
+        </a>
+        <a class="navbar-brand" href="./">Layouts &raquo; Hero Thirds</a>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav navbar-left">
+          <li><a href="https://keen.io">Home</a></li>
+          <li><a href="https://keen.io/team">Team</a></li>
+          <li><a href="https://github.com/keenlabs/dashboards/tree/gh-pages/layouts/hero-thirds">Source</a></li>
+          <li><a href="https://groups.google.com/forum/#!forum/keen-io-devs">Community</a></li><li><a href="http://stackoverflow.com/questions/tagged/keen-io?sort=newest&pageSize=15">Technical Support</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+
+    <div class="row">
+      <div class="col-sm-6 col-md-8">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            This month
+          </div>
+          <div class="chart-stage">
+            <div id="mychart">
+            
+            </div>
+          </div>
+          <div class="chart-notes">
+            kwhr
+          </div>
+        </div>
+      </div>
+      
+     <div class="col-sm-6 col-md-4">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            Total this year
+          </div>
+          <div class="chart-stage">
+            <div id="mychartt">
+            
+            </div>
+          </div>
+          <div class="chart-notes">
+            kwhr
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+            <div class="col-sm-6 col-md-8" id="mapwrap">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+             Cell Title
+            </div>
+          <div class="chart-stage">
+             <div id="map" style="width: 1200px; height: 250px;">
+               
+          </div>
+          </div>
+          <div class="chart-notes">
+             Notes about this chart
+          </div>
+        </div>
+      </div>
+     
+      <div class="col-sm-6 col-md-4">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            This month
+          </div>
+          <div class="chart-stage">
+            <div id="mycharttt">
+            
+            </div>
+          </div>
+          <div class="chart-notes">
+            kwhr
+          </div>
+        </div>
+      </div>
+       
+       
+
+</div>
+
+  
+  
+  
+      <div class="col-sm-6 col-md-4">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            Cell Title
+          </div>
+          <div class="chart-stage">
+            <img data-src="holder.js/100%x120/white">
+          </div>
+          <div class="chart-notes">
+            Notes about this chart
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            Cell Title
+          </div>
+          <div class="chart-stage">
+            <img data-src="holder.js/100%x120/white">
+          </div>
+          <div class="chart-notes">
+            Notes about this chart
+          </div>
+        </div>
+      </div>
+<!-- end of three -->
+      <div class="col-sm-6 col-md-4">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            Cell Title
+          </div>
+          <div class="chart-stage">
+            <img data-src="holder.js/100%x120/white">
+          </div>
+          <div class="chart-notes">
+            Notes about this chart
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            Cell Title
+          </div>
+          <div class="chart-stage">
+            <img data-src="holder.js/100%x120/white">
+          </div>
+          <div class="chart-notes">
+            Notes about this chart
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-4">
+        <div class="chart-wrapper">
+          <div class="chart-title">
+            Cell Title
+          </div>
+          <div class="chart-stage">
+            <img data-src="holder.js/100%x120/white">
+          </div>
+          <div class="chart-notes">
+            Notes about this chart
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 
 
+    <hr>
 
-  </body>
+    <p class="small text-muted">Built with &#9829; by <a href="https://keen.io">Keen IO</a></p>
+
+  </div>
+
+  <script type="text/javascript" src="../../assets/lib/jquery/dist/jquery.min.js"></script>
+  <script type="text/javascript" src="../../assets/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+  <script type="text/javascript" src="../../assets/lib/holderjs/holder.js"></script>
+  <script>
+    Holder.add_theme("white", { background:"#fff", foreground:"#a7a7a7", size:10 });
+  </script>
+
+  <script type="text/javascript" src="../../assets/lib/keen-js/dist/keen.min.js"></script>
+  <script type="text/javascript" src="../../assets/js/meta.js"></script>
+
+<script>
+var client = new Keen({
+  projectId: "563a13c896773d4a75c3bf93",
+  readKey: "9d45d36b3d3040533eb3a9f2e8bcc9e317d6b4e7e2cbb413ce959e7c0f8b926a7b82523fc0acd774ef024a0f4bddcc2bd8e992e2f61d9aed7b7f09bcb63bc0a1ebee2e0ebd0e2792dba3dc4ae1ae9c11c19e54753574a726dea4eec16e463aa06196d6876d167a9d668f236f25a8857d"
+});
+Keen.ready(function(){
+  
+  var query = new Keen.Query("count", {
+    eventCollection: "collect",
+    filters: [
+    {
+        "operator": "eq",
+        "property_name": "coreid",
+        "property_value": "51ff67065067545711360687"
+    }
+],
+    timeframe: "this_30_days",
+    timezone: "UTC"
+  });
+  
+    var queryy = new Keen.Query("count", {
+    eventCollection: "collect",
+        groupBy: [
+    "event"
+],
+    filters: [
+    {
+        "operator": "eq",
+        "property_name": "coreid",
+        "property_value": "51ff67065067545711360687"
+    }
+],
+    interval: "daily",
+    timeframe: "this_30_days",
+    timezone: "UTC"
+  });
+  
+       // and draw a column chart
+     client.draw(query, document.getElementById("mychart"), {
+        chartType: "metric",
+        title: false,
+        height: 250,
+        width: "auto",
+        chartOptions: {
+          chartOptions: {
+            isStacked: true
+          }
+        }
+      });
+      
+           client.draw(query, document.getElementById("mychartt"), {
+        chartType: "metric",
+        title: false,
+        height: 250,
+        width: "auto",
+          chartOptions: {
+            chartOptions: {
+            isStacked: true
+          }
+        }
+      });
+      
+client.draw(queryy, document.getElementById("mycharttt"), {
+  chartType: "columnchart",
+  title: false,
+  height: 250,
+  width: "auto",
+  chartOptions: {
+     chartOptions: {
+      isStacked: true
+          }
+  }
+  });
+});
+    
+</script>
+
+<div id='map'></div>
+
+<script>
+mapboxgl.accessToken = 'pk.eyJ1Ijoic2Vuc2l0IiwiYSI6ImNpZ2hwb2VlbTgzbjJ2OG03ZmhweGNqZzAifQ.YCcLyhXq7MXpRJDXojNtCg';
+var map = new mapboxgl.Map({
+    container: 'map',
+    style: 'mapbox://styles/mapbox/basic-v8',
+    center: [-100, 56],
+    zoom: 2
+});
+map.on('load', function () {
+    map.addSource("markers", {
+        "type": "geojson",
+        "data": {
+            "type": "FeatureCollection",
+            "features": [{
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-66.4619, 46.5653]
+                },
+                "properties": {
+                    "title": "1200",
+                    "marker-symbol": ""
+                }
+            }, {
+                "type": "Feature",
+                "geometry": {
+                    "type": "Point",
+                    "coordinates": [-106.3468, 56.1304]
+                },
+                "properties": {
+                    "title": "900",
+                    "marker-symbol": ""
+                }
+            }]
+        }
+    });
+    map.addLayer({
+        "id": "markers",
+        "type": "symbol",
+        "source": "markers",
+        "layout": {
+            "icon-image": "{marker-symbol}-15",
+            "text-field": "{title}",
+            "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+            "text-offset": [0, 0.6],
+            "text-anchor": "top"
+        }
+    });
+});
+</script>
+</body>
 </html>
