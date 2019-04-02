@@ -3,6 +3,20 @@
 <head>
   <meta charset="utf-8">
   <link href="https://d26b395fwzu5fz.cloudfront.net/keen-dataviz-2.0.4.min.css" rel="stylesheet" />
+  <script>
+  (function(name,path,ctx){ctx[name]=ctx[name]||{ready:function(fn){var h=document.getElementsByTagName('head')[0],s=document.createElement('script'),w=window,loaded;s.onload=s.onerror=s.onreadystatechange=function(){if((s.readyState&&!(/^c|loade/.test(s.readyState)))||loaded){return}s.onload=s.onreadystatechange=null;loaded=1;ctx[name].ready(fn)};s.async=1;s.src=path;h.parentNode.insertBefore(s,h)}}})
+  ('KeenTracking', 'https://cdn.jsdelivr.net/npm/keen-tracking@4/dist/keen-tracking.min.js', this);
+
+  KeenTracking.ready(function(){
+    const client = new KeenTracking({
+      projectId: '5ca29f48c9e77c000121f904',
+      writeKey: '0E82B362C9C22F714E0FA8260325D6B24EF3938B7BDB3CF4CA9287ACB958AB54F673678BB1419AEC74D5E2FC6C1C7D42E241B3BFFB7451903126C1A9919FEDE14387E975BBA2D104124EDAF6C9C0583C51F77F81D3C96FC8F43DA4262FBFE666'
+    });
+
+    // Record events automatically
+    client.initAutoTracking();
+  });
+</script>
 </head>
 <body>
   <!-- Target DOM Node -->
