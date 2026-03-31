@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NILM Dashboard</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+  :root {
+    --bg:     #0a0a0f;
+    --panel:  #12121e;
+    --dim:    #1e1e30;
+    --cyan:   #00ccff;
+    --green:  #44ff44;
+    --yellow: #ffd700;
+    --red:    #ff4444;
+    --orange: #ff8c00;
+    --grey:   #666688;
+    --white:  #eeeeee;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--panel);
+    padding: 10px 16px;
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+  header h1 { font-size: 14px; color: var(--cyan); letter-spacing: 2px; }
+  #status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--grey); display: inline-block;
+    margin-right: 6px; transition: background 0.3s;
+  }
+  #status-text { font-size: 10px; color: var(--grey); letter-spacing: 1px; }
+
+  /* ── Big watt display ── */
+  #power-card {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 24px 16px;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  #power-label { font-size: 10px; color: var(--grey); letter-spacing: 2px; }
+  #power-watts {
+    font-size: 64px; font-weight: bold; letter-spacing: -2px;
+    color: var(--green); transition: color 0.4s;
+    line-height: 1.1;
+  }
+  #power-unit  { font-size: 12px; color: var(--grey); margin-top: 2px; }
+  #power-meta  { font-size: 11px; color: var(--grey); margin-top: 6px; }
+
+  /* ── Two-col stat cards ── */
+  .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .stat-card {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .stat-label { font-size: 9px; color: var(--grey); letter-spacing: 1px; margin-bottom: 4px; }
+  .stat-value { font-size: 20px; font-weight: bold; }
+
+  /* ── Load tiles ── */
+  #loads-section { margin-bottom: 14px; }
+  .section-label { font-size: 10px; color: var(--grey); letter-spacing: 1px; margin-bottom: 8px; }
+  #load-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .load-tile {
+    background: var(--dim);
+    border-radius: 10px;
+    padding: 10px 12px;
+    transition: background 0.3s, border 0.3s;
+    border: 1px solid transparent;
+  }
+  .load-tile.on  { border-color: rgba(0,204,255,0.3); background: rgba(0,204,255,0.08); }
+  .load-tile-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .load-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+  .load-name { font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .load-watts { font-size: 15px; font-weight: bold; color: var(--white); }
+  .load-conf  { font-size: 9px; color: var(--grey); margin-top: 2px; }
+
+  /* ── Residual row ── */
+  #residual-row {
+    display: none;
+    background: #1a1000;
+    border-radius: 8px;
+    padding: 8px 12px;
+    margin-bottom: 14px;
+    justify-content: space-between;
+    align-items: center;
+  }
+  #residual-row.visible { display: flex; }
+  #residual-label { font-size: 10px; color: var(--orange); letter-spacing: 1px; }
+  #residual-watts { font-size: 13px; font-weight: bold; color: var(--orange); }
+
+  /* ── Inactive list ── */
+  #inactive-row { font-size: 9px; color: var(--grey); margin-bottom: 14px; letter-spacing: 0.5px; }
+
+  /* ── Footer ── */
+  footer {
+    font-size: 9px; color: var(--grey);
+    text-align: center; margin-top: 8px;
+    letter-spacing: 1px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>HOME ENERGY</h1>
+  <div>
+    <span id="status-dot"></span>
+    <span id="status-text">CONNECTING…</span>
+  </div>
+</header>
+
+<div id="power-card">
+  <div id="power-label">NOW</div>
+  <div id="power-watts">—</div>
+  <div id="power-unit">watts</div>
+  <div id="power-meta">PF — &nbsp;·&nbsp; THD —%</div>
+</div>
+
+<div class="card-row">
+  <div class="stat-card">
+    <div class="stat-label">ACTIVE LOADS</div>
+    <div class="stat-value" id="active-count" style="color:var(--cyan)">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">LAST UPDATE</div>
+    <div class="stat-value" id="last-update" style="font-size:13px; color:var(--grey)">—</div>
+  </div>
+</div>
+
+<div id="loads-section">
+  <div class="section-label">&nbsp;&nbsp;ACTIVE APPLIANCES</div>
+  <div id="load-grid"></div>
+</div>
+
+<div id="residual-row">
+  <span id="residual-label">⬡ UNACCOUNTED</span>
+  <span id="residual-watts">0 W</span>
+</div>
+
+<div id="inactive-row"></div>
+
+<footer>NILM MONITOR &nbsp;·&nbsp; MQTT LIVE &nbsp;·&nbsp; nilm/results</footer>
+
+<script>
+// ── Load colours (match Android app) ─────────────────────────────────────────
+const LOAD_COLORS = {
+  'HVAC':           '#00ccff',
+  'Elec Range':     '#ff4444',
+  'Elec Dryer':     '#ff8c00',
+  'EV Charger':     '#5599ff',
+  'Water Heater':   '#ffd700',
+  'Refrigerator':   '#44ff44',
+  'Microwave':      '#ffffff',
+  'Washer':         '#ff69b4',
+  'Lighting':       '#ffd700',
+  'TV/Electronics': '#aaaaaa'
+};
+
+function shortName(name) {
+  const map = {
+    'HVAC': 'HVAC', 'Elec Range': 'Range', 'Elec Dryer': 'Dryer',
+    'EV Charger': 'EV', 'Water Heater': 'H2O', 'Refrigerator': 'Fridge',
+    'Microwave': 'Micro', 'Washer': 'Wash', 'Lighting': 'Light',
+    'TV/Electronics': 'TV'
+  };
+  return map[name] || name.slice(0, 5);
+}
+
+function powerColor(w) {
+  if (w > 8000) return '#ff4444';
+  if (w > 4000) return '#ff8c00';
+  if (w > 1000) return '#ffd700';
+  return '#44ff44';
+}
+
+function formatTime(ts) {
+  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+// ── MQTT connection ───────────────────────────────────────────────────────────
+const HOST = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
+const client = mqtt.connect(`wss://${HOST}:8884/mqtt`, {
+  username:  'nilm-esp32',
+  password:  'Mayaesp321!',
+  clientId:  'nilm-web-' + Math.random().toString(16).slice(2, 8),
+  reconnectPeriod: 3000
+});
+
+const dot        = document.getElementById('status-dot');
+const statusText = document.getElementById('status-text');
+
+client.on('connect', () => {
+  dot.style.background        = '#44ff44';
+  statusText.style.color      = '#44ff44';
+  statusText.textContent      = 'LIVE';
+  client.subscribe('nilm/results');
+});
+
+client.on('offline', () => {
+  dot.style.background   = '#ff4444';
+  statusText.style.color = '#ff4444';
+  statusText.textContent = 'DISCONNECTED';
+});
+
+client.on('reconnect', () => {
+  dot.style.background   = '#ff8c00';
+  statusText.style.color = '#ff8c00';
+  statusText.textContent = 'RECONNECTING…';
+});
+
+// ── Message handler ───────────────────────────────────────────────────────────
+client.on('message', (topic, payload) => {
+  let data;
+  try { data = JSON.parse(payload.toString()); } catch { return; }
+
+  const loads     = data.loads || [];
+  const totalW    = data.totalW || 0;
+  const residualW = data.residualW || 0;
+  const pf        = data.pf || 0;
+  const thd       = data.thd || 0;
+
+  // ── Big watt number ──────────────────────────────────────────────────────
+  document.getElementById('power-watts').textContent = totalW.toLocaleString();
+  document.getElementById('power-watts').style.color = powerColor(totalW);
+  document.getElementById('power-meta').textContent  =
+    `PF ${pf.toFixed(2)}  ·  THD ${thd.toFixed(1)}%`;
+
+  // ── Stats row ────────────────────────────────────────────────────────────
+  const activeLoads = loads.filter(l => l.on);
+  document.getElementById('active-count').textContent = activeLoads.length;
+  document.getElementById('last-update').textContent  = formatTime(data.ts);
+
+  // ── Load grid ─────────────────────────────────────────────────────────────
+  const grid = document.getElementById('load-grid');
+  grid.innerHTML = '';
+  activeLoads.forEach(l => {
+    const color   = LOAD_COLORS[l.name] || '#888';
+    const confPct = Math.round((l.conf || 0) * 100);
+    const tile    = document.createElement('div');
+    tile.className = 'load-tile on';
+    tile.innerHTML = `
+      <div class="load-tile-header">
+        <div class="load-dot" style="background:${color}"></div>
+        <span class="load-name" style="color:${color}">${l.name}</span>
+      </div>
+      <div class="load-watts">${l.w.toLocaleString()} W</div>
+      <div class="load-conf">${confPct}% confidence</div>`;
+    grid.appendChild(tile);
+  });
+
+  // ── Residual ──────────────────────────────────────────────────────────────
+  const residualRow = document.getElementById('residual-row');
+  if (residualW > 0) {
+    residualRow.classList.add('visible');
+    document.getElementById('residual-watts').textContent = residualW.toLocaleString() + ' W';
+  } else {
+    residualRow.classList.remove('visible');
+  }
+
+  // ── Inactive summary ─────────────────────────────────────────────────────
+  const off = loads.filter(l => !l.on).map(l => shortName(l.name)).join(' · ');
+  document.getElementById('inactive-row').textContent = off ? '  OFF: ' + off : '';
+});
+</script>
+</body>
+</html>
