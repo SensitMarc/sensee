@@ -145,6 +145,17 @@
   </div>
 </div>
 
+<div class="card-row">
+  <div class="stat-card">
+    <div class="stat-label">TODAY COST</div>
+    <div class="stat-value" id="today-cost" style="color:var(--green); font-size:22px">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">THIS MONTH</div>
+    <div class="stat-value" id="month-cost" style="color:var(--yellow); font-size:22px">—</div>
+  </div>
+</div>
+
 <div id="loads-section">
   <div class="section-label">&nbsp;&nbsp;ACTIVE APPLIANCES</div>
   <div id="load-grid"></div>
@@ -231,11 +242,13 @@ client.on('message', (topic, payload) => {
   let data;
   try { data = JSON.parse(payload.toString()); } catch { return; }
 
-  const loads     = data.loads || [];
-  const totalW    = data.totalW || 0;
-  const residualW = data.residualW || 0;
-  const pf        = data.pf || 0;
-  const thd       = data.thd || 0;
+  const loads      = data.loads || [];
+  const totalW     = data.totalW || 0;
+  const residualW  = data.residualW || 0;
+  const pf         = data.pf || 0;
+  const thd        = data.thd || 0;
+  const todayCost  = data.todayCost != null ? data.todayCost : null;
+  const monthCost  = data.monthCost != null ? data.monthCost : null;
 
   // ── Big watt number ──────────────────────────────────────────────────────
   document.getElementById('power-watts').textContent = totalW.toLocaleString();
@@ -247,6 +260,10 @@ client.on('message', (topic, payload) => {
   const activeLoads = loads.filter(l => l.on);
   document.getElementById('active-count').textContent = activeLoads.length;
   document.getElementById('last-update').textContent  = formatTime(data.ts);
+
+  // ── Cost cards ───────────────────────────────────────────────────────────
+  document.getElementById('today-cost').textContent  = todayCost  != null ? '$' + todayCost.toFixed(4)  : '—';
+  document.getElementById('month-cost').textContent  = monthCost  != null ? '$' + monthCost.toFixed(2)  : '—';
 
   // ── Load grid ─────────────────────────────────────────────────────────────
   const grid = document.getElementById('load-grid');
