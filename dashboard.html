@@ -18,9 +18,7 @@
     --grey:   #666688;
     --white:  #eeeeee;
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
     background: var(--bg);
     color: var(--white);
@@ -40,67 +38,68 @@
     margin-bottom: 14px;
   }
   header h1 { font-size: 14px; color: var(--cyan); letter-spacing: 2px; }
-  #status-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--grey); display: inline-block;
-    margin-right: 6px; transition: background 0.3s;
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    font-size: 10px; letter-spacing: 1px; padding: 4px 10px; border-radius: 6px;
+    text-decoration: none; color: var(--grey); border: 1px solid var(--dim); transition: all 0.2s;
   }
+  .nav-tab.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
+  .nav-tab:hover:not(.active) { color: var(--white); border-color: var(--grey); }
+  .status-group { display: flex; align-items: center; gap: 6px; }
+  #status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--grey); display: inline-block; transition: background 0.3s; }
   #status-text { font-size: 10px; color: var(--grey); letter-spacing: 1px; }
 
   /* ── Big watt display ── */
   #power-card {
     background: var(--panel);
     border-radius: 12px;
-    padding: 24px 16px;
+    padding: 24px 16px 16px;
     text-align: center;
     margin-bottom: 14px;
   }
   #power-label { font-size: 10px; color: var(--grey); letter-spacing: 2px; }
-  #power-watts {
-    font-size: 64px; font-weight: bold; letter-spacing: -2px;
-    color: var(--green); transition: color 0.4s;
-    line-height: 1.1;
-  }
+  #power-watts { font-size: 64px; font-weight: bold; letter-spacing: -2px; color: var(--green); transition: color 0.4s; line-height: 1.1; }
   #power-unit  { font-size: 12px; color: var(--grey); margin-top: 2px; }
   #power-meta  { font-size: 11px; color: var(--grey); margin-top: 6px; }
 
-  /* ── Two-col stat cards ── */
+  /* ── Stat cards ── */
   .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-  .stat-card {
-    background: var(--panel);
-    border-radius: 10px;
-    padding: 12px 14px;
-  }
+  .stat-card { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
   .stat-label { font-size: 9px; color: var(--grey); letter-spacing: 1px; margin-bottom: 4px; }
   .stat-value { font-size: 20px; font-weight: bold; }
+
+  /* ── Overuse alerts ── */
+  #alerts-section { margin-bottom: 14px; }
+  .overuse-card {
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(255,140,0,0.1); border: 1px solid var(--orange);
+    border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 10px;
+  }
+  .overuse-card .dismiss { cursor: pointer; color: var(--grey); font-size: 14px; line-height: 1; }
 
   /* ── Load tiles ── */
   #loads-section { margin-bottom: 14px; }
   .section-label { font-size: 10px; color: var(--grey); letter-spacing: 1px; margin-bottom: 8px; }
   #load-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .load-tile {
-    background: var(--dim);
-    border-radius: 10px;
-    padding: 10px 12px;
-    transition: background 0.3s, border 0.3s;
-    border: 1px solid transparent;
+    background: var(--dim); border-radius: 10px; padding: 10px 12px;
+    transition: background 0.3s, border 0.3s; border: 1px solid transparent;
   }
-  .load-tile.on  { border-color: rgba(0,204,255,0.3); background: rgba(0,204,255,0.08); }
-  .load-tile-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-  .load-dot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+  .load-tile.on { border-color: rgba(0,204,255,0.3); background: rgba(0,204,255,0.06); }
+  .load-tile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .load-tile-name  { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .load-dot  { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
   .load-name { font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .load-watts { font-size: 15px; font-weight: bold; color: var(--white); }
-  .load-conf  { font-size: 9px; color: var(--grey); margin-top: 2px; }
+  .load-v-badge { font-size: 8px; color: var(--grey); border: 1px solid #333; border-radius: 3px; padding: 1px 3px; flex-shrink: 0; }
+  .load-watts   { font-size: 15px; font-weight: bold; color: var(--white); }
+  .load-runtime { font-size: 9px; color: var(--grey); margin-top: 1px; }
+  .conf-bar-bg  { height: 3px; background: var(--dim); border-radius: 2px; margin-top: 5px; }
+  .conf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
 
-  /* ── Residual row ── */
+  /* ── Residual ── */
   #residual-row {
-    display: none;
-    background: #1a1000;
-    border-radius: 8px;
-    padding: 8px 12px;
-    margin-bottom: 14px;
-    justify-content: space-between;
-    align-items: center;
+    display: none; background: #1a1000; border-radius: 8px; padding: 8px 12px;
+    margin-bottom: 14px; justify-content: space-between; align-items: center;
   }
   #residual-row.visible { display: flex; }
   #residual-label { font-size: 10px; color: var(--orange); letter-spacing: 1px; }
@@ -109,19 +108,29 @@
   /* ── Inactive list ── */
   #inactive-row { font-size: 9px; color: var(--grey); margin-bottom: 14px; letter-spacing: 0.5px; }
 
-  /* ── Footer ── */
-  footer {
-    font-size: 9px; color: var(--grey);
-    text-align: center; margin-top: 8px;
-    letter-spacing: 1px;
+  /* ── Power history ── */
+  #history-section { background: var(--panel); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .zoom-btns { display: flex; gap: 4px; }
+  .zoom-btn {
+    font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--dim); background: none; color: var(--grey); transition: all 0.2s;
   }
+  .zoom-btn.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
+  #history-canvas { width: 100%; height: 80px; display: block; }
+
+  footer { font-size: 9px; color: var(--grey); text-align: center; margin-top: 8px; letter-spacing: 1px; }
 </style>
 </head>
 <body>
 
 <header>
   <h1>HOME ENERGY</h1>
-  <div>
+  <div class="nav-tabs">
+    <a href="dashboard.html" class="nav-tab active">DASHBOARD</a>
+    <a href="detail.html" class="nav-tab">DETAIL</a>
+  </div>
+  <div class="status-group">
     <span id="status-dot"></span>
     <span id="status-text">CONNECTING…</span>
   </div>
@@ -141,20 +150,33 @@
   </div>
   <div class="stat-card">
     <div class="stat-label">LAST UPDATE</div>
-    <div class="stat-value" id="last-update" style="font-size:13px; color:var(--grey)">—</div>
+    <div class="stat-value" id="last-update" style="font-size:13px;color:var(--grey)">—</div>
   </div>
 </div>
 
 <div class="card-row">
   <div class="stat-card">
     <div class="stat-label">TODAY COST</div>
-    <div class="stat-value" id="today-cost" style="color:var(--green); font-size:22px">—</div>
+    <div class="stat-value" id="today-cost" style="color:var(--green);font-size:22px">—</div>
   </div>
   <div class="stat-card">
     <div class="stat-label">THIS MONTH</div>
-    <div class="stat-value" id="month-cost" style="color:var(--yellow); font-size:22px">—</div>
+    <div class="stat-value" id="month-cost" style="color:var(--yellow);font-size:22px">—</div>
   </div>
 </div>
+
+<div class="card-row">
+  <div class="stat-card">
+    <div class="stat-label">L1 LEG</div>
+    <div class="stat-value" id="l1-watts" style="color:var(--cyan);font-size:18px">—</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">L2 LEG</div>
+    <div class="stat-value" id="l2-watts" style="color:var(--cyan);font-size:18px">—</div>
+  </div>
+</div>
+
+<div id="alerts-section"></div>
 
 <div id="loads-section">
   <div class="section-label">&nbsp;&nbsp;ACTIVE APPLIANCES</div>
@@ -168,134 +190,245 @@
 
 <div id="inactive-row"></div>
 
+<div id="history-section">
+  <div class="history-header">
+    <span class="section-label" style="margin:0">POWER HISTORY</span>
+    <div class="zoom-btns">
+      <button class="zoom-btn active" onclick="setZoom(60)"  id="z1h">1H</button>
+      <button class="zoom-btn"        onclick="setZoom(360)" id="z6h">6H</button>
+      <button class="zoom-btn"        onclick="setZoom(1440)"id="z1d">1D</button>
+    </div>
+  </div>
+  <canvas id="history-canvas"></canvas>
+</div>
+
 <footer>NILM MONITOR &nbsp;·&nbsp; MQTT LIVE &nbsp;·&nbsp; nilm/results</footer>
 
 <script>
-// ── Load colours (match Android app) ─────────────────────────────────────────
 const LOAD_COLORS = {
-  'HVAC':           '#00ccff',
-  'Elec Range':     '#ff4444',
-  'Elec Dryer':     '#ff8c00',
-  'EV Charger':     '#5599ff',
-  'Water Heater':   '#ffd700',
-  'Refrigerator':   '#44ff44',
-  'Microwave':      '#ffffff',
-  'Washer':         '#ff69b4',
-  'Lighting':       '#ffd700',
-  'TV/Electronics': '#aaaaaa'
+  'HVAC':'#00ccff','Elec Range':'#ff4444','Elec Dryer':'#ff8c00',
+  'EV Charger':'#5599ff','Water Heater':'#ffd700','Refrigerator':'#44ff44',
+  'Microwave':'#ffffff','Washer':'#ff69b4','Lighting':'#ffd700','TV/Electronics':'#aaaaaa'
+};
+const OVERUSE_MIN = {
+  'HVAC':90,'Elec Range':120,'Elec Dryer':90,'EV Charger':480,
+  'Water Heater':60,'Microwave':15,'Washer':90
 };
 
-function shortName(name) {
-  const map = {
-    'HVAC': 'HVAC', 'Elec Range': 'Range', 'Elec Dryer': 'Dryer',
-    'EV Charger': 'EV', 'Water Heater': 'H2O', 'Refrigerator': 'Fridge',
-    'Microwave': 'Micro', 'Washer': 'Wash', 'Lighting': 'Light',
-    'TV/Electronics': 'TV'
-  };
-  return map[name] || name.slice(0, 5);
+function shortName(n) {
+  return {'HVAC':'HVAC','Elec Range':'Range','Elec Dryer':'Dryer','EV Charger':'EV',
+    'Water Heater':'H2O','Refrigerator':'Fridge','Microwave':'Micro','Washer':'Wash',
+    'Lighting':'Light','TV/Electronics':'TV'}[n] || n.slice(0,5);
 }
-
 function powerColor(w) {
   if (w > 8000) return '#ff4444';
   if (w > 4000) return '#ff8c00';
   if (w > 1000) return '#ffd700';
   return '#44ff44';
 }
-
+function confColor(c) {
+  if (c > 0.75) return '#44ff44';
+  if (c > 0.45) return '#ffd700';
+  return '#ff4444';
+}
 function formatTime(ts) {
-  return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+function fmtDur(ms) {
+  const s = Math.floor(ms/1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s/60);
+  if (m < 60) return m + 'm';
+  return Math.floor(m/60) + 'h ' + (m%60) + 'm';
 }
 
-// ── MQTT connection ───────────────────────────────────────────────────────────
-const HOST = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
+// ── Session & alert state ─────────────────────────────────────────────────────
+const sessionStart   = {};
+const dismissedAlerts = new Set();
+
+// ── Power history ─────────────────────────────────────────────────────────────
+const historyData = [];
+let zoomMinutes   = 60;
+
+function setZoom(mins) {
+  zoomMinutes = mins;
+  document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
+  ({60:'z1h',360:'z6h',1440:'z1d'})[mins] && document.getElementById(({60:'z1h',360:'z6h',1440:'z1d'})[mins]).classList.add('active');
+  drawHistory();
+}
+
+function pushHistory(w) {
+  historyData.push({t: Date.now(), w});
+  if (historyData.length > 8640) historyData.shift();
+  drawHistory();
+}
+
+function drawHistory() {
+  const canvas = document.getElementById('history-canvas');
+  const dpr    = window.devicePixelRatio || 1;
+  const rect   = canvas.getBoundingClientRect();
+  if (!rect.width) return;
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cutoff = Date.now() - zoomMinutes * 60 * 1000;
+  const pts    = historyData.filter(p => p.t >= cutoff);
+  if (pts.length < 2) {
+    ctx.fillStyle = '#444'; ctx.font = '10px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('ACCUMULATING DATA…', W/2, H/2); return;
+  }
+
+  const maxW = Math.max(...pts.map(p => p.w), 1000);
+  const minT = pts[0].t, maxT = pts[pts.length-1].t, range = maxT - minT || 1;
+
+  // Grid
+  ctx.strokeStyle = '#1e1e30'; ctx.lineWidth = 1;
+  [0.25,0.5,0.75].forEach(f => {
+    ctx.beginPath(); ctx.moveTo(0, H - f*H); ctx.lineTo(W, H - f*H); ctx.stroke();
+  });
+
+  // Area fill
+  ctx.beginPath();
+  pts.forEach((p, i) => {
+    const x = ((p.t - minT) / range) * W;
+    const y = H - (p.w / maxW) * H * 0.9;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(((pts[pts.length-1].t - minT) / range) * W, H);
+  ctx.lineTo(0, H); ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, 'rgba(0,204,255,0.35)');
+  grad.addColorStop(1, 'rgba(0,204,255,0.02)');
+  ctx.fillStyle = grad; ctx.fill();
+
+  // Line
+  ctx.beginPath(); ctx.strokeStyle = '#00ccff'; ctx.lineWidth = 1.5;
+  pts.forEach((p, i) => {
+    const x = ((p.t - minT) / range) * W;
+    const y = H - (p.w / maxW) * H * 0.9;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Peak label
+  const pk = pts.reduce((a, b) => a.w > b.w ? a : b);
+  const px = ((pk.t - minT) / range) * W;
+  const py = H - (pk.w / maxW) * H * 0.9 - 5;
+  ctx.fillStyle = '#ffd700'; ctx.font = '8px Courier New';
+  ctx.textAlign = px > W * 0.8 ? 'right' : 'left';
+  ctx.fillText(pk.w.toLocaleString() + 'W', px, py);
+}
+
+// ── MQTT ──────────────────────────────────────────────────────────────────────
+const HOST   = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
 const client = mqtt.connect(`wss://${HOST}:8884/mqtt`, {
-  username:  'nilm-esp32',
-  password:  'Mayaesp321!',
-  clientId:  'nilm-web-' + Math.random().toString(16).slice(2, 8),
+  username:'nilm-esp32', password:'Mayaesp321!',
+  clientId:'nilm-dash-' + Math.random().toString(16).slice(2,8),
   reconnectPeriod: 3000
 });
 
-const dot        = document.getElementById('status-dot');
-const statusText = document.getElementById('status-text');
+const dot = document.getElementById('status-dot');
+const stxt = document.getElementById('status-text');
+client.on('connect',   () => { dot.style.background=stxt.style.color='#44ff44'; stxt.textContent='LIVE'; client.subscribe('nilm/results'); });
+client.on('offline',   () => { dot.style.background=stxt.style.color='#ff4444'; stxt.textContent='DISCONNECTED'; });
+client.on('reconnect', () => { dot.style.background=stxt.style.color='#ff8c00'; stxt.textContent='RECONNECTING…'; });
 
-client.on('connect', () => {
-  dot.style.background        = '#44ff44';
-  statusText.style.color      = '#44ff44';
-  statusText.textContent      = 'LIVE';
-  client.subscribe('nilm/results');
-});
-
-client.on('offline', () => {
-  dot.style.background   = '#ff4444';
-  statusText.style.color = '#ff4444';
-  statusText.textContent = 'DISCONNECTED';
-});
-
-client.on('reconnect', () => {
-  dot.style.background   = '#ff8c00';
-  statusText.style.color = '#ff8c00';
-  statusText.textContent = 'RECONNECTING…';
-});
-
-// ── Message handler ───────────────────────────────────────────────────────────
 client.on('message', (topic, payload) => {
-  let data;
-  try { data = JSON.parse(payload.toString()); } catch { return; }
+  let data; try { data = JSON.parse(payload.toString()); } catch { return; }
 
-  const loads      = data.loads || [];
-  const totalW     = data.totalW || 0;
-  const residualW  = data.residualW || 0;
-  const pf         = data.pf || 0;
-  const thd        = data.thd || 0;
-  const todayCost  = data.todayCost != null ? data.todayCost : null;
-  const monthCost  = data.monthCost != null ? data.monthCost : null;
+  const loads    = data.loads    || [];
+  const totalW   = data.totalW   || 0;
+  const residualW= data.residualW|| 0;
+  const pf       = data.pf  || 0;
+  const thd      = data.thd || 0;
+  const cf       = data.cf;
+  const irms     = data.irms;
+  const l1W      = data.l1W;
+  const l2W      = data.l2W;
+  const now      = Date.now();
 
-  // ── Big watt number ──────────────────────────────────────────────────────
-  document.getElementById('power-watts').textContent = totalW.toLocaleString();
-  document.getElementById('power-watts').style.color = powerColor(totalW);
-  document.getElementById('power-meta').textContent  =
-    `PF ${pf.toFixed(2)}  ·  THD ${thd.toFixed(1)}%`;
+  // Power display
+  document.getElementById('power-watts').textContent  = totalW.toLocaleString();
+  document.getElementById('power-watts').style.color  = powerColor(totalW);
+  let meta = `PF ${pf.toFixed(2)}  ·  THD ${thd.toFixed(1)}%`;
+  if (cf   != null) meta += `  ·  CF ${cf.toFixed(2)}`;
+  if (irms != null) meta += `  ·  ${irms.toFixed(1)}A`;
+  document.getElementById('power-meta').textContent = meta;
 
-  // ── Stats row ────────────────────────────────────────────────────────────
-  const activeLoads = loads.filter(l => l.on);
-  document.getElementById('active-count').textContent = activeLoads.length;
-  document.getElementById('last-update').textContent  = formatTime(data.ts);
+  // Stats
+  const active = loads.filter(l => l.on);
+  document.getElementById('active-count').textContent = active.length;
+  document.getElementById('last-update').textContent  = formatTime(data.ts || now);
+  document.getElementById('today-cost').textContent   = data.todayCost != null ? '$' + data.todayCost.toFixed(4) : '—';
+  document.getElementById('month-cost').textContent   = data.monthCost != null ? '$' + data.monthCost.toFixed(2) : '—';
+  document.getElementById('l1-watts').textContent     = l1W != null ? l1W.toLocaleString() + ' W' : '—';
+  document.getElementById('l2-watts').textContent     = l2W != null ? l2W.toLocaleString() + ' W' : '—';
 
-  // ── Cost cards ───────────────────────────────────────────────────────────
-  document.getElementById('today-cost').textContent  = todayCost  != null ? '$' + todayCost.toFixed(4)  : '—';
-  document.getElementById('month-cost').textContent  = monthCost  != null ? '$' + monthCost.toFixed(2)  : '—';
+  // Session tracking
+  active.forEach(l => { if (!sessionStart[l.name]) sessionStart[l.name] = now; });
+  loads.filter(l => !l.on).forEach(l => delete sessionStart[l.name]);
 
-  // ── Load grid ─────────────────────────────────────────────────────────────
+  // Overuse alerts
+  const alertsEl = document.getElementById('alerts-section');
+  alertsEl.innerHTML = '';
+  active.forEach(l => {
+    const threshold = OVERUSE_MIN[l.name];
+    if (!threshold || !sessionStart[l.name]) return;
+    const elapsed = (now - sessionStart[l.name]) / 60000;
+    if (elapsed < threshold) return;
+    const key = l.name + '_' + Math.floor(elapsed / threshold);
+    if (dismissedAlerts.has(key)) return;
+    const card = document.createElement('div');
+    card.className = 'overuse-card';
+    card.innerHTML = `<span>⚠ ${shortName(l.name)} running ${fmtDur(now - sessionStart[l.name])} — expected ${threshold}m</span>
+      <span class="dismiss" onclick="dismissedAlerts.add('${key}');this.parentElement.remove()">✕</span>`;
+    alertsEl.appendChild(card);
+  });
+
+  // Load grid
   const grid = document.getElementById('load-grid');
   grid.innerHTML = '';
-  activeLoads.forEach(l => {
+  active.forEach(l => {
     const color   = LOAD_COLORS[l.name] || '#888';
-    const confPct = Math.round((l.conf || 0) * 100);
+    const conf    = l.conf || 0;
+    const confPct = Math.round(conf * 100);
+    const runtime = sessionStart[l.name] ? fmtDur(now - sessionStart[l.name]) : null;
     const tile    = document.createElement('div');
     tile.className = 'load-tile on';
     tile.innerHTML = `
       <div class="load-tile-header">
-        <div class="load-dot" style="background:${color}"></div>
-        <span class="load-name" style="color:${color}">${l.name}</span>
+        <div class="load-tile-name">
+          <div class="load-dot" style="background:${color}"></div>
+          <span class="load-name" style="color:${color}">${l.name}</span>
+        </div>
+        ${l.v ? `<span class="load-v-badge">${l.v}V</span>` : ''}
       </div>
       <div class="load-watts">${l.w.toLocaleString()} W</div>
-      <div class="load-conf">${confPct}% confidence</div>`;
+      ${runtime ? `<div class="load-runtime">${runtime}</div>` : ''}
+      <div class="conf-bar-bg">
+        <div class="conf-bar-fill" style="width:${confPct}%;background:${confColor(conf)}"></div>
+      </div>`;
     grid.appendChild(tile);
   });
 
-  // ── Residual ──────────────────────────────────────────────────────────────
-  const residualRow = document.getElementById('residual-row');
-  if (residualW > 0) {
-    residualRow.classList.add('visible');
-    document.getElementById('residual-watts').textContent = residualW.toLocaleString() + ' W';
-  } else {
-    residualRow.classList.remove('visible');
-  }
+  // Residual
+  const rr = document.getElementById('residual-row');
+  if (residualW > 0) { rr.classList.add('visible'); document.getElementById('residual-watts').textContent = residualW.toLocaleString() + ' W'; }
+  else               { rr.classList.remove('visible'); }
 
-  // ── Inactive summary ─────────────────────────────────────────────────────
+  // Inactive
   const off = loads.filter(l => !l.on).map(l => shortName(l.name)).join(' · ');
   document.getElementById('inactive-row').textContent = off ? '  OFF: ' + off : '';
+
+  // History
+  pushHistory(totalW);
 });
+
+window.addEventListener('resize', drawHistory);
 </script>
 </body>
 </html>

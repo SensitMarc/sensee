@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NILM Detail</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+  :root {
+    --bg:     #0a0a0f;
+    --panel:  #12121e;
+    --dim:    #1e1e30;
+    --cyan:   #00ccff;
+    --green:  #44ff44;
+    --yellow: #ffd700;
+    --red:    #ff4444;
+    --orange: #ff8c00;
+    --grey:   #666688;
+    --white:  #eeeeee;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--white);
+    font-family: 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  /* ── Header ── */
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--panel); padding: 10px 16px; border-radius: 10px; margin-bottom: 14px;
+  }
+  header h1 { font-size: 14px; color: var(--cyan); letter-spacing: 2px; }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    font-size: 10px; letter-spacing: 1px; padding: 4px 10px; border-radius: 6px;
+    text-decoration: none; color: var(--grey); border: 1px solid var(--dim); transition: all 0.2s;
+  }
+  .nav-tab.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
+  .nav-tab:hover:not(.active) { color: var(--white); border-color: var(--grey); }
+  .status-group { display: flex; align-items: center; gap: 6px; }
+  #status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--grey); display: inline-block; transition: background 0.3s; }
+  #status-text { font-size: 10px; color: var(--grey); letter-spacing: 1px; }
+
+  .section-label { font-size: 10px; color: var(--grey); letter-spacing: 1px; margin-bottom: 8px; }
+
+  /* ── Summary row ── */
+  #summary-section {
+    background: var(--panel); border-radius: 10px; padding: 12px 14px;
+    margin-bottom: 14px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  }
+  .summary-cell { text-align: center; }
+  .summary-label { font-size: 8px; color: var(--grey); letter-spacing: 1px; }
+  .summary-val { font-size: 18px; font-weight: bold; margin-top: 3px; }
+
+  /* ── Load table ── */
+  #table-section { background: var(--panel); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+  .load-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .load-table th {
+    font-size: 8px; color: var(--grey); letter-spacing: 1px; text-align: left;
+    padding: 0 6px 7px 0; border-bottom: 1px solid var(--dim);
+  }
+  .load-table td { padding: 5px 6px 5px 0; vertical-align: middle; }
+  .load-table tr { border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .load-table tr.off td { opacity: 0.35; }
+  .dot-cell { width: 14px; }
+  .ld { width: 7px; height: 7px; border-radius: 2px; display: inline-block; }
+  .conf-bar-bg  { height: 4px; background: var(--dim); border-radius: 2px; }
+  .conf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
+
+  /* ── Analysis panel (features + waveform side by side) ── */
+  #analysis-section {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+  }
+  #feature-panel { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
+  .feat-row { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+  .feat-label { font-size: 9px; color: var(--grey); width: 34px; flex-shrink: 0; }
+  .feat-val   { font-size: 10px; font-weight: bold; width: 46px; text-align: right; flex-shrink: 0; }
+  .feat-bar-bg   { flex: 1; height: 4px; background: var(--dim); border-radius: 2px; }
+  .feat-bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+  #waveform-panel {
+    background: var(--panel); border-radius: 10px; padding: 12px 14px;
+    display: flex; flex-direction: column;
+  }
+  #waveform-canvas { flex: 1; width: 100%; min-height: 120px; display: block; }
+
+  /* ── Power history ── */
+  #history-section { background: var(--panel); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .zoom-btns { display: flex; gap: 4px; }
+  .zoom-btn {
+    font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; cursor: pointer;
+    border: 1px solid var(--dim); background: none; color: var(--grey); transition: all 0.2s;
+  }
+  .zoom-btn.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
+  #history-canvas { width: 100%; height: 80px; display: block; }
+
+  footer { font-size: 9px; color: var(--grey); text-align: center; margin-top: 8px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>HOME ENERGY</h1>
+  <div class="nav-tabs">
+    <a href="dashboard.html" class="nav-tab">DASHBOARD</a>
+    <a href="detail.html"    class="nav-tab active">DETAIL</a>
+  </div>
+  <div class="status-group">
+    <span id="status-dot"></span>
+    <span id="status-text">CONNECTING…</span>
+  </div>
+</header>
+
+<!-- Summary row -->
+<div id="summary-section">
+  <div class="summary-cell">
+    <div class="summary-label">TRUE W</div>
+    <div class="summary-val" id="sum-total" style="color:var(--cyan)">—</div>
+  </div>
+  <div class="summary-cell">
+    <div class="summary-label">L1 W</div>
+    <div class="summary-val" id="sum-l1" style="color:var(--green)">—</div>
+  </div>
+  <div class="summary-cell">
+    <div class="summary-label">L2 W</div>
+    <div class="summary-val" id="sum-l2" style="color:var(--green)">—</div>
+  </div>
+  <div class="summary-cell">
+    <div class="summary-label">$/HR EST</div>
+    <div class="summary-val" id="sum-rate" style="color:var(--yellow)">—</div>
+  </div>
+</div>
+
+<!-- Load table -->
+<div id="table-section">
+  <div class="section-label">ALL LOADS</div>
+  <table class="load-table">
+    <thead>
+      <tr>
+        <th class="dot-cell"></th>
+        <th>NAME</th>
+        <th style="text-align:right">V</th>
+        <th style="text-align:right">WATTS</th>
+        <th style="text-align:right">CONF</th>
+        <th style="width:60px"></th>
+      </tr>
+    </thead>
+    <tbody id="load-tbody"></tbody>
+  </table>
+</div>
+
+<!-- Electrical features + waveform -->
+<div id="analysis-section">
+  <div id="feature-panel">
+    <div class="section-label">ELECTRICAL</div>
+    <div id="feat-rows"></div>
+  </div>
+  <div id="waveform-panel">
+    <div class="section-label">WAVEFORM</div>
+    <canvas id="waveform-canvas"></canvas>
+  </div>
+</div>
+
+<!-- Power history bar chart -->
+<div id="history-section">
+  <div class="history-header">
+    <span class="section-label" style="margin:0">POWER HISTORY</span>
+    <div class="zoom-btns">
+      <button class="zoom-btn active" onclick="setZoom(60)"   id="z1h">1H</button>
+      <button class="zoom-btn"        onclick="setZoom(360)"  id="z6h">6H</button>
+      <button class="zoom-btn"        onclick="setZoom(1440)" id="z1d">1D</button>
+    </div>
+  </div>
+  <canvas id="history-canvas"></canvas>
+</div>
+
+<footer>NILM MONITOR &nbsp;·&nbsp; MQTT LIVE &nbsp;·&nbsp; nilm/results + nilm/frames</footer>
+
+<script>
+const LOAD_COLORS = {
+  'HVAC':'#00ccff','Elec Range':'#ff4444','Elec Dryer':'#ff8c00',
+  'EV Charger':'#5599ff','Water Heater':'#ffd700','Refrigerator':'#44ff44',
+  'Microwave':'#ffffff','Washer':'#ff69b4','Lighting':'#ffd700','TV/Electronics':'#aaaaaa'
+};
+const ALL_LOADS = [
+  'HVAC','Elec Range','Elec Dryer','EV Charger','Water Heater',
+  'Refrigerator','Microwave','Washer','Lighting','TV/Electronics'
+];
+const FEATURES = [
+  {key:'irms', label:'I_rms', unit:'A',  max:50,  color:'#00ccff'},
+  {key:'h1',   label:'H1',    unit:'',   max:1,   color:'#44ff44'},
+  {key:'h3',   label:'H3',    unit:'',   max:0.5, color:'#ffd700'},
+  {key:'h5',   label:'H5',    unit:'',   max:0.3, color:'#ff8c00'},
+  {key:'h7',   label:'H7',    unit:'',   max:0.2, color:'#ff4444'},
+  {key:'thd',  label:'THD',   unit:'%',  max:50,  color:'#ff69b4'},
+  {key:'pf',   label:'PF',    unit:'',   max:1,   color:'#5599ff'},
+  {key:'cf',   label:'CF',    unit:'',   max:5,   color:'#aaaaaa'},
+];
+
+function confColor(c) {
+  if (c > 0.75) return '#44ff44';
+  if (c > 0.45) return '#ffd700';
+  return '#ff4444';
+}
+
+// ── Power history ─────────────────────────────────────────────────────────────
+const historyData = [];
+let zoomMinutes = 60;
+
+function setZoom(mins) {
+  zoomMinutes = mins;
+  document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
+  const id = {60:'z1h',360:'z6h',1440:'z1d'}[mins];
+  if (id) document.getElementById(id).classList.add('active');
+  drawHistory();
+}
+
+function pushHistory(w) {
+  historyData.push({t: Date.now(), w});
+  if (historyData.length > 8640) historyData.shift();
+  drawHistory();
+}
+
+function drawHistory() {
+  const canvas = document.getElementById('history-canvas');
+  const dpr    = window.devicePixelRatio || 1;
+  const rect   = canvas.getBoundingClientRect();
+  if (!rect.width) return;
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const cutoff = Date.now() - zoomMinutes * 60 * 1000;
+  const pts    = historyData.filter(p => p.t >= cutoff);
+  if (pts.length < 2) {
+    ctx.fillStyle = '#444'; ctx.font = '10px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('ACCUMULATING DATA…', W/2, H/2); return;
+  }
+
+  // Bucket into 80 bars
+  const buckets  = 80;
+  const bucketMs = (zoomMinutes * 60 * 1000) / buckets;
+  const now      = Date.now();
+  const bars     = Array.from({length: buckets}, (_, i) => {
+    const end   = now - (buckets - 1 - i) * bucketMs;
+    const start = end - bucketMs;
+    const slice = pts.filter(p => p.t >= start && p.t < end);
+    return slice.length ? slice.reduce((s, p) => s + p.w, 0) / slice.length : 0;
+  });
+
+  const maxVal = Math.max(...bars, 1);
+  const barW   = W / buckets;
+  bars.forEach((val, i) => {
+    if (!val) return;
+    const barH = (val / maxVal) * H * 0.9;
+    const frac = val / maxVal;
+    ctx.fillStyle = frac > 0.8 ? '#ff4444' : frac > 0.5 ? '#ff8c00' : frac > 0.25 ? '#ffd700' : '#00ccff';
+    ctx.fillRect(i * barW + 1, H - barH, barW - 2, barH);
+  });
+}
+
+// ── Waveform ──────────────────────────────────────────────────────────────────
+function drawWaveform(wave, peak) {
+  const canvas = document.getElementById('waveform-canvas');
+  const dpr    = window.devicePixelRatio || 1;
+  const rect   = canvas.getBoundingClientRect();
+  if (!rect.width) return;
+  canvas.width  = rect.width  * dpr;
+  canvas.height = rect.height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width, H = rect.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // Zero line
+  ctx.strokeStyle = '#1e1e30'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0, H/2); ctx.lineTo(W, H/2); ctx.stroke();
+
+  if (!wave || wave.length === 0) {
+    ctx.fillStyle = '#444'; ctx.font = '9px Courier New'; ctx.textAlign = 'center';
+    ctx.fillText('NO WAVEFORM', W/2, H/2 + 4); return;
+  }
+
+  const maxAmp = Math.max(...wave.map(Math.abs), 0.001);
+  ctx.beginPath(); ctx.strokeStyle = '#00ccff'; ctx.lineWidth = 1.5;
+  wave.forEach((v, i) => {
+    const x = (i / (wave.length - 1)) * W;
+    const y = H/2 - (v / maxAmp) * (H/2 - 4);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Glow effect
+  ctx.beginPath(); ctx.strokeStyle = 'rgba(0,204,255,0.15)'; ctx.lineWidth = 4;
+  wave.forEach((v, i) => {
+    const x = (i / (wave.length - 1)) * W;
+    const y = H/2 - (v / maxAmp) * (H/2 - 4);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  if (peak != null) {
+    ctx.fillStyle = '#ffd700'; ctx.font = '8px Courier New'; ctx.textAlign = 'right';
+    ctx.fillText(`±${peak.toFixed(2)}A`, W - 2, 11);
+  }
+}
+
+// ── Feature rows ──────────────────────────────────────────────────────────────
+function updateFeatures(data) {
+  const container = document.getElementById('feat-rows');
+  container.innerHTML = '';
+  FEATURES.forEach(f => {
+    const val = data[f.key];
+    if (val == null) return;
+    const pct  = Math.min(100, (val / f.max) * 100);
+    const disp = f.unit === '%'  ? val.toFixed(1) + '%'
+               : f.max <= 1      ? val.toFixed(3)
+               : val.toFixed(1) + (f.unit ? ' ' + f.unit : '');
+    const row = document.createElement('div');
+    row.className = 'feat-row';
+    row.innerHTML = `
+      <span class="feat-label">${f.label}</span>
+      <span class="feat-val" style="color:${f.color}">${disp}</span>
+      <div class="feat-bar-bg">
+        <div class="feat-bar-fill" style="width:${pct}%;background:${f.color}"></div>
+      </div>`;
+    container.appendChild(row);
+  });
+}
+
+// ── MQTT ──────────────────────────────────────────────────────────────────────
+const HOST   = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
+const client = mqtt.connect(`wss://${HOST}:8884/mqtt`, {
+  username:'nilm-esp32', password:'Mayaesp321!',
+  clientId:'nilm-det-' + Math.random().toString(16).slice(2,8),
+  reconnectPeriod: 3000
+});
+
+const dot  = document.getElementById('status-dot');
+const stxt = document.getElementById('status-text');
+client.on('connect',   () => { dot.style.background=stxt.style.color='#44ff44'; stxt.textContent='LIVE'; client.subscribe('nilm/results'); client.subscribe('nilm/frames'); });
+client.on('offline',   () => { dot.style.background=stxt.style.color='#ff4444'; stxt.textContent='DISCONNECTED'; });
+client.on('reconnect', () => { dot.style.background=stxt.style.color='#ff8c00'; stxt.textContent='RECONNECTING…'; });
+
+// Merge state from both topics
+let state = {};
+
+client.on('message', (topic, payload) => {
+  let data; try { data = JSON.parse(payload.toString()); } catch { return; }
+  Object.assign(state, data);
+  render(state);
+});
+
+function render(data) {
+  const loads  = data.loads  || [];
+  const totalW = data.totalW || 0;
+  const l1W    = data.l1W;
+  const l2W    = data.l2W;
+
+  // Summary row
+  document.getElementById('sum-total').textContent = totalW.toLocaleString();
+  document.getElementById('sum-l1').textContent    = l1W != null ? l1W.toLocaleString() : '—';
+  document.getElementById('sum-l2').textContent    = l2W != null ? l2W.toLocaleString() : '—';
+  document.getElementById('sum-rate').textContent  = '$' + (totalW * 0.00012).toFixed(3);
+
+  // Load table — all 10 loads, OFF rows dimmed
+  const liveMap = {};
+  loads.forEach(l => { liveMap[l.name] = l; });
+  const tbody = document.getElementById('load-tbody');
+  tbody.innerHTML = '';
+  ALL_LOADS.forEach(name => {
+    const l     = liveMap[name] || {name, on:false, w:0, conf:0, v:null};
+    const color = LOAD_COLORS[name] || '#888';
+    const conf  = l.conf || 0;
+    const pct   = Math.round(conf * 100);
+    const tr    = document.createElement('tr');
+    tr.className = l.on ? 'on' : 'off';
+    tr.innerHTML = `
+      <td class="dot-cell"><div class="ld" style="background:${l.on ? color : '#2a2a3a'}"></div></td>
+      <td style="font-weight:bold;color:${l.on ? color : 'var(--grey)'}">${name}</td>
+      <td style="text-align:right;color:var(--grey);font-size:9px">${l.v ? l.v+'V' : '—'}</td>
+      <td style="text-align:right;font-weight:${l.on?'bold':'normal'};color:${l.on?'var(--white)':'var(--grey)'}">${l.on ? l.w.toLocaleString() : '—'}</td>
+      <td style="text-align:right;color:${l.on ? confColor(conf) : 'var(--grey)'};font-size:9px">${l.on ? pct+'%' : ''}</td>
+      <td><div class="conf-bar-bg"><div class="conf-bar-fill" style="width:${l.on?pct:0}%;background:${confColor(conf)}"></div></div></td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Electrical features
+  updateFeatures(data);
+
+  // Waveform
+  if (data.wave) drawWaveform(data.wave, data.peak);
+
+  // History
+  if (data.totalW != null) pushHistory(data.totalW);
+}
+
+window.addEventListener('resize', () => {
+  drawHistory();
+  if (state.wave) drawWaveform(state.wave, state.peak);
+});
+</script>
+</body>
+</html>
