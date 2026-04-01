@@ -108,6 +108,43 @@
   /* ── Inactive list ── */
   #inactive-row { font-size: 9px; color: var(--grey); margin-bottom: 14px; letter-spacing: 0.5px; }
 
+  /* ── HVAC efficiency card ── */
+  #hvac-card {
+    display: none;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-left: 3px solid var(--cyan);
+  }
+  #hvac-card.visible { display: block; }
+  #hvac-card.warn    { border-left-color: var(--yellow); }
+  #hvac-card.alert   { border-left-color: var(--red); background: rgba(255,68,68,0.06); }
+  .hvac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .hvac-title  { font-size: 10px; color: var(--cyan); letter-spacing: 1px; }
+  #hvac-card.warn  .hvac-title { color: var(--yellow); }
+  #hvac-card.alert .hvac-title { color: var(--red); }
+  .hvac-grid   { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .hvac-cell   { text-align: center; }
+  .hvac-lbl    { font-size: 8px; color: var(--grey); letter-spacing: 1px; }
+  .hvac-val    { font-size: 15px; font-weight: bold; margin-top: 2px; }
+
+  /* ── AI insights card ── */
+  #insight-card {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-left: 3px solid #5599ff;
+    min-height: 54px;
+  }
+  .insight-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .insight-label  { font-size: 9px; color: #5599ff; letter-spacing: 1px; }
+  .insight-dot    { width: 6px; height: 6px; border-radius: 50%; background: #5599ff; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  #insight-text   { font-size: 11px; color: var(--white); line-height: 1.5; }
+  #insight-age    { font-size: 9px; color: var(--grey); margin-top: 4px; }
+
   /* ── Power history ── */
   #history-section { background: var(--panel); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
   .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
@@ -190,6 +227,38 @@
 
 <div id="inactive-row"></div>
 
+<!-- HVAC efficiency card -->
+<div id="hvac-card">
+  <div class="hvac-header">
+    <span class="hvac-title">❄ HVAC EFFICIENCY</span>
+    <span id="hvac-status-text" style="font-size:9px;color:var(--grey)"></span>
+  </div>
+  <div class="hvac-grid">
+    <div class="hvac-cell">
+      <div class="hvac-lbl">RUNTIME</div>
+      <div class="hvac-val" id="hvac-runtime" style="color:var(--cyan)">—</div>
+    </div>
+    <div class="hvac-cell">
+      <div class="hvac-lbl">OUTDOOR</div>
+      <div class="hvac-val" id="hvac-temp" style="color:var(--white)">—</div>
+    </div>
+    <div class="hvac-cell">
+      <div class="hvac-lbl">MIN/°F</div>
+      <div class="hvac-val" id="hvac-eff" style="color:var(--green)">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- AI insights card -->
+<div id="insight-card">
+  <div class="insight-header">
+    <div class="insight-dot"></div>
+    <span class="insight-label">AI INSIGHT</span>
+  </div>
+  <div id="insight-text" style="color:var(--grey)">Waiting for first insight…</div>
+  <div id="insight-age"></div>
+</div>
+
 <div id="history-section">
   <div class="history-header">
     <span class="section-label" style="margin:0">POWER HISTORY</span>
@@ -243,8 +312,123 @@ function fmtDur(ms) {
 }
 
 // ── Session & alert state ─────────────────────────────────────────────────────
-const sessionStart   = {};
+const sessionStart    = {};
 const dismissedAlerts = new Set();
+
+// ── HVAC efficiency ───────────────────────────────────────────────────────────
+const HVAC_SETPOINT_F = 72;
+let   outdoorTempF    = null;
+let   geoFetched      = false;
+
+function loadHvacBaseline() {
+  try { return JSON.parse(localStorage.getItem('hvac_baseline') || '[]'); } catch { return []; }
+}
+function saveHvacSession(runtimeMin, effVal) {
+  const sessions = loadHvacBaseline();
+  sessions.push({ ts: Date.now(), runtimeMin, eff: effVal });
+  // Keep last 20 sessions (~7 days worth)
+  if (sessions.length > 20) sessions.splice(0, sessions.length - 20);
+  localStorage.setItem('hvac_baseline', JSON.stringify(sessions));
+}
+function hvacBaselineAvg() {
+  const sessions = loadHvacBaseline().filter(s => s.eff > 0);
+  if (sessions.length < 2) return null;
+  return sessions.reduce((sum, s) => sum + s.eff, 0) / sessions.length;
+}
+
+async function fetchOutdoorTemp(lat, lon) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&temperature_unit=fahrenheit&forecast_days=1`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    outdoorTempF = data.current.temperature_2m;
+  } catch { /* silently ignore */ }
+}
+
+function initGeolocation() {
+  if (geoFetched || !navigator.geolocation) return;
+  geoFetched = true;
+  navigator.geolocation.getCurrentPosition(
+    pos => fetchOutdoorTemp(pos.coords.latitude, pos.coords.longitude),
+    ()  => { /* denied — outdoor temp stays null */ }
+  );
+}
+
+function updateHvacCard(hvacOn, runtimeMs) {
+  const card = document.getElementById('hvac-card');
+  if (!hvacOn) {
+    card.classList.remove('visible', 'warn', 'alert');
+    return;
+  }
+  initGeolocation();
+  card.classList.add('visible');
+
+  const runtimeMin = runtimeMs / 60000;
+  document.getElementById('hvac-runtime').textContent = fmtDur(runtimeMs);
+
+  if (outdoorTempF != null) {
+    const delta = Math.abs(outdoorTempF - HVAC_SETPOINT_F);
+    document.getElementById('hvac-temp').textContent = outdoorTempF.toFixed(1) + '°F';
+
+    if (delta > 2 && runtimeMin > 5) {
+      const eff     = runtimeMin / delta;
+      const baseline = hvacBaselineAvg();
+      document.getElementById('hvac-eff').textContent = eff.toFixed(2);
+
+      card.classList.remove('warn', 'alert');
+      if (baseline) {
+        const pctWorse = (eff - baseline) / baseline;
+        if (pctWorse >= 0.30) {
+          card.classList.add('alert');
+          document.getElementById('hvac-status-text').textContent =
+            `${(pctWorse*100).toFixed(0)}% worse than baseline`;
+          document.getElementById('hvac-eff').style.color = '#ff4444';
+        } else if (pctWorse >= 0.15) {
+          card.classList.add('warn');
+          document.getElementById('hvac-status-text').textContent =
+            `${(pctWorse*100).toFixed(0)}% above baseline`;
+          document.getElementById('hvac-eff').style.color = '#ffd700';
+        } else {
+          document.getElementById('hvac-status-text').textContent = 'normal';
+          document.getElementById('hvac-eff').style.color = '#44ff44';
+        }
+      } else {
+        document.getElementById('hvac-status-text').textContent = 'building baseline…';
+        document.getElementById('hvac-eff').style.color = '#00ccff';
+      }
+    } else {
+      document.getElementById('hvac-eff').textContent = '—';
+      document.getElementById('hvac-status-text').textContent = '';
+    }
+  } else {
+    document.getElementById('hvac-temp').textContent = '—';
+    document.getElementById('hvac-eff').textContent  = '—';
+    document.getElementById('hvac-status-text').textContent = 'allow location for efficiency';
+  }
+}
+
+// Save HVAC session when it turns OFF
+let hvacWasOn = false;
+function checkHvacSessionEnd(hvacIsOn) {
+  if (hvacWasOn && !hvacIsOn && sessionStart['HVAC']) {
+    const runtimeMin = (Date.now() - sessionStart['HVAC']) / 60000;
+    if (outdoorTempF != null && runtimeMin > 5) {
+      const delta = Math.abs(outdoorTempF - HVAC_SETPOINT_F);
+      if (delta > 2) saveHvacSession(runtimeMin, runtimeMin / delta);
+    }
+  }
+  hvacWasOn = hvacIsOn;
+}
+
+// ── AI insights ───────────────────────────────────────────────────────────────
+let insightTs = null;
+function updateInsightAge() {
+  if (!insightTs) return;
+  const age = Math.floor((Date.now() - insightTs) / 60000);
+  document.getElementById('insight-age').textContent =
+    age < 1 ? 'just now' : age === 1 ? '1 min ago' : age + ' min ago';
+}
+setInterval(updateInsightAge, 30000);
 
 // ── Power history ─────────────────────────────────────────────────────────────
 const historyData = [];
@@ -333,12 +517,20 @@ const client = mqtt.connect(`wss://${HOST}:8884/mqtt`, {
 
 const dot = document.getElementById('status-dot');
 const stxt = document.getElementById('status-text');
-client.on('connect',   () => { dot.style.background=stxt.style.color='#44ff44'; stxt.textContent='LIVE'; client.subscribe('nilm/results'); });
+client.on('connect',   () => { dot.style.background=stxt.style.color='#44ff44'; stxt.textContent='LIVE'; client.subscribe('nilm/results'); client.subscribe('nilm/insights'); });
 client.on('offline',   () => { dot.style.background=stxt.style.color='#ff4444'; stxt.textContent='DISCONNECTED'; });
 client.on('reconnect', () => { dot.style.background=stxt.style.color='#ff8c00'; stxt.textContent='RECONNECTING…'; });
 
 client.on('message', (topic, payload) => {
   let data; try { data = JSON.parse(payload.toString()); } catch { return; }
+
+  if (topic === 'nilm/insights') {
+    document.getElementById('insight-text').textContent = data.text || '';
+    document.getElementById('insight-text').style.color = 'var(--white)';
+    insightTs = data.ts || Date.now();
+    updateInsightAge();
+    return;
+  }
 
   const loads    = data.loads    || [];
   const totalW   = data.totalW   || 0;
@@ -371,6 +563,12 @@ client.on('message', (topic, payload) => {
   // Session tracking
   active.forEach(l => { if (!sessionStart[l.name]) sessionStart[l.name] = now; });
   loads.filter(l => !l.on).forEach(l => delete sessionStart[l.name]);
+
+  // HVAC efficiency
+  const hvacLoad = loads.find(l => l.name === 'HVAC');
+  const hvacOn   = hvacLoad?.on || false;
+  checkHvacSessionEnd(hvacOn);
+  updateHvacCard(hvacOn, hvacOn && sessionStart['HVAC'] ? now - sessionStart['HVAC'] : 0);
 
   // Overuse alerts
   const alertsEl = document.getElementById('alerts-section');
