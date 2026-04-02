@@ -37,17 +37,17 @@
     border-radius: 10px;
     margin-bottom: 14px;
   }
-  header h1 { font-size: 14px; color: var(--cyan); letter-spacing: 2px; }
+  header h1 { font-size: 18px; color: var(--cyan); letter-spacing: 2px; }
   .nav-tabs { display: flex; gap: 4px; }
   .nav-tab {
-    font-size: 10px; letter-spacing: 1px; padding: 4px 10px; border-radius: 6px;
+    font-size: 12px; letter-spacing: 1px; padding: 5px 12px; border-radius: 6px;
     text-decoration: none; color: var(--grey); border: 1px solid var(--dim); transition: all 0.2s;
   }
   .nav-tab.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
   .nav-tab:hover:not(.active) { color: var(--white); border-color: var(--grey); }
   .status-group { display: flex; align-items: center; gap: 6px; }
-  #status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--grey); display: inline-block; transition: background 0.3s; }
-  #status-text { font-size: 10px; color: var(--grey); letter-spacing: 1px; }
+  #status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--grey); display: inline-block; transition: background 0.3s; }
+  #status-text { font-size: 12px; color: var(--grey); letter-spacing: 1px; }
 
   /* ── Big watt display ── */
   #power-card {
@@ -57,43 +57,43 @@
     text-align: center;
     margin-bottom: 14px;
   }
-  #power-label { font-size: 10px; color: var(--grey); letter-spacing: 2px; }
-  #power-watts { font-size: 64px; font-weight: bold; letter-spacing: -2px; color: var(--green); transition: color 0.4s; line-height: 1.1; }
-  #power-unit  { font-size: 12px; color: var(--grey); margin-top: 2px; }
-  #power-meta  { font-size: 11px; color: var(--grey); margin-top: 6px; }
+  #power-label { font-size: 13px; color: var(--grey); letter-spacing: 2px; }
+  #power-watts { font-size: 96px; font-weight: bold; letter-spacing: -2px; color: var(--green); transition: color 0.4s; line-height: 1.1; }
+  #power-unit  { font-size: 15px; color: var(--grey); margin-top: 4px; }
+  #power-meta  { font-size: 14px; color: var(--grey); margin-top: 8px; }
 
   /* ── Stat cards ── */
   .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
   .stat-card { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
-  .stat-label { font-size: 9px; color: var(--grey); letter-spacing: 1px; margin-bottom: 4px; }
-  .stat-value { font-size: 20px; font-weight: bold; }
+  .stat-label { font-size: 11px; color: var(--grey); letter-spacing: 1px; margin-bottom: 4px; }
+  .stat-value { font-size: 26px; font-weight: bold; }
 
   /* ── Overuse alerts ── */
   #alerts-section { margin-bottom: 14px; }
   .overuse-card {
     display: flex; align-items: center; justify-content: space-between;
     background: rgba(255,140,0,0.1); border: 1px solid var(--orange);
-    border-radius: 8px; padding: 8px 12px; margin-bottom: 6px; font-size: 10px;
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; font-size: 13px;
   }
-  .overuse-card .dismiss { cursor: pointer; color: var(--grey); font-size: 14px; line-height: 1; }
+  .overuse-card .dismiss { cursor: pointer; color: var(--grey); font-size: 16px; line-height: 1; }
 
   /* ── Load tiles ── */
   #loads-section { margin-bottom: 14px; }
-  .section-label { font-size: 10px; color: var(--grey); letter-spacing: 1px; margin-bottom: 8px; }
-  #load-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .section-label { font-size: 13px; color: var(--grey); letter-spacing: 1px; margin-bottom: 8px; }
+  #load-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .load-tile {
-    background: var(--dim); border-radius: 10px; padding: 10px 12px;
+    background: var(--dim); border-radius: 10px; padding: 14px 16px;
     transition: background 0.3s, border 0.3s; border: 1px solid transparent;
   }
   .load-tile.on { border-color: rgba(0,204,255,0.3); background: rgba(0,204,255,0.06); }
-  .load-tile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-  .load-tile-name  { display: flex; align-items: center; gap: 6px; min-width: 0; }
-  .load-dot  { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
-  .load-name { font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .load-v-badge { font-size: 8px; color: var(--grey); border: 1px solid #333; border-radius: 3px; padding: 1px 3px; flex-shrink: 0; }
-  .load-watts   { font-size: 15px; font-weight: bold; color: var(--white); }
-  .load-runtime { font-size: 9px; color: var(--grey); margin-top: 1px; }
-  .conf-bar-bg  { height: 3px; background: var(--dim); border-radius: 2px; margin-top: 5px; }
+  .load-tile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .load-tile-name  { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .load-dot  { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+  .load-name { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .load-v-badge { font-size: 10px; color: var(--grey); border: 1px solid #333; border-radius: 3px; padding: 1px 4px; flex-shrink: 0; }
+  .load-watts   { font-size: 22px; font-weight: bold; color: var(--white); }
+  .load-runtime { font-size: 11px; color: var(--grey); margin-top: 2px; }
+  .conf-bar-bg  { height: 4px; background: var(--dim); border-radius: 2px; margin-top: 8px; }
   .conf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
 
   /* ── Residual ── */
@@ -102,11 +102,11 @@
     margin-bottom: 14px; justify-content: space-between; align-items: center;
   }
   #residual-row.visible { display: flex; }
-  #residual-label { font-size: 10px; color: var(--orange); letter-spacing: 1px; }
-  #residual-watts { font-size: 13px; font-weight: bold; color: var(--orange); }
+  #residual-label { font-size: 13px; color: var(--orange); letter-spacing: 1px; }
+  #residual-watts { font-size: 16px; font-weight: bold; color: var(--orange); }
 
   /* ── Inactive list ── */
-  #inactive-row { font-size: 9px; color: var(--grey); margin-bottom: 14px; letter-spacing: 0.5px; }
+  #inactive-row { font-size: 12px; color: var(--grey); margin-bottom: 14px; letter-spacing: 0.5px; }
 
   /* ── HVAC efficiency card ── */
   #hvac-card {
@@ -121,13 +121,13 @@
   #hvac-card.warn    { border-left-color: var(--yellow); }
   #hvac-card.alert   { border-left-color: var(--red); background: rgba(255,68,68,0.06); }
   .hvac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .hvac-title  { font-size: 10px; color: var(--cyan); letter-spacing: 1px; }
+  .hvac-title  { font-size: 13px; color: var(--cyan); letter-spacing: 1px; }
   #hvac-card.warn  .hvac-title { color: var(--yellow); }
   #hvac-card.alert .hvac-title { color: var(--red); }
   .hvac-grid   { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
   .hvac-cell   { text-align: center; }
-  .hvac-lbl    { font-size: 8px; color: var(--grey); letter-spacing: 1px; }
-  .hvac-val    { font-size: 15px; font-weight: bold; margin-top: 2px; }
+  .hvac-lbl    { font-size: 11px; color: var(--grey); letter-spacing: 1px; }
+  .hvac-val    { font-size: 22px; font-weight: bold; margin-top: 4px; }
 
   /* ── AI insights card ── */
   #insight-card {
@@ -139,11 +139,11 @@
     min-height: 54px;
   }
   .insight-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .insight-label  { font-size: 9px; color: #5599ff; letter-spacing: 1px; }
-  .insight-dot    { width: 6px; height: 6px; border-radius: 50%; background: #5599ff; animation: pulse 2s infinite; }
+  .insight-label  { font-size: 11px; color: #5599ff; letter-spacing: 1px; }
+  .insight-dot    { width: 8px; height: 8px; border-radius: 50%; background: #5599ff; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  #insight-text   { font-size: 11px; color: var(--white); line-height: 1.5; }
-  #insight-age    { font-size: 9px; color: var(--grey); margin-top: 4px; }
+  #insight-text   { font-size: 14px; color: var(--white); line-height: 1.6; }
+  #insight-age    { font-size: 11px; color: var(--grey); margin-top: 6px; }
 
   /* ── Power history ── */
   #history-section { background: var(--panel); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
@@ -156,7 +156,7 @@
   .zoom-btn.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
   #history-canvas { width: 100%; height: 80px; display: block; }
 
-  footer { font-size: 9px; color: var(--grey); text-align: center; margin-top: 8px; letter-spacing: 1px; }
+  footer { font-size: 11px; color: var(--grey); text-align: center; margin-top: 8px; letter-spacing: 1px; }
 </style>
 </head>
 <body>
@@ -187,29 +187,18 @@
   </div>
   <div class="stat-card">
     <div class="stat-label">LAST UPDATE</div>
-    <div class="stat-value" id="last-update" style="font-size:13px;color:var(--grey)">—</div>
+    <div class="stat-value" id="last-update" style="font-size:16px;color:var(--grey)">—</div>
   </div>
 </div>
 
 <div class="card-row">
   <div class="stat-card">
     <div class="stat-label">TODAY COST</div>
-    <div class="stat-value" id="today-cost" style="color:var(--green);font-size:22px">—</div>
+    <div class="stat-value" id="today-cost" style="color:var(--green);font-size:28px">—</div>
   </div>
   <div class="stat-card">
     <div class="stat-label">THIS MONTH</div>
-    <div class="stat-value" id="month-cost" style="color:var(--yellow);font-size:22px">—</div>
-  </div>
-</div>
-
-<div class="card-row">
-  <div class="stat-card">
-    <div class="stat-label">L1 LEG</div>
-    <div class="stat-value" id="l1-watts" style="color:var(--cyan);font-size:18px">—</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">L2 LEG</div>
-    <div class="stat-value" id="l2-watts" style="color:var(--cyan);font-size:18px">—</div>
+    <div class="stat-value" id="month-cost" style="color:var(--yellow);font-size:28px">—</div>
   </div>
 </div>
 
@@ -557,8 +546,6 @@ client.on('message', (topic, payload) => {
   document.getElementById('last-update').textContent  = formatTime(data.ts || now);
   document.getElementById('today-cost').textContent   = data.todayCost != null ? '$' + data.todayCost.toFixed(4) : '—';
   document.getElementById('month-cost').textContent   = data.monthCost != null ? '$' + data.monthCost.toFixed(2) : '—';
-  document.getElementById('l1-watts').textContent     = l1W != null ? l1W.toLocaleString() + ' W' : '—';
-  document.getElementById('l2-watts').textContent     = l2W != null ? l2W.toLocaleString() + ' W' : '—';
 
   // Session tracking
   active.forEach(l => { if (!sessionStart[l.name]) sessionStart[l.name] = now; });
