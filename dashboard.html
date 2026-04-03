@@ -34,7 +34,8 @@
   #status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; transition: background 0.3s; }
   #status-text { font-size: 9px; letter-spacing: 1px; color: #9a8c78; }
 
-  #cost-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  #cost-row { display: flex; gap: 8px; margin-bottom: 6px; }
+  #kwh-row  { display: flex; gap: 8px; margin-bottom: 10px; }
   .cost-card {
     flex: 1; background: #fff; border-radius: 12px; padding: 8px 10px;
     border: 1px solid #e8e0d4; box-shadow: 0 1px 6px rgba(0,0,0,0.03); text-align: center;
@@ -153,6 +154,20 @@
       <div class="cost-label">Month</div>
     </div>
   </div>
+  <div id="kwh-row">
+    <div class="cost-card">
+      <div class="cost-value" id="kwh-now" style="color:#9a8c78">—<span>kW</span></div>
+      <div class="cost-label">Now</div>
+    </div>
+    <div class="cost-card">
+      <div class="cost-value" id="kwh-today" style="color:#9a8c78">—<span>kWh</span></div>
+      <div class="cost-label">Today</div>
+    </div>
+    <div class="cost-card">
+      <div class="cost-value" id="kwh-month" style="color:#9a8c78">—<span>kWh</span></div>
+      <div class="cost-label">Month</div>
+    </div>
+  </div>
   <div id="greeting-bubble">
     <div id="greeting-icon">🌿</div>
     <div id="greeting-text" style="color:#b0a898">Checking in on your home…</div>
@@ -223,6 +238,9 @@ function renderDashboard(data) {
   document.getElementById('cost-now').innerHTML=fmt(h)+'<span>/hr</span>';
   document.getElementById('cost-today').textContent=fmt(today);
   document.getElementById('cost-month').textContent=fmt(month,0);
+  document.getElementById('kwh-now').innerHTML  = (data.kwhNow   ?? totalW/1000).toFixed(2) + '<span>kW</span>';
+  document.getElementById('kwh-today').innerHTML = (data.kwhToday ?? 0).toFixed(2) + '<span>kWh</span>';
+  document.getElementById('kwh-month').innerHTML = (data.kwhMonth ?? 0).toFixed(1) + '<span>kWh</span>';
   const scroll=document.getElementById('device-scroll');
   if(!active.length){scroll.innerHTML='<div style="font-size:12px;color:#b0a898;padding:8px 0;">No active appliances</div>';return;}
   scroll.innerHTML='';
