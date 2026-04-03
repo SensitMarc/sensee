@@ -238,8 +238,8 @@ function renderDashboard(data) {
   document.getElementById('cost-now').innerHTML=fmt(h)+'<span>/hr</span>';
   document.getElementById('cost-today').textContent=fmt(today,4);
   document.getElementById('cost-month').textContent=fmt(month,0);
-  document.getElementById('kwh-now').innerHTML  = (data.kwhNow   ?? totalW/1000).toFixed(3) + '<span>kW</span>';
-  document.getElementById('kwh-today').innerHTML = (data.kwhToday ?? 0).toFixed(4) + '<span>kWh</span>';
+  document.getElementById('kwh-now').innerHTML  = (data.kwhNow   ?? totalW/1000).toFixed(2) + '<span>kW</span>';
+  document.getElementById('kwh-today').innerHTML = (data.kwhToday ?? 0).toFixed(2) + '<span>kWh</span>';
   document.getElementById('kwh-month').innerHTML = (data.kwhMonth ?? 0).toFixed(1) + '<span>kWh</span>';
   const scroll=document.getElementById('device-scroll');
   if(!active.length){scroll.innerHTML='<div style="font-size:12px;color:#b0a898;padding:8px 0;">No active appliances</div>';return;}
