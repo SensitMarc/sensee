@@ -3,617 +3,299 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NILM Dashboard</title>
+<title>Your Home · Sensee</title>
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
 <style>
-  :root {
-    --bg:     #0a0a0f;
-    --panel:  #12121e;
-    --dim:    #1e1e30;
-    --cyan:   #00ccff;
-    --green:  #44ff44;
-    --yellow: #ffd700;
-    --red:    #ff4444;
-    --orange: #ff8c00;
-    --grey:   #666688;
-    --white:  #eeeeee;
-  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+
   body {
-    background: var(--bg);
-    color: var(--white);
-    font-family: 'Courier New', monospace;
+    background: #faf7f2;
+    color: #2e2a22;
+    font-family: 'Georgia', serif;
     min-height: 100vh;
-    padding: 16px;
-  }
-
-  /* ── Header ── */
-  header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: var(--panel);
-    padding: 10px 16px;
-    border-radius: 10px;
-    margin-bottom: 14px;
+    flex-direction: column;
+    max-width: 480px;
+    margin: 0 auto;
   }
-  header h1 { font-size: 18px; color: var(--cyan); letter-spacing: 2px; }
-  .nav-tabs { display: flex; gap: 4px; }
-  .nav-tab {
-    font-size: 12px; letter-spacing: 1px; padding: 5px 12px; border-radius: 6px;
-    text-decoration: none; color: var(--grey); border: 1px solid var(--dim); transition: all 0.2s;
+
+  #header {
+    background: linear-gradient(160deg, #e8f4ec 0%, #f0ede4 100%);
+    padding: 12px 16px;
+    border-bottom: 1px solid #e0d8cc;
+    flex-shrink: 0;
   }
-  .nav-tab.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
-  .nav-tab:hover:not(.active) { color: var(--white); border-color: var(--grey); }
-  .status-group { display: flex; align-items: center; gap: 6px; }
-  #status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--grey); display: inline-block; transition: background 0.3s; }
-  #status-text { font-size: 12px; color: var(--grey); letter-spacing: 1px; }
-
-  /* ── Big watt display ── */
-  #power-card {
-    background: var(--panel);
-    border-radius: 12px;
-    padding: 24px 16px 16px;
-    text-align: center;
-    margin-bottom: 14px;
+  #header-meta {
+    font-size: 10px; color: #9a8c78; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 8px;
+    display: flex; justify-content: space-between; align-items: center;
   }
-  #power-label { font-size: 13px; color: var(--grey); letter-spacing: 2px; }
-  #power-watts { font-size: 96px; font-weight: bold; letter-spacing: -2px; color: var(--green); transition: color 0.4s; line-height: 1.1; }
-  #power-unit  { font-size: 15px; color: var(--grey); margin-top: 4px; }
-  #power-meta  { font-size: 14px; color: var(--grey); margin-top: 8px; }
+  #status-pill { display: flex; align-items: center; gap: 5px; }
+  #status-dot { width: 7px; height: 7px; border-radius: 50%; background: #ccc; transition: background 0.3s; }
+  #status-text { font-size: 9px; letter-spacing: 1px; color: #9a8c78; }
 
-  /* ── Stat cards ── */
-  .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-  .stat-card { background: var(--panel); border-radius: 10px; padding: 12px 14px; }
-  .stat-label { font-size: 11px; color: var(--grey); letter-spacing: 1px; margin-bottom: 4px; }
-  .stat-value { font-size: 26px; font-weight: bold; }
-
-  /* ── Overuse alerts ── */
-  #alerts-section { margin-bottom: 14px; }
-  .overuse-card {
-    display: flex; align-items: center; justify-content: space-between;
-    background: rgba(255,140,0,0.1); border: 1px solid var(--orange);
-    border-radius: 8px; padding: 10px 14px; margin-bottom: 6px; font-size: 13px;
+  #cost-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .cost-card {
+    flex: 1; background: #fff; border-radius: 12px; padding: 8px 10px;
+    border: 1px solid #e8e0d4; box-shadow: 0 1px 6px rgba(0,0,0,0.03); text-align: center;
   }
-  .overuse-card .dismiss { cursor: pointer; color: var(--grey); font-size: 16px; line-height: 1; }
+  .cost-value { font-size: 16px; color: #2e2a22; font-weight: bold; line-height: 1.1; white-space: nowrap; }
+  .cost-value span { font-size: 9px; color: #9a8c78; font-weight: normal; }
+  .cost-label { font-size: 9px; color: #9a8c78; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 3px; }
 
-  /* ── Load tiles ── */
-  #loads-section { margin-bottom: 14px; }
-  .section-label { font-size: 13px; color: var(--grey); letter-spacing: 1px; margin-bottom: 8px; }
-  #load-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .load-tile {
-    background: var(--dim); border-radius: 10px; padding: 14px 16px;
-    transition: background 0.3s, border 0.3s; border: 1px solid transparent;
+  #greeting-bubble {
+    background: #fff; border-radius: 14px 14px 14px 4px;
+    padding: 10px 12px; border: 1px solid #e8e0d4;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+    display: flex; align-items: flex-start; gap: 8px;
   }
-  .load-tile.on { border-color: rgba(0,204,255,0.3); background: rgba(0,204,255,0.06); }
-  .load-tile-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-  .load-tile-name  { display: flex; align-items: center; gap: 8px; min-width: 0; }
-  .load-dot  { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
-  .load-name { font-size: 13px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .load-v-badge { font-size: 10px; color: var(--grey); border: 1px solid #333; border-radius: 3px; padding: 1px 4px; flex-shrink: 0; }
-  .load-watts   { font-size: 22px; font-weight: bold; color: var(--white); }
-  .load-runtime { font-size: 11px; color: var(--grey); margin-top: 2px; }
-  .conf-bar-bg  { height: 4px; background: var(--dim); border-radius: 2px; margin-top: 8px; }
-  .conf-bar-fill { height: 100%; border-radius: 2px; transition: width 0.4s; }
-
-  /* ── Residual ── */
-  #residual-row {
-    display: none; background: #1a1000; border-radius: 8px; padding: 8px 12px;
-    margin-bottom: 14px; justify-content: space-between; align-items: center;
+  #greeting-icon {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, #a8d5b5, #c8e8d0);
+    display: flex; align-items: center; justify-content: center; font-size: 12px;
   }
-  #residual-row.visible { display: flex; }
-  #residual-label { font-size: 13px; color: var(--orange); letter-spacing: 1px; }
-  #residual-watts { font-size: 16px; font-weight: bold; color: var(--orange); }
+  #greeting-text { font-size: 12px; color: #4a4238; line-height: 1.5; flex: 1; }
 
-  /* ── Inactive list ── */
-  #inactive-row { font-size: 12px; color: var(--grey); margin-bottom: 14px; letter-spacing: 0.5px; }
+  #active-section { padding: 14px 16px 4px; flex-shrink: 0; }
+  .section-label { font-size: 11px; color: #9a8c78; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
 
-  /* ── HVAC efficiency card ── */
-  #hvac-card {
-    display: none;
-    background: var(--panel);
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
-    border-left: 3px solid var(--cyan);
+  #device-scroll { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  #device-scroll::-webkit-scrollbar { display: none; }
+
+  .device-card {
+    flex-shrink: 0; background: #fff; border-radius: 16px; padding: 12px;
+    width: 100px; box-shadow: 0 1px 8px rgba(0,0,0,0.04); border: 1px solid #e8e0d4;
   }
-  #hvac-card.visible { display: block; }
-  #hvac-card.warn    { border-left-color: var(--yellow); }
-  #hvac-card.alert   { border-left-color: var(--red); background: rgba(255,68,68,0.06); }
-  .hvac-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .hvac-title  { font-size: 13px; color: var(--cyan); letter-spacing: 1px; }
-  #hvac-card.warn  .hvac-title { color: var(--yellow); }
-  #hvac-card.alert .hvac-title { color: var(--red); }
-  .hvac-grid   { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-  .hvac-cell   { text-align: center; }
-  .hvac-lbl    { font-size: 11px; color: var(--grey); letter-spacing: 1px; }
-  .hvac-val    { font-size: 22px; font-weight: bold; margin-top: 4px; }
+  .device-card.expensive { border-color: #f0d8c8; }
+  .device-emoji { font-size: 22px; margin-bottom: 6px; }
+  .device-name { font-size: 10px; color: #2e2a22; font-weight: bold; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .device-cost { font-size: 11px; font-weight: bold; }
+  .device-cost.normal { color: #7c9e8a; }
+  .device-cost.pricey { color: #c07050; }
+  .device-watt { font-size: 9px; color: #b0a898; margin-top: 1px; }
 
-  /* ── AI insights card ── */
-  #insight-card {
-    background: var(--panel);
-    border-radius: 10px;
-    padding: 12px 14px;
-    margin-bottom: 14px;
-    border-left: 3px solid #5599ff;
-    min-height: 54px;
+  #chat-section { flex: 1; padding: 12px 16px 0; display: flex; flex-direction: column; overflow: hidden; }
+
+  #chips { margin-bottom: 12px; }
+  #chips .section-label { margin-bottom: 8px; }
+  .chip {
+    width: 100%; background: #fff; border: 1px solid #e8e0d4; border-radius: 12px;
+    padding: 11px 14px; text-align: left; font-size: 13px; color: #4a4238;
+    cursor: pointer; margin-bottom: 8px; font-family: 'Georgia', serif;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.03); transition: all 0.15s;
   }
-  .insight-header { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
-  .insight-label  { font-size: 11px; color: #5599ff; letter-spacing: 1px; }
-  .insight-dot    { width: 8px; height: 8px; border-radius: 50%; background: #5599ff; animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-  #insight-text   { font-size: 14px; color: var(--white); line-height: 1.6; }
-  #insight-age    { font-size: 11px; color: var(--grey); margin-top: 6px; }
+  .chip:hover { background: #f5f2ec; }
+  .chip:disabled { opacity: 0.6; cursor: not-allowed; }
 
-  /* ── Power history ── */
-  #history-section { background: var(--panel); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
-  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .zoom-btns { display: flex; gap: 4px; }
-  .zoom-btn {
-    font-size: 8px; letter-spacing: 1px; padding: 2px 6px; border-radius: 4px; cursor: pointer;
-    border: 1px solid var(--dim); background: none; color: var(--grey); transition: all 0.2s;
+  #chat-messages {
+    flex: 1; overflow-y: auto; display: flex; flex-direction: column;
+    gap: 12px; margin-bottom: 8px; scrollbar-width: none;
   }
-  .zoom-btn.active { color: var(--cyan); border-color: var(--cyan); background: rgba(0,204,255,0.08); }
-  #history-canvas { width: 100%; height: 80px; display: block; }
+  #chat-messages::-webkit-scrollbar { display: none; }
 
-  footer { font-size: 11px; color: var(--grey); text-align: center; margin-top: 8px; letter-spacing: 1px; }
+  .msg-row { display: flex; flex-direction: column; }
+  .msg-row.user  { align-items: flex-end; }
+  .msg-row.model { align-items: flex-start; }
+  .msg-bubble { max-width: 85%; padding: 10px 14px; font-size: 13px; line-height: 1.55; box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
+  .msg-bubble.user  { background: linear-gradient(135deg, #7c9e8a, #9bc4a8); border-radius: 16px 16px 4px 16px; color: #fff; }
+  .msg-bubble.model { background: #fff; border-radius: 16px 16px 16px 4px; border: 1px solid #e8e0d4; color: #4a4238; }
+
+  #thinking { display: none; align-self: flex-start; background: #fff; border-radius: 16px 16px 16px 4px; padding: 12px 16px; border: 1px solid #e8e0d4; }
+  #thinking.visible { display: block; }
+  .dot-row { display: flex; gap: 4px; }
+  .tdot { width: 6px; height: 6px; border-radius: 50%; background: #7c9e8a; animation: organicPulse 1.2s ease-in-out infinite; }
+  .tdot:nth-child(2) { animation-delay: 0.2s; }
+  .tdot:nth-child(3) { animation-delay: 0.4s; }
+
+  #input-bar {
+    padding: 10px 16px 18px; background: #faf7f2; border-top: 1px solid #e8e0d4;
+    display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+  }
+  #chat-input {
+    flex: 1; background: #fff; border: 1px solid #e0d8cc; border-radius: 22px;
+    padding: 10px 16px; color: #2e2a22; font-size: 13px; outline: none; font-family: 'Georgia', serif;
+  }
+  #chat-input::placeholder { color: #b0a898; }
+  #send-btn {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; background: #e8e0d4;
+    border: none; cursor: pointer; color: #fff; font-size: 16px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+  }
+  #send-btn.active { background: linear-gradient(135deg, #7c9e8a, #9bc4a8); }
+
+  @keyframes organicPulse {
+    0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
+    40%           { opacity: 1;   transform: scale(1);   }
+  }
 </style>
 </head>
 <body>
 
-<header>
-  <h1>HOME ENERGY</h1>
-  <div class="nav-tabs">
-    <a href="dashboard.html" class="nav-tab active">DASHBOARD</a>
-    <a href="detail.html" class="nav-tab">DETAIL</a>
-  </div>
-  <div class="status-group">
-    <span id="status-dot"></span>
-    <span id="status-text">CONNECTING…</span>
-  </div>
-</header>
-
-<div id="power-card">
-  <div id="power-label">NOW</div>
-  <div id="power-watts">—</div>
-  <div id="power-unit">watts</div>
-  <div id="power-meta">PF — &nbsp;·&nbsp; THD —%</div>
-</div>
-
-<div class="card-row">
-  <div class="stat-card">
-    <div class="stat-label">ACTIVE LOADS</div>
-    <div class="stat-value" id="active-count" style="color:var(--cyan)">—</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">LAST UPDATE</div>
-    <div class="stat-value" id="last-update" style="font-size:16px;color:var(--grey)">—</div>
-  </div>
-</div>
-
-<div class="card-row">
-  <div class="stat-card">
-    <div class="stat-label">TODAY COST</div>
-    <div class="stat-value" id="today-cost" style="color:var(--green);font-size:28px">—</div>
-  </div>
-  <div class="stat-card">
-    <div class="stat-label">THIS MONTH</div>
-    <div class="stat-value" id="month-cost" style="color:var(--yellow);font-size:28px">—</div>
-  </div>
-</div>
-
-<div id="alerts-section"></div>
-
-<div id="loads-section">
-  <div class="section-label">&nbsp;&nbsp;ACTIVE APPLIANCES</div>
-  <div id="load-grid"></div>
-</div>
-
-<div id="residual-row">
-  <span id="residual-label">⬡ UNACCOUNTED</span>
-  <span id="residual-watts">0 W</span>
-</div>
-
-<div id="inactive-row"></div>
-
-<!-- HVAC efficiency card -->
-<div id="hvac-card">
-  <div class="hvac-header">
-    <span class="hvac-title">❄ HVAC EFFICIENCY</span>
-    <span id="hvac-status-text" style="font-size:9px;color:var(--grey)"></span>
-  </div>
-  <div class="hvac-grid">
-    <div class="hvac-cell">
-      <div class="hvac-lbl">RUNTIME</div>
-      <div class="hvac-val" id="hvac-runtime" style="color:var(--cyan)">—</div>
-    </div>
-    <div class="hvac-cell">
-      <div class="hvac-lbl">OUTDOOR</div>
-      <div class="hvac-val" id="hvac-temp" style="color:var(--white)">—</div>
-    </div>
-    <div class="hvac-cell">
-      <div class="hvac-lbl">MIN/°F</div>
-      <div class="hvac-val" id="hvac-eff" style="color:var(--green)">—</div>
+<div id="header">
+  <div id="header-meta">
+    <span id="header-time">Your Home · —</span>
+    <div id="status-pill">
+      <div id="status-dot"></div>
+      <span id="status-text">CONNECTING</span>
     </div>
   </div>
-</div>
-
-<!-- AI insights card -->
-<div id="insight-card">
-  <div class="insight-header">
-    <div class="insight-dot"></div>
-    <span class="insight-label">AI INSIGHT</span>
-  </div>
-  <div id="insight-text" style="color:var(--grey)">Waiting for first insight…</div>
-  <div id="insight-age"></div>
-</div>
-
-<div id="history-section">
-  <div class="history-header">
-    <span class="section-label" style="margin:0">POWER HISTORY</span>
-    <div class="zoom-btns">
-      <button class="zoom-btn active" onclick="setZoom(60)"  id="z1h">1H</button>
-      <button class="zoom-btn"        onclick="setZoom(360)" id="z6h">6H</button>
-      <button class="zoom-btn"        onclick="setZoom(1440)"id="z1d">1D</button>
+  <div id="cost-row">
+    <div class="cost-card">
+      <div class="cost-value" id="cost-now">—<span>/hr</span></div>
+      <div class="cost-label">Now</div>
+    </div>
+    <div class="cost-card">
+      <div class="cost-value" id="cost-today">—</div>
+      <div class="cost-label">Today</div>
+    </div>
+    <div class="cost-card">
+      <div class="cost-value" id="cost-month" style="color:#7c9e8a">—</div>
+      <div class="cost-label">Month</div>
     </div>
   </div>
-  <canvas id="history-canvas"></canvas>
+  <div id="greeting-bubble">
+    <div id="greeting-icon">🌿</div>
+    <div id="greeting-text" style="color:#b0a898">Checking in on your home…</div>
+  </div>
 </div>
 
-<footer>NILM MONITOR &nbsp;·&nbsp; MQTT LIVE &nbsp;·&nbsp; nilm/results</footer>
+<div id="active-section">
+  <div class="section-label">Active Now</div>
+  <div id="device-scroll">
+    <div style="font-size:12px;color:#b0a898;padding:8px 0;">Waiting for live data…</div>
+  </div>
+</div>
+
+<div id="chat-section">
+  <div id="chips">
+    <div class="section-label">Ask me anything</div>
+    <button class="chip" onclick="sendChip(this)">What's using the most energy right now?</button>
+    <button class="chip" onclick="sendChip(this)">Best time to run laundry?</button>
+    <button class="chip" onclick="sendChip(this)">How can I lower this month's bill?</button>
+  </div>
+  <div id="chat-messages" style="display:none"></div>
+  <div id="thinking"><div class="dot-row"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div>
+</div>
+
+<div id="input-bar">
+  <input id="chat-input" type="text" placeholder="Ask about your home…" oninput="updateSendBtn()" onkeydown="if(event.key==='Enter')sendMessage()">
+  <button id="send-btn" onclick="sendMessage()">↑</button>
+</div>
 
 <script>
-const LOAD_COLORS = {
-  'HVAC':'#00ccff','Elec Range':'#ff4444','Elec Dryer':'#ff8c00',
-  'EV Charger':'#5599ff','Water Heater':'#ffd700','Refrigerator':'#44ff44',
-  'Microwave':'#ffffff','Washer':'#ff69b4','Lighting':'#ffd700','TV/Electronics':'#aaaaaa'
-};
-const OVERUSE_MIN = {
-  'HVAC':90,'Elec Range':120,'Elec Dryer':90,'EV Charger':480,
-  'Water Heater':60,'Microwave':15,'Washer':90
-};
+const RATE   = 0.28;
+const GEMINI = 'AIzaSyCB9RtPbrDBiH_Ds0EVQcl1UNRa9bT7tCY';
+const MODEL  = 'gemini-3.1-flash-lite-preview';
+const EMOJI  = { 'HVAC':'❄️','Elec Range':'🔥','Elec Dryer':'🌀','EV Charger':'⚡','Water Heater':'💧','Refrigerator':'🧊','Microwave':'📡','Washer':'🫧','Lighting':'💡','TV/Electronics':'📺' };
 
-function shortName(n) {
-  return {'HVAC':'HVAC','Elec Range':'Range','Elec Dryer':'Dryer','EV Charger':'EV',
-    'Water Heater':'H2O','Refrigerator':'Fridge','Microwave':'Micro','Washer':'Wash',
-    'Lighting':'Light','TV/Electronics':'TV'}[n] || n.slice(0,5);
+let liveData=null, chatHistory=[], chatLoading=false, greetingDone=false, showingChat=false;
+
+function updateClock() {
+  const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('header-time').textContent = 'Your Home · '+t;
 }
-function powerColor(w) {
-  if (w > 8000) return '#ff4444';
-  if (w > 4000) return '#ff8c00';
-  if (w > 1000) return '#ffd700';
-  return '#44ff44';
-}
-function confColor(c) {
-  if (c > 0.75) return '#44ff44';
-  if (c > 0.45) return '#ffd700';
-  return '#ff4444';
-}
-function formatTime(ts) {
-  return new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
-function fmtDur(ms) {
-  const s = Math.floor(ms/1000);
-  if (s < 60) return s + 's';
-  const m = Math.floor(s/60);
-  if (m < 60) return m + 'm';
-  return Math.floor(m/60) + 'h ' + (m%60) + 'm';
-}
+updateClock(); setInterval(updateClock,30000);
 
-// ── Session & alert state ─────────────────────────────────────────────────────
-const sessionStart    = {};
-const dismissedAlerts = new Set();
+function cph(w)      { return w/1000*RATE; }
+function fmt(n,d=2)  { return '$'+n.toFixed(d); }
+function fmtW(w)     { return w>=1000?(w/1000).toFixed(1)+'kW':w+'W'; }
 
-// ── HVAC efficiency ───────────────────────────────────────────────────────────
-const HVAC_SETPOINT_F = 72;
-let   outdoorTempF    = null;
-let   geoFetched      = false;
-
-function loadHvacBaseline() {
-  try { return JSON.parse(localStorage.getItem('hvac_baseline') || '[]'); } catch { return []; }
-}
-function saveHvacSession(runtimeMin, effVal) {
-  const sessions = loadHvacBaseline();
-  sessions.push({ ts: Date.now(), runtimeMin, eff: effVal });
-  // Keep last 20 sessions (~7 days worth)
-  if (sessions.length > 20) sessions.splice(0, sessions.length - 20);
-  localStorage.setItem('hvac_baseline', JSON.stringify(sessions));
-}
-function hvacBaselineAvg() {
-  const sessions = loadHvacBaseline().filter(s => s.eff > 0);
-  if (sessions.length < 2) return null;
-  return sessions.reduce((sum, s) => sum + s.eff, 0) / sessions.length;
-}
-
-async function fetchOutdoorTemp(lat, lon) {
-  try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m&temperature_unit=fahrenheit&forecast_days=1`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    outdoorTempF = data.current.temperature_2m;
-  } catch { /* silently ignore */ }
-}
-
-function initGeolocation() {
-  if (geoFetched || !navigator.geolocation) return;
-  geoFetched = true;
-  navigator.geolocation.getCurrentPosition(
-    pos => fetchOutdoorTemp(pos.coords.latitude, pos.coords.longitude),
-    ()  => { /* denied — outdoor temp stays null */ }
-  );
-}
-
-function updateHvacCard(hvacOn, runtimeMs) {
-  const card = document.getElementById('hvac-card');
-  if (!hvacOn) {
-    card.classList.remove('visible', 'warn', 'alert');
-    return;
-  }
-  initGeolocation();
-  card.classList.add('visible');
-
-  const runtimeMin = runtimeMs / 60000;
-  document.getElementById('hvac-runtime').textContent = fmtDur(runtimeMs);
-
-  if (outdoorTempF != null) {
-    const delta = Math.abs(outdoorTempF - HVAC_SETPOINT_F);
-    document.getElementById('hvac-temp').textContent = outdoorTempF.toFixed(1) + '°F';
-
-    if (delta > 2 && runtimeMin > 5) {
-      const eff     = runtimeMin / delta;
-      const baseline = hvacBaselineAvg();
-      document.getElementById('hvac-eff').textContent = eff.toFixed(2);
-
-      card.classList.remove('warn', 'alert');
-      if (baseline) {
-        const pctWorse = (eff - baseline) / baseline;
-        if (pctWorse >= 0.30) {
-          card.classList.add('alert');
-          document.getElementById('hvac-status-text').textContent =
-            `${(pctWorse*100).toFixed(0)}% worse than baseline`;
-          document.getElementById('hvac-eff').style.color = '#ff4444';
-        } else if (pctWorse >= 0.15) {
-          card.classList.add('warn');
-          document.getElementById('hvac-status-text').textContent =
-            `${(pctWorse*100).toFixed(0)}% above baseline`;
-          document.getElementById('hvac-eff').style.color = '#ffd700';
-        } else {
-          document.getElementById('hvac-status-text').textContent = 'normal';
-          document.getElementById('hvac-eff').style.color = '#44ff44';
-        }
-      } else {
-        document.getElementById('hvac-status-text').textContent = 'building baseline…';
-        document.getElementById('hvac-eff').style.color = '#00ccff';
-      }
-    } else {
-      document.getElementById('hvac-eff').textContent = '—';
-      document.getElementById('hvac-status-text').textContent = '';
-    }
-  } else {
-    document.getElementById('hvac-temp').textContent = '—';
-    document.getElementById('hvac-eff').textContent  = '—';
-    document.getElementById('hvac-status-text').textContent = 'allow location for efficiency';
-  }
-}
-
-// Save HVAC session when it turns OFF
-let hvacWasOn = false;
-function checkHvacSessionEnd(hvacIsOn) {
-  if (hvacWasOn && !hvacIsOn && sessionStart['HVAC']) {
-    const runtimeMin = (Date.now() - sessionStart['HVAC']) / 60000;
-    if (outdoorTempF != null && runtimeMin > 5) {
-      const delta = Math.abs(outdoorTempF - HVAC_SETPOINT_F);
-      if (delta > 2) saveHvacSession(runtimeMin, runtimeMin / delta);
-    }
-  }
-  hvacWasOn = hvacIsOn;
-}
-
-// ── AI insights ───────────────────────────────────────────────────────────────
-let insightTs = null;
-function updateInsightAge() {
-  if (!insightTs) return;
-  const age = Math.floor((Date.now() - insightTs) / 60000);
-  document.getElementById('insight-age').textContent =
-    age < 1 ? 'just now' : age === 1 ? '1 min ago' : age + ' min ago';
-}
-setInterval(updateInsightAge, 30000);
-
-// ── Power history ─────────────────────────────────────────────────────────────
-const historyData = [];
-let zoomMinutes   = 60;
-
-function setZoom(mins) {
-  zoomMinutes = mins;
-  document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
-  ({60:'z1h',360:'z6h',1440:'z1d'})[mins] && document.getElementById(({60:'z1h',360:'z6h',1440:'z1d'})[mins]).classList.add('active');
-  drawHistory();
-}
-
-function pushHistory(w) {
-  historyData.push({t: Date.now(), w});
-  if (historyData.length > 8640) historyData.shift();
-  drawHistory();
-}
-
-function drawHistory() {
-  const canvas = document.getElementById('history-canvas');
-  const dpr    = window.devicePixelRatio || 1;
-  const rect   = canvas.getBoundingClientRect();
-  if (!rect.width) return;
-  canvas.width  = rect.width  * dpr;
-  canvas.height = rect.height * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  const W = rect.width, H = rect.height;
-  ctx.clearRect(0, 0, W, H);
-
-  const cutoff = Date.now() - zoomMinutes * 60 * 1000;
-  const pts    = historyData.filter(p => p.t >= cutoff);
-  if (pts.length < 2) {
-    ctx.fillStyle = '#444'; ctx.font = '10px Courier New'; ctx.textAlign = 'center';
-    ctx.fillText('ACCUMULATING DATA…', W/2, H/2); return;
-  }
-
-  const maxW = Math.max(...pts.map(p => p.w), 1000);
-  const minT = pts[0].t, maxT = pts[pts.length-1].t, range = maxT - minT || 1;
-
-  // Grid
-  ctx.strokeStyle = '#1e1e30'; ctx.lineWidth = 1;
-  [0.25,0.5,0.75].forEach(f => {
-    ctx.beginPath(); ctx.moveTo(0, H - f*H); ctx.lineTo(W, H - f*H); ctx.stroke();
-  });
-
-  // Area fill
-  ctx.beginPath();
-  pts.forEach((p, i) => {
-    const x = ((p.t - minT) / range) * W;
-    const y = H - (p.w / maxW) * H * 0.9;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.lineTo(((pts[pts.length-1].t - minT) / range) * W, H);
-  ctx.lineTo(0, H); ctx.closePath();
-  const grad = ctx.createLinearGradient(0, 0, 0, H);
-  grad.addColorStop(0, 'rgba(0,204,255,0.35)');
-  grad.addColorStop(1, 'rgba(0,204,255,0.02)');
-  ctx.fillStyle = grad; ctx.fill();
-
-  // Line
-  ctx.beginPath(); ctx.strokeStyle = '#00ccff'; ctx.lineWidth = 1.5;
-  pts.forEach((p, i) => {
-    const x = ((p.t - minT) / range) * W;
-    const y = H - (p.w / maxW) * H * 0.9;
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Peak label
-  const pk = pts.reduce((a, b) => a.w > b.w ? a : b);
-  const px = ((pk.t - minT) / range) * W;
-  const py = H - (pk.w / maxW) * H * 0.9 - 5;
-  ctx.fillStyle = '#ffd700'; ctx.font = '8px Courier New';
-  ctx.textAlign = px > W * 0.8 ? 'right' : 'left';
-  ctx.fillText(pk.w.toLocaleString() + 'W', px, py);
-}
-
-// ── MQTT ──────────────────────────────────────────────────────────────────────
-const HOST   = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
-const client = mqtt.connect(`wss://${HOST}:8884/mqtt`, {
+const HOST = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
+const client = mqtt.connect(`wss://${HOST}:8884/mqtt`,{
   username:'nilm-esp32', password:'Mayaesp321!',
-  clientId:'nilm-dash-' + Math.random().toString(16).slice(2,8),
-  reconnectPeriod: 3000
+  clientId:'sensee-'+Math.random().toString(16).slice(2,8), reconnectPeriod:3000
+});
+const dot=document.getElementById('status-dot'), stxt=document.getElementById('status-text');
+client.on('connect',()=>{ dot.style.background='#7c9e8a'; stxt.style.color='#7c9e8a'; stxt.textContent='LIVE'; client.subscribe('nilm/results'); });
+client.on('offline', ()=>{ dot.style.background='#c07050'; stxt.style.color='#c07050'; stxt.textContent='OFFLINE'; });
+client.on('reconnect',()=>{ dot.style.background='#d4a84b'; stxt.style.color='#d4a84b'; stxt.textContent='RECONNECTING'; });
+client.on('message',(topic,payload)=>{
+  let data; try{data=JSON.parse(payload.toString());}catch{return;}
+  liveData=data; renderDashboard(data);
+  if(!greetingDone){greetingDone=true; sendGreeting(data);}
 });
 
-const dot = document.getElementById('status-dot');
-const stxt = document.getElementById('status-text');
-client.on('connect',   () => { dot.style.background=stxt.style.color='#44ff44'; stxt.textContent='LIVE'; client.subscribe('nilm/results'); client.subscribe('nilm/insights'); });
-client.on('offline',   () => { dot.style.background=stxt.style.color='#ff4444'; stxt.textContent='DISCONNECTED'; });
-client.on('reconnect', () => { dot.style.background=stxt.style.color='#ff8c00'; stxt.textContent='RECONNECTING…'; });
+function renderDashboard(data) {
+  const loads=data.loads||[], totalW=data.totalW||0, active=loads.filter(l=>l.on);
+  const h=cph(totalW), today=h*8, month=today*30;
+  document.getElementById('cost-now').innerHTML=fmt(h)+'<span>/hr</span>';
+  document.getElementById('cost-today').textContent=fmt(today);
+  document.getElementById('cost-month').textContent=fmt(month,0);
+  const scroll=document.getElementById('device-scroll');
+  if(!active.length){scroll.innerHTML='<div style="font-size:12px;color:#b0a898;padding:8px 0;">No active appliances</div>';return;}
+  scroll.innerHTML='';
+  active.forEach(l=>{
+    const c=cph(l.w||0), pricey=c>0.5, emoji=EMOJI[l.name]||'🔌';
+    const card=document.createElement('div');
+    card.className='device-card'+(pricey?' expensive':'');
+    card.innerHTML=`<div class="device-emoji">${emoji}</div><div class="device-name">${l.name}</div><div class="device-cost ${pricey?'pricey':'normal'}">${fmt(c)}/hr</div><div class="device-watt">${fmtW(l.w||0)}</div>`;
+    scroll.appendChild(card);
+  });
+}
 
-client.on('message', (topic, payload) => {
-  let data; try { data = JSON.parse(payload.toString()); } catch { return; }
+function buildCtx() {
+  if(!liveData) return 'No live data yet.';
+  const active=(liveData.loads||[]).filter(l=>l.on).map(l=>`${l.name} ${l.w}W (${fmt(cph(l.w))}/hr)`).join(', ')||'none';
+  return `Active: ${active}. Total: ${liveData.totalW||0}W at ${fmt(cph(liveData.totalW||0))}/hr. Rate: ${fmt(RATE,3)}/kWh.`;
+}
 
-  if (topic === 'nilm/insights') {
-    document.getElementById('insight-text').textContent = data.text || '';
-    document.getElementById('insight-text').style.color = 'var(--white)';
-    insightTs = data.ts || Date.now();
-    updateInsightAge();
-    return;
+async function callGemini(userMsg, isGreeting=false) {
+  chatLoading=true; setThinking(true);
+  const sys=`You are a warm, friendly home energy companion. Speak like a caring friend, not a technical dashboard. Be concise (1-3 sentences). No bullet points, no markdown. ${buildCtx()}`;
+  const contents=[...chatHistory.map(m=>({role:m.role,parts:[{text:m.content}]})),{role:'user',parts:[{text:userMsg}]}];
+  try {
+    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({system_instruction:{parts:[{text:sys}]},contents,generationConfig:{maxOutputTokens:150,temperature:0.8}})
+    });
+    const json=await res.json();
+    const text=json.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||"I'm having trouble connecting right now.";
+    if(isGreeting){
+      document.getElementById('greeting-text').textContent=text;
+      document.getElementById('greeting-text').style.color='#4a4238';
+    } else { chatHistory.push({role:'model',content:text}); appendMsg('model',text); }
+  } catch {
+    const err=isGreeting?"Couldn't reach the AI — but your home data is live!":"Couldn't connect just now — try again?";
+    if(isGreeting){document.getElementById('greeting-text').textContent=err;document.getElementById('greeting-text').style.color='#b0a898';}
+    else appendMsg('model',err);
   }
+  setThinking(false); chatLoading=false;
+}
 
-  const loads    = data.loads    || [];
-  const totalW   = data.totalW   || 0;
-  const residualW= data.residualW|| 0;
-  const pf       = data.pf  || 0;
-  const thd      = data.thd || 0;
-  const cf       = data.cf;
-  const irms     = data.irms;
-  const l1W      = data.l1W;
-  const l2W      = data.l2W;
-  const now      = Date.now();
+async function sendGreeting(data) {
+  await callGemini(`In exactly one short sentence (max 15 words), greet the homeowner and mention their current cost of ${fmt(cph(data.totalW||0))}/hr.`,true);
+}
 
-  // Power display
-  document.getElementById('power-watts').textContent  = totalW.toLocaleString();
-  document.getElementById('power-watts').style.color  = powerColor(totalW);
-  let meta = `PF ${pf.toFixed(2)}  ·  THD ${thd.toFixed(1)}%`;
-  if (cf   != null) meta += `  ·  CF ${cf.toFixed(2)}`;
-  if (irms != null) meta += `  ·  ${irms.toFixed(1)}A`;
-  document.getElementById('power-meta').textContent = meta;
-
-  // Stats
-  const active = loads.filter(l => l.on);
-  document.getElementById('active-count').textContent = active.length;
-  document.getElementById('last-update').textContent  = formatTime(data.ts || now);
-  document.getElementById('today-cost').textContent   = data.todayCost != null ? '$' + data.todayCost.toFixed(4) : '—';
-  document.getElementById('month-cost').textContent   = data.monthCost != null ? '$' + data.monthCost.toFixed(2) : '—';
-
-  // Session tracking
-  active.forEach(l => { if (!sessionStart[l.name]) sessionStart[l.name] = now; });
-  loads.filter(l => !l.on).forEach(l => delete sessionStart[l.name]);
-
-  // HVAC efficiency
-  const hvacLoad = loads.find(l => l.name === 'HVAC');
-  const hvacOn   = hvacLoad?.on || false;
-  checkHvacSessionEnd(hvacOn);
-  updateHvacCard(hvacOn, hvacOn && sessionStart['HVAC'] ? now - sessionStart['HVAC'] : 0);
-
-  // Overuse alerts
-  const alertsEl = document.getElementById('alerts-section');
-  alertsEl.innerHTML = '';
-  active.forEach(l => {
-    const threshold = OVERUSE_MIN[l.name];
-    if (!threshold || !sessionStart[l.name]) return;
-    const elapsed = (now - sessionStart[l.name]) / 60000;
-    if (elapsed < threshold) return;
-    const key = l.name + '_' + Math.floor(elapsed / threshold);
-    if (dismissedAlerts.has(key)) return;
-    const card = document.createElement('div');
-    card.className = 'overuse-card';
-    card.innerHTML = `<span>⚠ ${shortName(l.name)} running ${fmtDur(now - sessionStart[l.name])} — expected ${threshold}m</span>
-      <span class="dismiss" onclick="dismissedAlerts.add('${key}');this.parentElement.remove()">✕</span>`;
-    alertsEl.appendChild(card);
-  });
-
-  // Load grid
-  const grid = document.getElementById('load-grid');
-  grid.innerHTML = '';
-  active.forEach(l => {
-    const color   = LOAD_COLORS[l.name] || '#888';
-    const conf    = l.conf || 0;
-    const confPct = Math.round(conf * 100);
-    const runtime = sessionStart[l.name] ? fmtDur(now - sessionStart[l.name]) : null;
-    const tile    = document.createElement('div');
-    tile.className = 'load-tile on';
-    tile.innerHTML = `
-      <div class="load-tile-header">
-        <div class="load-tile-name">
-          <div class="load-dot" style="background:${color}"></div>
-          <span class="load-name" style="color:${color}">${l.name}</span>
-        </div>
-        ${l.v ? `<span class="load-v-badge">${l.v}V</span>` : ''}
-      </div>
-      <div class="load-watts">${l.w.toLocaleString()} W</div>
-      ${runtime ? `<div class="load-runtime">${runtime}</div>` : ''}
-      <div class="conf-bar-bg">
-        <div class="conf-bar-fill" style="width:${confPct}%;background:${confColor(conf)}"></div>
-      </div>`;
-    grid.appendChild(tile);
-  });
-
-  // Residual
-  const rr = document.getElementById('residual-row');
-  if (residualW > 0) { rr.classList.add('visible'); document.getElementById('residual-watts').textContent = residualW.toLocaleString() + ' W'; }
-  else               { rr.classList.remove('visible'); }
-
-  // Inactive
-  const off = loads.filter(l => !l.on).map(l => shortName(l.name)).join(' · ');
-  document.getElementById('inactive-row').textContent = off ? '  OFF: ' + off : '';
-
-  // History
-  pushHistory(totalW);
-});
-
-window.addEventListener('resize', drawHistory);
+function showChat() {
+  if(!showingChat){showingChat=true;document.getElementById('chips').style.display='none';document.getElementById('chat-messages').style.display='flex';}
+}
+function appendMsg(role,text) {
+  showChat();
+  const msgs=document.getElementById('chat-messages');
+  const row=document.createElement('div'); row.className='msg-row '+role;
+  const bub=document.createElement('div'); bub.className='msg-bubble '+role; bub.textContent=text;
+  row.appendChild(bub); msgs.appendChild(row);
+  row.scrollIntoView({behavior:'smooth',block:'end'});
+}
+function setThinking(on) {
+  document.getElementById('thinking').classList.toggle('visible',on);
+  if(on&&showingChat) document.getElementById('thinking').scrollIntoView({behavior:'smooth',block:'end'});
+}
+function sendChip(btn) {
+  if(chatLoading) return;
+  const q=btn.textContent; showChat();
+  chatHistory.push({role:'user',content:q}); appendMsg('user',q); callGemini(q);
+}
+function sendMessage() {
+  const input=document.getElementById('chat-input'), q=input.value.trim();
+  if(!q||chatLoading) return;
+  input.value=''; updateSendBtn(); showChat();
+  chatHistory.push({role:'user',content:q}); appendMsg('user',q); callGemini(q);
+}
+function updateSendBtn() {
+  const val=document.getElementById('chat-input').value.trim();
+  document.getElementById('send-btn').classList.toggle('active',!!val&&!chatLoading);
+}
 </script>
 </body>
 </html>
