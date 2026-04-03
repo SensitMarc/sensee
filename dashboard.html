@@ -265,7 +265,8 @@ async function callGemini(userMsg, isGreeting=false) {
 }
 
 async function sendGreeting(data) {
-  await callGemini(`In exactly one short sentence (max 15 words), greet the homeowner and mention their current cost of ${fmt(cph(data.totalW||0))}/hr.`,true);
+  const costNow = data.costNow ?? cph(data.totalW||0);
+  await callGemini(`In exactly one short sentence (max 15 words), greet the homeowner and mention their current cost of ${fmt(costNow)}/hr.`,true);
 }
 
 function showChat() {
