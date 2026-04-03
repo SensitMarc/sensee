@@ -255,10 +255,14 @@ function renderDashboard(data) {
 
 function buildCtx() {
   if(!liveData) return 'No live data yet.';
-  const rate   = liveData.rate || RATE;
-  const active = (liveData.loads||[]).filter(l=>l.on).map(l=>`${l.name} ${l.w}W ($${(l.w/1000*rate).toFixed(2)}/hr)`).join(', ')||'none';
+  const rate    = liveData.rate || RATE;
+  const active  = (liveData.loads||[]).filter(l=>l.on).map(l=>`${l.name} ${l.w}W ($${(l.w/1000*rate).toFixed(2)}/hr)`).join(', ')||'none';
   const costNow = liveData.costNow ?? cph(liveData.totalW||0);
-  return `Active: ${active}. Total: ${liveData.totalW||0}W at ${fmt(costNow)}/hr. Rate: $${rate.toFixed(3)}/kWh.`;
+  const tempStr = liveData.tempF ? `Outside temperature: ${liveData.tempF}°F. ` : '';
+  const carbon  = liveData.carbonGPerKwh || 140;
+  const kwhNow  = (liveData.kwhNow ?? (liveData.totalW||0)/1000).toFixed(2);
+  const carbonNow = ((liveData.totalW||0)/1000 * carbon).toFixed(0);
+  return `${tempStr}Active: ${active}. Total: ${liveData.totalW||0}W (${kwhNow}kW) at ${fmt(costNow)}/hr. Rate: $${rate.toFixed(3)}/kWh. Grid carbon intensity: ${carbon}g CO2/kWh. Current carbon rate: ~${carbonNow}g CO2/hr.`;
 }
 
 async function callGemini(userMsg, isGreeting=false) {
