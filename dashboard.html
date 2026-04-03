@@ -184,8 +184,7 @@
 
 <script>
 const RATE   = 0.28;
-const GEMINI = 'AIzaSyCB9RtPbrDBiH_Ds0EVQcl1UNRa9bT7tCY';
-const MODEL  = 'gemini-3.1-flash-lite-preview';
+const WORKER = 'https://dawn-shape-f5e6.sensitlabs.workers.dev';
 const EMOJI  = { 'HVAC':'❄️','Elec Range':'🔥','Elec Dryer':'🌀','EV Charger':'⚡','Water Heater':'💧','Refrigerator':'🧊','Microwave':'📡','Washer':'🫧','Lighting':'💡','TV/Electronics':'📺' };
 
 let liveData=null, chatHistory=[], chatLoading=false, greetingDone=false, showingChat=false;
@@ -241,15 +240,13 @@ function buildCtx() {
 
 async function callGemini(userMsg, isGreeting=false) {
   chatLoading=true; setThinking(true);
-  const sys=`You are a warm, friendly home energy companion. Speak like a caring friend, not a technical dashboard. Be concise (1-3 sentences). No bullet points, no markdown. ${buildCtx()}`;
-  const contents=[...chatHistory.map(m=>({role:m.role,parts:[{text:m.content}]})),{role:'user',parts:[{text:userMsg}]}];
   try {
-    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI}`,{
+    const res=await fetch(WORKER,{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system_instruction:{parts:[{text:sys}]},contents,generationConfig:{maxOutputTokens:150,temperature:0.8}})
+      body:JSON.stringify({ userMsg, history: chatHistory, context: buildCtx() })
     });
     const json=await res.json();
-    const text=json.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||"I'm having trouble connecting right now.";
+    const text=json.text||"I'm having trouble connecting right now.";
     if(isGreeting){
       document.getElementById('greeting-text').textContent=text;
       document.getElementById('greeting-text').style.color='#4a4238';
