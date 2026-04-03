@@ -216,7 +216,10 @@ client.on('message',(topic,payload)=>{
 
 function renderDashboard(data) {
   const loads=data.loads||[], totalW=data.totalW||0, active=loads.filter(l=>l.on);
-  const h=cph(totalW), today=h*8, month=today*30;
+  const rate  = data.rate      || RATE;
+  const h     = data.costNow   ?? cph(totalW);
+  const today = data.todayCost ?? h * 8;
+  const month = data.monthCost ?? today * 30;
   document.getElementById('cost-now').innerHTML=fmt(h)+'<span>/hr</span>';
   document.getElementById('cost-today').textContent=fmt(today);
   document.getElementById('cost-month').textContent=fmt(month,0);
@@ -224,7 +227,7 @@ function renderDashboard(data) {
   if(!active.length){scroll.innerHTML='<div style="font-size:12px;color:#b0a898;padding:8px 0;">No active appliances</div>';return;}
   scroll.innerHTML='';
   active.forEach(l=>{
-    const c=cph(l.w||0), pricey=c>0.5, emoji=EMOJI[l.name]||'🔌';
+    const c=l.w/1000*rate, pricey=c>0.5, emoji=EMOJI[l.name]||'🔌';
     const card=document.createElement('div');
     card.className='device-card'+(pricey?' expensive':'');
     card.innerHTML=`<div class="device-emoji">${emoji}</div><div class="device-name">${l.name}</div><div class="device-cost ${pricey?'pricey':'normal'}">${fmt(c)}/hr</div><div class="device-watt">${fmtW(l.w||0)}</div>`;
@@ -234,8 +237,10 @@ function renderDashboard(data) {
 
 function buildCtx() {
   if(!liveData) return 'No live data yet.';
-  const active=(liveData.loads||[]).filter(l=>l.on).map(l=>`${l.name} ${l.w}W (${fmt(cph(l.w))}/hr)`).join(', ')||'none';
-  return `Active: ${active}. Total: ${liveData.totalW||0}W at ${fmt(cph(liveData.totalW||0))}/hr. Rate: ${fmt(RATE,3)}/kWh.`;
+  const rate   = liveData.rate || RATE;
+  const active = (liveData.loads||[]).filter(l=>l.on).map(l=>`${l.name} ${l.w}W ($${(l.w/1000*rate).toFixed(2)}/hr)`).join(', ')||'none';
+  const costNow = liveData.costNow ?? cph(liveData.totalW||0);
+  return `Active: ${active}. Total: ${liveData.totalW||0}W at ${fmt(costNow)}/hr. Rate: $${rate.toFixed(3)}/kWh.`;
 }
 
 async function callGemini(userMsg, isGreeting=false) {
