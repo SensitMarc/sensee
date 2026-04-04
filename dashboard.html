@@ -209,18 +209,25 @@
       <div class="cost-label">Month</div>
     </div>
   </div>
-  <!-- Indoor climate — shown when ESP32-S3 sensor data arrives -->
+  <!-- Climate row — indoor / outdoor / humidity, shown when any temp is available -->
   <div id="indoor-row">
-    <div class="indoor-half">
-      <span class="indoor-emoji">🌡️</span>
+    <div class="indoor-half" id="indoor-cell" style="display:none">
+      <span class="indoor-emoji">🏠</span>
       <div>
         <div class="indoor-label">Indoor</div>
         <div class="indoor-value" id="indoor-temp">—</div>
       </div>
     </div>
-    <div class="indoor-half">
+    <div class="indoor-half" id="outdoor-cell" style="display:none">
+      <span class="indoor-emoji">🌤️</span>
+      <div>
+        <div class="indoor-label">Outdoor</div>
+        <div class="indoor-value" id="outdoor-temp" style="color:#9a8c78">—</div>
+      </div>
+    </div>
+    <div class="indoor-half" id="humidity-cell" style="display:none">
       <span class="indoor-emoji">💧</span>
-      <div style="text-align:right">
+      <div>
         <div class="indoor-label">Humidity</div>
         <div class="indoor-value" id="indoor-humidity" style="color:#9a8c78">—</div>
       </div>
@@ -325,11 +332,14 @@ client.on('message',(topic,payload)=>{
   } else if (topic === 'nilm/sensors') {
     // ESP32-S3 indoor sensor — update immediately (retained, arrives on connect)
     if (data.tempC != null) {
-      const tc = data.tempC, tf = (tc * 9/5 + 32).toFixed(1);
-      document.getElementById('indoor-temp').textContent = `${tf}°F (${tc.toFixed(1)}°C)`;
-      if (data.humidity != null)
-        document.getElementById('indoor-humidity').textContent = `${data.humidity.toFixed(0)}%`;
+      const tf = (data.tempC * 9/5 + 32).toFixed(1);
+      document.getElementById('indoor-temp').textContent = `${tf}°F`;
+      document.getElementById('indoor-cell').style.display = 'flex';
       document.getElementById('indoor-row').classList.add('visible');
+    }
+    if (data.humidity != null) {
+      document.getElementById('indoor-humidity').textContent = `${data.humidity.toFixed(0)}%`;
+      document.getElementById('humidity-cell').style.display = 'flex';
     }
   }
 });
@@ -348,13 +358,22 @@ function renderDashboard(data) {
   document.getElementById('kwh-today').innerHTML = (data.kwhToday ?? 0).toFixed(2) + '<span>kWh</span>';
   document.getElementById('kwh-month').innerHTML = (data.kwhMonth ?? 0).toFixed(1) + '<span>kWh</span>';
 
-  // Indoor climate (from ESP32-S3 sensor, optional)
+  // Outdoor temperature (from Android WeatherService via nilm/results)
+  if (data.tempF) {
+    document.getElementById('outdoor-temp').textContent = `${parseFloat(data.tempF).toFixed(0)}°F`;
+    document.getElementById('outdoor-cell').style.display = 'flex';
+    document.getElementById('indoor-row').classList.add('visible');
+  }
+  // Indoor climate (from ESP32-S3 via nilm/results, already populated by sensor handler too)
   if (data.indoorTempC != null) {
     const tc = data.indoorTempC, tf = (tc * 9/5 + 32).toFixed(1);
-    document.getElementById('indoor-temp').textContent = `${tf}°F (${tc.toFixed(1)}°C)`;
-    if (data.indoorHumidity != null)
-      document.getElementById('indoor-humidity').textContent = `${data.indoorHumidity.toFixed(0)}%`;
+    document.getElementById('indoor-temp').textContent = `${tf}°F`;
+    document.getElementById('indoor-cell').style.display = 'flex';
     document.getElementById('indoor-row').classList.add('visible');
+    if (data.indoorHumidity != null) {
+      document.getElementById('indoor-humidity').textContent = `${data.indoorHumidity.toFixed(0)}%`;
+      document.getElementById('humidity-cell').style.display = 'flex';
+    }
   }
 
   const scroll=document.getElementById('device-scroll');
