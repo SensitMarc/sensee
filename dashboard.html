@@ -58,7 +58,21 @@
   #status-text { font-size: 9px; letter-spacing: 1px; color: #9a8c78; }
 
   #cost-row { display: flex; gap: 8px; margin-bottom: 6px; }
-  #kwh-row  { display: flex; gap: 8px; margin-bottom: 10px; }
+  #kwh-row  { display: flex; gap: 8px; margin-bottom: 6px; }
+
+  /* Indoor climate row */
+  #indoor-row {
+    display: none; /* hidden until ESP32 data arrives */
+    background: #fff; border-radius: 12px; padding: 9px 14px;
+    border: 1px solid #e8e0d4; box-shadow: 0 1px 6px rgba(0,0,0,0.03);
+    margin-bottom: 10px;
+    justify-content: space-between; align-items: center;
+  }
+  #indoor-row.visible { display: flex; }
+  .indoor-half { display: flex; align-items: center; gap: 7px; }
+  .indoor-emoji { font-size: 14px; }
+  .indoor-label { font-size: 9px; color: #9a8c78; text-transform: uppercase; letter-spacing: 0.8px; }
+  .indoor-value { font-size: 13px; font-weight: bold; color: #2e2a22; line-height: 1.2; }
   .cost-card {
     flex: 1; background: #fff; border-radius: 12px; padding: 8px 10px;
     border: 1px solid #e8e0d4; box-shadow: 0 1px 6px rgba(0,0,0,0.03); text-align: center;
@@ -195,6 +209,23 @@
       <div class="cost-label">Month</div>
     </div>
   </div>
+  <!-- Indoor climate — shown when ESP32-S3 sensor data arrives -->
+  <div id="indoor-row">
+    <div class="indoor-half">
+      <span class="indoor-emoji">🌡️</span>
+      <div>
+        <div class="indoor-label">Indoor</div>
+        <div class="indoor-value" id="indoor-temp">—</div>
+      </div>
+    </div>
+    <div class="indoor-half">
+      <span class="indoor-emoji">💧</span>
+      <div style="text-align:right">
+        <div class="indoor-label">Humidity</div>
+        <div class="indoor-value" id="indoor-humidity" style="color:#9a8c78">—</div>
+      </div>
+    </div>
+  </div>
   <!-- Greeting bubble — mirrors Android state machine -->
   <div id="greeting-bubble">
     <div id="greeting-icon">🌿</div>
@@ -267,6 +298,7 @@ client.on('connect',()=>{
   client.subscribe('nilm/results');       // live energy data
   client.subscribe('nilm/insights');      // AI greeting from Android (retained)
   client.subscribe('nilm/chat_response'); // AI answers to our questions
+  client.subscribe('nilm/sensors');       // ESP32-S3 indoor temp/humidity (retained)
 });
 client.on('offline',   ()=>{ dot.style.background='#c07050'; stxt.style.color='#c07050'; stxt.textContent='OFFLINE'; });
 client.on('reconnect', ()=>{ dot.style.background='#d4a84b'; stxt.style.color='#d4a84b'; stxt.textContent='RECONNECTING'; });
@@ -289,6 +321,16 @@ client.on('message',(topic,payload)=>{
       setThinking(false);
       appendMsg('model', data.text);
     }
+
+  } else if (topic === 'nilm/sensors') {
+    // ESP32-S3 indoor sensor — update immediately (retained, arrives on connect)
+    if (data.tempC != null) {
+      const tc = data.tempC, tf = (tc * 9/5 + 32).toFixed(1);
+      document.getElementById('indoor-temp').textContent = `${tf}°F (${tc.toFixed(1)}°C)`;
+      if (data.humidity != null)
+        document.getElementById('indoor-humidity').textContent = `${data.humidity.toFixed(0)}%`;
+      document.getElementById('indoor-row').classList.add('visible');
+    }
   }
 });
 
@@ -305,6 +347,15 @@ function renderDashboard(data) {
   document.getElementById('kwh-now').innerHTML   = (data.kwhNow   ?? totalW/1000).toFixed(2) + '<span>kW</span>';
   document.getElementById('kwh-today').innerHTML = (data.kwhToday ?? 0).toFixed(2) + '<span>kWh</span>';
   document.getElementById('kwh-month').innerHTML = (data.kwhMonth ?? 0).toFixed(1) + '<span>kWh</span>';
+
+  // Indoor climate (from ESP32-S3 sensor, optional)
+  if (data.indoorTempC != null) {
+    const tc = data.indoorTempC, tf = (tc * 9/5 + 32).toFixed(1);
+    document.getElementById('indoor-temp').textContent = `${tf}°F (${tc.toFixed(1)}°C)`;
+    if (data.indoorHumidity != null)
+      document.getElementById('indoor-humidity').textContent = `${data.indoorHumidity.toFixed(0)}%`;
+    document.getElementById('indoor-row').classList.add('visible');
+  }
 
   const scroll=document.getElementById('device-scroll');
   if(!active.length){
