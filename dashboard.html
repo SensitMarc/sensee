@@ -222,11 +222,10 @@
 </div>
 
 <script>
-const RATE   = 0.28;
-const WORKER = 'https://dawn-shape-f5e6.sensitlabs.workers.dev';
-const EMOJI  = { 'HVAC':'❄️','Elec Range':'🔥','Elec Dryer':'🌀','EV Charger':'⚡','Water Heater':'💧','Refrigerator':'🧊','Microwave':'📡','Washer':'🫧','Lighting':'💡','TV/Electronics':'📺' };
+const RATE  = 0.28;
+const EMOJI = { 'HVAC':'❄️','Elec Range':'🔥','Elec Dryer':'🌀','EV Charger':'⚡','Water Heater':'💧','Refrigerator':'🧊','Microwave':'📡','Washer':'🫧','Lighting':'💡','TV/Electronics':'📺' };
 
-let liveData=null, chatHistory=[], chatLoading=false, greetingDone=false, showingChat=false;
+let liveData=null, chatLoading=false, showingChat=false, chatTimeout=null;
 
 function updateClock() {
   const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
@@ -238,7 +237,7 @@ function cph(w)      { return w/1000*RATE; }
 function fmt(n,d=2)  { return '$'+n.toFixed(d); }
 function fmtW(w)     { return w>=1000?(w/1000).toFixed(1)+'kW':w+'W'; }
 
-// ── Greeting bubble state machine (mirrors Android EnergyInsightEngine.State) ──
+// ── Greeting bubble state machine ────────────────────────────────────────────
 function setGreetingState(state, text) {
   const dots = document.getElementById('greeting-dots');
   const gtxt = document.getElementById('greeting-text');
@@ -247,25 +246,16 @@ function setGreetingState(state, text) {
     gtxt.style.display = 'block';
     gtxt.textContent   = 'Monitoring your home energy…';
     gtxt.style.color   = '#b0a898';
-  } else if (state === 'generating') {
-    gtxt.style.display = 'none';
-    dots.style.display = 'flex';
   } else if (state === 'done') {
     dots.style.display = 'none';
     gtxt.style.display = 'block';
     gtxt.textContent   = text;
     gtxt.style.color   = '#4a4238';
-  } else if (state === 'error') {
-    dots.style.display = 'none';
-    gtxt.style.display = 'block';
-    gtxt.textContent   = "Couldn't connect just now — tap a chip below to chat.";
-    gtxt.style.color   = '#b0a898';
   }
 }
-// Start in idle state
 setGreetingState('idle');
 
-// ── MQTT ────────────────────────────────────────────────────────────────────
+// ── MQTT — Android is the AI brain, sensee just subscribes ──────────────────
 const HOST = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
 const client = mqtt.connect(`wss://${HOST}:8884/mqtt`,{
   username:'nilm-esp32', password:'Mayaesp321!',
@@ -274,16 +264,32 @@ const client = mqtt.connect(`wss://${HOST}:8884/mqtt`,{
 const dot=document.getElementById('status-dot'), stxt=document.getElementById('status-text');
 client.on('connect',()=>{
   dot.style.background='#7c9e8a'; stxt.style.color='#7c9e8a'; stxt.textContent='LIVE';
-  client.subscribe('nilm/results');
+  client.subscribe('nilm/results');       // live energy data
+  client.subscribe('nilm/insights');      // AI greeting from Android (retained)
+  client.subscribe('nilm/chat_response'); // AI answers to our questions
 });
-client.on('offline', ()=>{ dot.style.background='#c07050'; stxt.style.color='#c07050'; stxt.textContent='OFFLINE'; });
-client.on('reconnect',()=>{ dot.style.background='#d4a84b'; stxt.style.color='#d4a84b'; stxt.textContent='RECONNECTING'; });
+client.on('offline',   ()=>{ dot.style.background='#c07050'; stxt.style.color='#c07050'; stxt.textContent='OFFLINE'; });
+client.on('reconnect', ()=>{ dot.style.background='#d4a84b'; stxt.style.color='#d4a84b'; stxt.textContent='RECONNECTING'; });
 client.on('message',(topic,payload)=>{
-  let data; try{data=JSON.parse(payload.toString());}catch{return;}
-  liveData=data;
-  renderDashboard(data);
-  // Auto-trigger greeting on first live frame (mirrors Android 2s LaunchedEffect)
-  if(!greetingDone){ greetingDone=true; sendGreeting(data); }
+  let data; try{ data=JSON.parse(payload.toString()); }catch{ return; }
+
+  if (topic === 'nilm/results') {
+    liveData = data;
+    renderDashboard(data);
+
+  } else if (topic === 'nilm/insights') {
+    // Android's EnergyInsightEngine published an insight — show in greeting bubble
+    if (data.text) setGreetingState('done', data.text);
+
+  } else if (topic === 'nilm/chat_response') {
+    // Android answered a question we published to nilm/questions
+    if (chatLoading && data.text) {
+      clearTimeout(chatTimeout);
+      chatLoading = false;
+      setThinking(false);
+      appendMsg('model', data.text);
+    }
+  }
 });
 
 // ── Dashboard render ─────────────────────────────────────────────────────────
@@ -315,59 +321,27 @@ function renderDashboard(data) {
   });
 }
 
-// ── Context builder ──────────────────────────────────────────────────────────
-function buildCtx() {
-  if(!liveData) return 'No live data yet.';
-  const rate    = liveData.rate || RATE;
-  const active  = (liveData.loads||[]).filter(l=>l.on)
-    .map(l=>`${l.name} ${l.w}W ($${(l.w/1000*rate).toFixed(2)}/hr)`).join(', ')||'none';
-  const costNow = liveData.costNow ?? cph(liveData.totalW||0);
-  const tempStr = liveData.tempF ? `Outside temperature: ${liveData.tempF}°F. ` : '';
-  const carbon  = liveData.carbonGPerKwh || 140;
-  const kwhNow  = (liveData.kwhNow ?? (liveData.totalW||0)/1000).toFixed(2);
-  const carbonNow = ((liveData.totalW||0)/1000 * carbon).toFixed(0);
-  return `${tempStr}Active: ${active}. Total: ${liveData.totalW||0}W (${kwhNow}kW) at ${fmt(costNow)}/hr. Rate: $${rate.toFixed(3)}/kWh. Grid carbon intensity: ${carbon}g CO2/kWh. Current carbon rate: ~${carbonNow}g CO2/hr.`;
-}
-
-// ── Gemini call ──────────────────────────────────────────────────────────────
-async function callGemini(userMsg, isGreeting=false) {
+// ── Publish question to Android via MQTT ─────────────────────────────────────
+// Android subscribes to nilm/questions, calls Gemini with full context,
+// and publishes the answer to nilm/chat_response which we receive above.
+function askAndroid(question) {
+  if (chatLoading) return;
+  showChatHistory();
+  appendMsg('user', question);
   chatLoading = true;
-  if (isGreeting) {
-    setGreetingState('generating');
-  } else {
-    setThinking(true);
-  }
-  try {
-    const res = await fetch(WORKER, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ userMsg, history: chatHistory, context: buildCtx() })
-    });
-    const json = await res.json();
-    const text = json.text || "I'm having trouble connecting right now.";
-    if (isGreeting) {
-      setGreetingState('done', text);
-    } else {
-      chatHistory.push({role:'model', content:text});
-      appendMsg('model', text);
-    }
-  } catch {
-    if (isGreeting) {
-      setGreetingState('error');
-    } else {
-      appendMsg('model', "Couldn't connect just now — try again?");
-    }
-  }
-  if (!isGreeting) setThinking(false);
-  chatLoading = false;
-}
-
-// ── Greeting auto-trigger ────────────────────────────────────────────────────
-async function sendGreeting(data) {
-  const costNow = data.costNow ?? cph(data.totalW||0);
-  await callGemini(
-    `In exactly one short sentence (max 15 words), greet the homeowner and mention their current cost of ${fmt(costNow)}/hr.`,
-    true
+  setThinking(true);
+  client.publish('nilm/questions',
+    JSON.stringify({ question, ts: Date.now() }),
+    { qos: 1, retain: false }
   );
+  // Timeout if Android is unreachable
+  chatTimeout = setTimeout(() => {
+    if (chatLoading) {
+      chatLoading = false;
+      setThinking(false);
+      appendMsg('model', 'Android is offline — open the app and try again.');
+    }
+  }, 30000);
 }
 
 // ── Chat helpers ─────────────────────────────────────────────────────────────
@@ -392,21 +366,13 @@ function setThinking(on) {
     document.getElementById('thinking').scrollIntoView({behavior:'smooth', block:'end'});
 }
 function sendChip(btn) {
-  if (chatLoading) return;
-  const q = btn.textContent;
-  showChatHistory();
-  chatHistory.push({role:'user', content:q});
-  appendMsg('user', q);
-  callGemini(q);
+  askAndroid(btn.textContent);
 }
 function sendMessage() {
   const input = document.getElementById('chat-input'), q = input.value.trim();
   if (!q || chatLoading) return;
   input.value = ''; updateSendBtn();
-  showChatHistory();
-  chatHistory.push({role:'user', content:q});
-  appendMsg('user', q);
-  callGemini(q);
+  askAndroid(q);
 }
 function updateSendBtn() {
   const val = document.getElementById('chat-input').value.trim();
