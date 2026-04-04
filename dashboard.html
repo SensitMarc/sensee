@@ -19,6 +19,29 @@
     margin: 0 auto;
   }
 
+  /* ── Input bar — TOP, keyboard opens below it ─────────────────────── */
+  #input-bar {
+    padding: 8px 16px;
+    background: #faf7f2;
+    border-bottom: 1px solid #e8e0d4;
+    display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+  }
+  #chat-input {
+    flex: 1; background: #fff; border: 1px solid #e0d8cc; border-radius: 22px;
+    padding: 10px 16px; color: #2e2a22; font-size: 13px; outline: none;
+    font-family: 'Georgia', serif;
+  }
+  #chat-input:focus { border-color: #7c9e8a; }
+  #chat-input::placeholder { color: #b0a898; }
+  #send-btn {
+    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+    background: #e8e0d4; border: none; cursor: pointer; color: #fff;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  #send-btn.active { background: linear-gradient(135deg, #7c9e8a, #9bc4a8); }
+
+  /* ── Header ───────────────────────────────────────────────────────── */
   #header {
     background: linear-gradient(160deg, #e8f4ec 0%, #f0ede4 100%);
     padding: 12px 16px;
@@ -44,6 +67,7 @@
   .cost-value span { font-size: 9px; color: #9a8c78; font-weight: normal; }
   .cost-label { font-size: 9px; color: #9a8c78; text-transform: uppercase; letter-spacing: 0.8px; margin-top: 3px; }
 
+  /* ── Greeting bubble ───────────────────────────────────────────────── */
   #greeting-bubble {
     background: #fff; border-radius: 14px 14px 14px 4px;
     padding: 10px 12px; border: 1px solid #e8e0d4;
@@ -55,8 +79,16 @@
     background: linear-gradient(135deg, #a8d5b5, #c8e8d0);
     display: flex; align-items: center; justify-content: center; font-size: 12px;
   }
-  #greeting-text { font-size: 12px; color: #4a4238; line-height: 1.5; flex: 1; }
+  #greeting-text { font-size: 12px; color: #b0a898; line-height: 1.5; flex: 1; }
+  #greeting-dots { display: none; flex: 1; align-items: center; padding-top: 4px; gap: 4px; }
+  .gdot {
+    width: 6px; height: 6px; border-radius: 50%; background: #7c9e8a;
+    animation: organicPulse 1.2s ease-in-out infinite;
+  }
+  .gdot:nth-child(2) { animation-delay: 0.2s; }
+  .gdot:nth-child(3) { animation-delay: 0.4s; }
 
+  /* ── Active devices ────────────────────────────────────────────────── */
   #active-section { padding: 14px 16px 4px; flex-shrink: 0; }
   .section-label { font-size: 11px; color: #9a8c78; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
 
@@ -75,6 +107,7 @@
   .device-cost.pricey { color: #c07050; }
   .device-watt { font-size: 9px; color: #b0a898; margin-top: 1px; }
 
+  /* ── Chat section ──────────────────────────────────────────────────── */
   #chat-section { flex: 1; padding: 12px 16px 0; display: flex; flex-direction: column; overflow: hidden; }
 
   #chips { margin-bottom: 12px; }
@@ -83,7 +116,7 @@
     width: 100%; background: #fff; border: 1px solid #e8e0d4; border-radius: 12px;
     padding: 11px 14px; text-align: left; font-size: 13px; color: #4a4238;
     cursor: pointer; margin-bottom: 8px; font-family: 'Georgia', serif;
-    box-shadow: 0 1px 6px rgba(0,0,0,0.03); transition: all 0.15s;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.03); transition: background 0.15s;
   }
   .chip:hover { background: #f5f2ec; }
   .chip:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -97,7 +130,10 @@
   .msg-row { display: flex; flex-direction: column; }
   .msg-row.user  { align-items: flex-end; }
   .msg-row.model { align-items: flex-start; }
-  .msg-bubble { max-width: 85%; padding: 10px 14px; font-size: 13px; line-height: 1.55; box-shadow: 0 1px 8px rgba(0,0,0,0.05); }
+  .msg-bubble {
+    max-width: 85%; padding: 10px 14px; font-size: 13px;
+    line-height: 1.55; box-shadow: 0 1px 8px rgba(0,0,0,0.05);
+  }
   .msg-bubble.user  { background: linear-gradient(135deg, #7c9e8a, #9bc4a8); border-radius: 16px 16px 4px 16px; color: #fff; }
   .msg-bubble.model { background: #fff; border-radius: 16px 16px 16px 4px; border: 1px solid #e8e0d4; color: #4a4238; }
 
@@ -108,22 +144,6 @@
   .tdot:nth-child(2) { animation-delay: 0.2s; }
   .tdot:nth-child(3) { animation-delay: 0.4s; }
 
-  #input-bar {
-    padding: 10px 16px 18px; background: #faf7f2; border-top: 1px solid #e8e0d4;
-    display: flex; gap: 8px; align-items: center; flex-shrink: 0;
-  }
-  #chat-input {
-    flex: 1; background: #fff; border: 1px solid #e0d8cc; border-radius: 22px;
-    padding: 10px 16px; color: #2e2a22; font-size: 13px; outline: none; font-family: 'Georgia', serif;
-  }
-  #chat-input::placeholder { color: #b0a898; }
-  #send-btn {
-    width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; background: #e8e0d4;
-    border: none; cursor: pointer; color: #fff; font-size: 16px;
-    display: flex; align-items: center; justify-content: center; transition: all 0.2s;
-  }
-  #send-btn.active { background: linear-gradient(135deg, #7c9e8a, #9bc4a8); }
-
   @keyframes organicPulse {
     0%, 80%, 100% { opacity: 0.2; transform: scale(0.8); }
     40%           { opacity: 1;   transform: scale(1);   }
@@ -131,6 +151,13 @@
 </style>
 </head>
 <body>
+
+<!-- Input bar at TOP — keyboard opens below, never covers it -->
+<div id="input-bar">
+  <input id="chat-input" type="text" placeholder="Ask about your home…"
+         oninput="updateSendBtn()" onkeydown="if(event.key==='Enter')sendMessage()">
+  <button id="send-btn" onclick="sendMessage()">↑</button>
+</div>
 
 <div id="header">
   <div id="header-meta">
@@ -168,9 +195,11 @@
       <div class="cost-label">Month</div>
     </div>
   </div>
+  <!-- Greeting bubble — mirrors Android state machine -->
   <div id="greeting-bubble">
     <div id="greeting-icon">🌿</div>
-    <div id="greeting-text" style="color:#b0a898">Checking in on your home…</div>
+    <div id="greeting-dots"><div class="gdot"></div><div class="gdot"></div><div class="gdot"></div></div>
+    <div id="greeting-text">Monitoring your home energy…</div>
   </div>
 </div>
 
@@ -184,17 +213,12 @@
 <div id="chat-section">
   <div id="chips">
     <div class="section-label">Ask me anything</div>
-    <button class="chip" onclick="sendChip(this)">What's using the most energy right now?</button>
+    <button class="chip" onclick="sendChip(this)">What's costing me the most?</button>
+    <button class="chip" onclick="sendChip(this)">Any quick wins to save money?</button>
     <button class="chip" onclick="sendChip(this)">Best time to run laundry?</button>
-    <button class="chip" onclick="sendChip(this)">How can I lower this month's bill?</button>
   </div>
   <div id="chat-messages" style="display:none"></div>
   <div id="thinking"><div class="dot-row"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div>
-</div>
-
-<div id="input-bar">
-  <input id="chat-input" type="text" placeholder="Ask about your home…" oninput="updateSendBtn()" onkeydown="if(event.key==='Enter')sendMessage()">
-  <button id="send-btn" onclick="sendMessage()">↑</button>
 </div>
 
 <script>
@@ -214,21 +238,55 @@ function cph(w)      { return w/1000*RATE; }
 function fmt(n,d=2)  { return '$'+n.toFixed(d); }
 function fmtW(w)     { return w>=1000?(w/1000).toFixed(1)+'kW':w+'W'; }
 
+// ── Greeting bubble state machine (mirrors Android EnergyInsightEngine.State) ──
+function setGreetingState(state, text) {
+  const dots = document.getElementById('greeting-dots');
+  const gtxt = document.getElementById('greeting-text');
+  if (state === 'idle') {
+    dots.style.display = 'none';
+    gtxt.style.display = 'block';
+    gtxt.textContent   = 'Monitoring your home energy…';
+    gtxt.style.color   = '#b0a898';
+  } else if (state === 'generating') {
+    gtxt.style.display = 'none';
+    dots.style.display = 'flex';
+  } else if (state === 'done') {
+    dots.style.display = 'none';
+    gtxt.style.display = 'block';
+    gtxt.textContent   = text;
+    gtxt.style.color   = '#4a4238';
+  } else if (state === 'error') {
+    dots.style.display = 'none';
+    gtxt.style.display = 'block';
+    gtxt.textContent   = "Couldn't connect just now — tap a chip below to chat.";
+    gtxt.style.color   = '#b0a898';
+  }
+}
+// Start in idle state
+setGreetingState('idle');
+
+// ── MQTT ────────────────────────────────────────────────────────────────────
 const HOST = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
 const client = mqtt.connect(`wss://${HOST}:8884/mqtt`,{
   username:'nilm-esp32', password:'Mayaesp321!',
   clientId:'sensee-'+Math.random().toString(16).slice(2,8), reconnectPeriod:3000
 });
 const dot=document.getElementById('status-dot'), stxt=document.getElementById('status-text');
-client.on('connect',()=>{ dot.style.background='#7c9e8a'; stxt.style.color='#7c9e8a'; stxt.textContent='LIVE'; client.subscribe('nilm/results'); });
+client.on('connect',()=>{
+  dot.style.background='#7c9e8a'; stxt.style.color='#7c9e8a'; stxt.textContent='LIVE';
+  client.subscribe('nilm/results');
+});
 client.on('offline', ()=>{ dot.style.background='#c07050'; stxt.style.color='#c07050'; stxt.textContent='OFFLINE'; });
 client.on('reconnect',()=>{ dot.style.background='#d4a84b'; stxt.style.color='#d4a84b'; stxt.textContent='RECONNECTING'; });
 client.on('message',(topic,payload)=>{
   let data; try{data=JSON.parse(payload.toString());}catch{return;}
-  liveData=data; renderDashboard(data);
-  if(!greetingDone){greetingDone=true; sendGreeting(data);}
+  liveData=data;
+  renderDashboard(data);
+  // Auto-trigger greeting on first live frame (mirrors Android 2s LaunchedEffect)
+  if(!greetingDone){ greetingDone=true; sendGreeting(data); }
 });
 
+// ── Dashboard render ─────────────────────────────────────────────────────────
 function renderDashboard(data) {
   const loads=data.loads||[], totalW=data.totalW||0, active=loads.filter(l=>l.on);
   const rate  = data.rate      || RATE;
@@ -238,11 +296,15 @@ function renderDashboard(data) {
   document.getElementById('cost-now').innerHTML=fmt(h)+'<span>/hr</span>';
   document.getElementById('cost-today').textContent=fmt(today,4);
   document.getElementById('cost-month').textContent=fmt(month,0);
-  document.getElementById('kwh-now').innerHTML  = (data.kwhNow   ?? totalW/1000).toFixed(2) + '<span>kW</span>';
+  document.getElementById('kwh-now').innerHTML   = (data.kwhNow   ?? totalW/1000).toFixed(2) + '<span>kW</span>';
   document.getElementById('kwh-today').innerHTML = (data.kwhToday ?? 0).toFixed(2) + '<span>kWh</span>';
   document.getElementById('kwh-month').innerHTML = (data.kwhMonth ?? 0).toFixed(1) + '<span>kWh</span>';
+
   const scroll=document.getElementById('device-scroll');
-  if(!active.length){scroll.innerHTML='<div style="font-size:12px;color:#b0a898;padding:8px 0;">No active appliances</div>';return;}
+  if(!active.length){
+    scroll.innerHTML='<div style="font-size:12px;color:#b0a898;padding:8px 0;">No active appliances</div>';
+    return;
+  }
   scroll.innerHTML='';
   active.forEach(l=>{
     const c=l.w/1000*rate, pricey=c>0.5, emoji=EMOJI[l.name]||'🔌';
@@ -253,10 +315,12 @@ function renderDashboard(data) {
   });
 }
 
+// ── Context builder ──────────────────────────────────────────────────────────
 function buildCtx() {
   if(!liveData) return 'No live data yet.';
   const rate    = liveData.rate || RATE;
-  const active  = (liveData.loads||[]).filter(l=>l.on).map(l=>`${l.name} ${l.w}W ($${(l.w/1000*rate).toFixed(2)}/hr)`).join(', ')||'none';
+  const active  = (liveData.loads||[]).filter(l=>l.on)
+    .map(l=>`${l.name} ${l.w}W ($${(l.w/1000*rate).toFixed(2)}/hr)`).join(', ')||'none';
   const costNow = liveData.costNow ?? cph(liveData.totalW||0);
   const tempStr = liveData.tempF ? `Outside temperature: ${liveData.tempF}°F. ` : '';
   const carbon  = liveData.carbonGPerKwh || 140;
@@ -265,61 +329,88 @@ function buildCtx() {
   return `${tempStr}Active: ${active}. Total: ${liveData.totalW||0}W (${kwhNow}kW) at ${fmt(costNow)}/hr. Rate: $${rate.toFixed(3)}/kWh. Grid carbon intensity: ${carbon}g CO2/kWh. Current carbon rate: ~${carbonNow}g CO2/hr.`;
 }
 
+// ── Gemini call ──────────────────────────────────────────────────────────────
 async function callGemini(userMsg, isGreeting=false) {
-  chatLoading=true; setThinking(true);
-  try {
-    const res=await fetch(WORKER,{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ userMsg, history: chatHistory, context: buildCtx() })
-    });
-    const json=await res.json();
-    const text=json.text||"I'm having trouble connecting right now.";
-    if(isGreeting){
-      document.getElementById('greeting-text').textContent=text;
-      document.getElementById('greeting-text').style.color='#4a4238';
-    } else { chatHistory.push({role:'model',content:text}); appendMsg('model',text); }
-  } catch {
-    const err=isGreeting?"Couldn't reach the AI — but your home data is live!":"Couldn't connect just now — try again?";
-    if(isGreeting){document.getElementById('greeting-text').textContent=err;document.getElementById('greeting-text').style.color='#b0a898';}
-    else appendMsg('model',err);
+  chatLoading = true;
+  if (isGreeting) {
+    setGreetingState('generating');
+  } else {
+    setThinking(true);
   }
-  setThinking(false); chatLoading=false;
+  try {
+    const res = await fetch(WORKER, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ userMsg, history: chatHistory, context: buildCtx() })
+    });
+    const json = await res.json();
+    const text = json.text || "I'm having trouble connecting right now.";
+    if (isGreeting) {
+      setGreetingState('done', text);
+    } else {
+      chatHistory.push({role:'model', content:text});
+      appendMsg('model', text);
+    }
+  } catch {
+    if (isGreeting) {
+      setGreetingState('error');
+    } else {
+      appendMsg('model', "Couldn't connect just now — try again?");
+    }
+  }
+  if (!isGreeting) setThinking(false);
+  chatLoading = false;
 }
 
+// ── Greeting auto-trigger ────────────────────────────────────────────────────
 async function sendGreeting(data) {
   const costNow = data.costNow ?? cph(data.totalW||0);
-  await callGemini(`In exactly one short sentence (max 15 words), greet the homeowner and mention their current cost of ${fmt(costNow)}/hr.`,true);
+  await callGemini(
+    `In exactly one short sentence (max 15 words), greet the homeowner and mention their current cost of ${fmt(costNow)}/hr.`,
+    true
+  );
 }
 
-function showChat() {
-  if(!showingChat){showingChat=true;document.getElementById('chips').style.display='none';document.getElementById('chat-messages').style.display='flex';}
+// ── Chat helpers ─────────────────────────────────────────────────────────────
+function showChatHistory() {
+  if (!showingChat) {
+    showingChat = true;
+    document.getElementById('chips').style.display = 'none';
+    document.getElementById('chat-messages').style.display = 'flex';
+  }
 }
-function appendMsg(role,text) {
-  showChat();
-  const msgs=document.getElementById('chat-messages');
-  const row=document.createElement('div'); row.className='msg-row '+role;
-  const bub=document.createElement('div'); bub.className='msg-bubble '+role; bub.textContent=text;
+function appendMsg(role, text) {
+  showChatHistory();
+  const msgs = document.getElementById('chat-messages');
+  const row  = document.createElement('div'); row.className = 'msg-row '+role;
+  const bub  = document.createElement('div'); bub.className = 'msg-bubble '+role; bub.textContent = text;
   row.appendChild(bub); msgs.appendChild(row);
-  row.scrollIntoView({behavior:'smooth',block:'end'});
+  row.scrollIntoView({behavior:'smooth', block:'end'});
 }
 function setThinking(on) {
-  document.getElementById('thinking').classList.toggle('visible',on);
-  if(on&&showingChat) document.getElementById('thinking').scrollIntoView({behavior:'smooth',block:'end'});
+  document.getElementById('thinking').classList.toggle('visible', on);
+  if (on && showingChat)
+    document.getElementById('thinking').scrollIntoView({behavior:'smooth', block:'end'});
 }
 function sendChip(btn) {
-  if(chatLoading) return;
-  const q=btn.textContent; showChat();
-  chatHistory.push({role:'user',content:q}); appendMsg('user',q); callGemini(q);
+  if (chatLoading) return;
+  const q = btn.textContent;
+  showChatHistory();
+  chatHistory.push({role:'user', content:q});
+  appendMsg('user', q);
+  callGemini(q);
 }
 function sendMessage() {
-  const input=document.getElementById('chat-input'), q=input.value.trim();
-  if(!q||chatLoading) return;
-  input.value=''; updateSendBtn(); showChat();
-  chatHistory.push({role:'user',content:q}); appendMsg('user',q); callGemini(q);
+  const input = document.getElementById('chat-input'), q = input.value.trim();
+  if (!q || chatLoading) return;
+  input.value = ''; updateSendBtn();
+  showChatHistory();
+  chatHistory.push({role:'user', content:q});
+  appendMsg('user', q);
+  callGemini(q);
 }
 function updateSendBtn() {
-  const val=document.getElementById('chat-input').value.trim();
-  document.getElementById('send-btn').classList.toggle('active',!!val&&!chatLoading);
+  const val = document.getElementById('chat-input').value.trim();
+  document.getElementById('send-btn').classList.toggle('active', !!val && !chatLoading);
 }
 </script>
 </body>
