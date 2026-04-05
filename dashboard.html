@@ -330,10 +330,9 @@ client.on('message',(topic,payload)=>{
     }
 
   } else if (topic === 'nilm/sensors') {
-    // ESP32-S3 indoor sensor — update immediately (retained, arrives on connect)
+    // ESP32-S3 indoor sensor — already in °C
     if (data.tempC != null) {
-      const tf = (data.tempC * 9/5 + 32).toFixed(1);
-      document.getElementById('indoor-temp').textContent = `${tf}°F`;
+      document.getElementById('indoor-temp').textContent = `${data.tempC.toFixed(1)}°C`;
       document.getElementById('indoor-cell').style.display = 'flex';
       document.getElementById('indoor-row').classList.add('visible');
     }
@@ -358,16 +357,16 @@ function renderDashboard(data) {
   document.getElementById('kwh-today').innerHTML = (data.kwhToday ?? 0).toFixed(2) + '<span>kWh</span>';
   document.getElementById('kwh-month').innerHTML = (data.kwhMonth ?? 0).toFixed(1) + '<span>kWh</span>';
 
-  // Outdoor temperature (from Android WeatherService via nilm/results)
+  // Outdoor temperature (from Android WeatherService — arrives as °F, display as °C)
   if (data.tempF) {
-    document.getElementById('outdoor-temp').textContent = `${parseFloat(data.tempF).toFixed(0)}°F`;
+    const outC = ((parseFloat(data.tempF) - 32) * 5/9).toFixed(1);
+    document.getElementById('outdoor-temp').textContent = `${outC}°C`;
     document.getElementById('outdoor-cell').style.display = 'flex';
     document.getElementById('indoor-row').classList.add('visible');
   }
-  // Indoor climate (from ESP32-S3 via nilm/results, already populated by sensor handler too)
+  // Indoor climate (from ESP32-S3 — already in °C)
   if (data.indoorTempC != null) {
-    const tc = data.indoorTempC, tf = (tc * 9/5 + 32).toFixed(1);
-    document.getElementById('indoor-temp').textContent = `${tf}°F`;
+    document.getElementById('indoor-temp').textContent = `${data.indoorTempC.toFixed(1)}°C`;
     document.getElementById('indoor-cell').style.display = 'flex';
     document.getElementById('indoor-row').classList.add('visible');
     if (data.indoorHumidity != null) {
