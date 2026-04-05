@@ -135,6 +135,15 @@
   .chip:hover { background: #f5f2ec; }
   .chip:disabled { opacity: 0.6; cursor: not-allowed; }
 
+  #chat-header { display: none; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  #chat-header.visible { display: flex; }
+  #reset-btn {
+    background: #e8e0d4; border: none; border-radius: 8px;
+    padding: 5px 10px; font-size: 11px; color: #9a8c78;
+    font-family: 'Georgia', serif; cursor: pointer; letter-spacing: 0.5px;
+  }
+  #reset-btn:hover { background: #ddd5c8; }
+
   #chat-messages {
     flex: 1; overflow-y: auto; display: flex; flex-direction: column;
     gap: 12px; margin-bottom: 8px; scrollbar-width: none;
@@ -254,6 +263,10 @@
     <button class="chip" onclick="sendChip(this)">What's costing me the most?</button>
     <button class="chip" onclick="sendChip(this)">Any quick wins to save money?</button>
     <button class="chip" onclick="sendChip(this)">Best time to run laundry?</button>
+  </div>
+  <div id="chat-header">
+    <div class="section-label">Conversation</div>
+    <button id="reset-btn" onclick="resetChat()">Reset</button>
   </div>
   <div id="chat-messages" style="display:none"></div>
   <div id="thinking"><div class="dot-row"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div></div>
@@ -418,8 +431,20 @@ function showChatHistory() {
   if (!showingChat) {
     showingChat = true;
     document.getElementById('chips').style.display = 'none';
+    document.getElementById('chat-header').classList.add('visible');
     document.getElementById('chat-messages').style.display = 'flex';
   }
+}
+function resetChat() {
+  if (chatLoading) return;
+  showingChat = false;
+  chatLoading = false;
+  document.getElementById('chat-messages').innerHTML = '';
+  document.getElementById('chat-messages').style.display = 'none';
+  document.getElementById('chat-header').classList.remove('visible');
+  document.getElementById('chips').style.display = 'block';
+  document.getElementById('thinking').classList.remove('visible');
+  if (chatTimeout) { clearTimeout(chatTimeout); chatTimeout = null; }
 }
 function appendMsg(role, text) {
   showChatHistory();
