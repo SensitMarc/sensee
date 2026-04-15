@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="HVAC Vibration Guard — Three-layer AI system that detects heat pump and AC faults weeks before failure. ESP32 edge processing, Android adaptive AI, Gemini diagnosis. ~$55 hardware, no subscription.">
+    <meta name="author" content="Sensee.ca">
+
+    <title>HVAC Vibration Guard — Sensee.ca</title>
+
+    <!-- Bootstrap core CSS -->
+    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom fonts -->
+    <link href="vendor/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <link href='https://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+    <link href='https://fonts.googleapis.com/css?family=Merriweather:400,300,300italic,400italic,700,700italic,900,900italic' rel='stylesheet' type='text/css'>
+
+    <!-- Plugin CSS -->
+    <link href="vendor/magnific-popup/magnific-popup.css" rel="stylesheet">
+
+    <!-- Theme CSS -->
+    <link href="css/creative.min.css" rel="stylesheet">
+    <script src="https://code.s4d.io/widget-space/production/bundle.js"></script>
+    <link rel="stylesheet" href="https://code.s4d.io/widget-space/production/main.css">
+
+    <style>
+
+      /* ── Page palette ─────────────────────────────────────── */
+      :root {
+        --hvac-blue:   #2980b9;
+        --hvac-dark:   #1a2a3a;
+        --hvac-accent: #27ae60;
+        --text-muted:  #6c757d;
+      }
+
+      /* ── Hero override ────────────────────────────────────── */
+      .masthead-product {
+        padding: 120px 0 80px;
+        background: linear-gradient(135deg, #1a2a3a 0%, #2c3e50 60%, #2980b9 100%);
+        color: #fff;
+      }
+      .hero-badge {
+        display: inline-block;
+        background: rgba(255,255,255,0.12);
+        border: 1px solid rgba(255,255,255,0.25);
+        border-radius: 20px;
+        padding: 4px 14px;
+        font-size: 0.78rem;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        margin-bottom: 1.2rem;
+      }
+      .hero-price {
+        font-size: 1.1rem;
+        opacity: 0.7;
+        margin-top: 1rem;
+      }
+
+      /* ── Problem section ──────────────────────────────────── */
+      .problem-stat {
+        border-left: 3px solid var(--hvac-blue);
+        padding: 0.5rem 0 0.5rem 1rem;
+        margin-bottom: 1.25rem;
+      }
+      .problem-stat .stat-number {
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--hvac-blue);
+        line-height: 1;
+      }
+      .problem-stat .stat-label {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 0.15rem;
+      }
+
+      /* ── Layer cards ──────────────────────────────────────── */
+      .layer-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        height: 100%;
+        overflow: hidden;
+      }
+      .layer-card .layer-header {
+        padding: 1.5rem;
+        color: #fff;
+        position: relative;
+      }
+      .layer-card .layer-header.l1 { background: linear-gradient(135deg, #16a085, #1abc9c); }
+      .layer-card .layer-header.l2 { background: linear-gradient(135deg, #2980b9, #3498db); }
+      .layer-card .layer-header.l3 { background: linear-gradient(135deg, #8e44ad, #9b59b6); }
+      .layer-num {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        opacity: 0.7;
+        margin-bottom: 0.25rem;
+      }
+      .layer-card .card-body { padding: 1.5rem; }
+      .layer-spec {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+      }
+      .layer-spec .spec-icon {
+        width: 28px;
+        flex-shrink: 0;
+        color: var(--hvac-blue);
+        margin-top: 2px;
+      }
+      .layer-spec p { margin: 0; font-size: 0.875rem; color: #444; }
+
+      /* ── Algorithm cards ──────────────────────────────────── */
+      .algo-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 3px 16px rgba(0,0,0,0.07);
+        padding: 1.75rem;
+        height: 100%;
+        border-top: 4px solid var(--hvac-blue);
+      }
+      .algo-card.cusum  { border-top-color: #e67e22; }
+      .algo-card.mahl   { border-top-color: #8e44ad; }
+      .algo-name {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+      }
+      .algo-card h5 { font-weight: 700; margin-bottom: 0.75rem; color: #2c3e50; }
+      .algo-analogy {
+        background: #f8f9fa;
+        border-left: 3px solid var(--hvac-blue);
+        padding: 0.75rem 1rem;
+        border-radius: 0 6px 6px 0;
+        font-size: 0.85rem;
+        font-style: italic;
+        color: #555;
+        margin: 1rem 0;
+      }
+      .algo-card.cusum .algo-analogy { border-left-color: #e67e22; }
+      .algo-card.mahl  .algo-analogy { border-left-color: #8e44ad; }
+
+      /* ── Fault table ──────────────────────────────────────── */
+      .fault-row td { vertical-align: middle; font-size: 0.9rem; }
+      .fault-icon-cell { font-size: 1.4rem; width: 44px; text-align: center; }
+      .fault-name { font-weight: 700; color: #2c3e50; }
+      .fault-signal { font-size: 0.8rem; color: var(--text-muted); }
+      .badge-algo {
+        font-size: 0.7rem;
+        font-weight: 600;
+        padding: 3px 7px;
+        border-radius: 10px;
+        margin-right: 3px;
+        color: #fff;
+      }
+      .bg-ema   { background-color: #27ae60; }
+      .bg-cusum { background-color: #e67e22; }
+      .bg-mahl  { background-color: #8e44ad; }
+      .bg-rms   { background-color: #2980b9; }
+      .bg-crest { background-color: #c0392b; }
+
+      /* ── Setup steps ──────────────────────────────────────── */
+      .step-circle {
+        width: 48px; height: 48px;
+        border-radius: 50%;
+        background: var(--hvac-blue);
+        color: #fff;
+        font-size: 1.1rem;
+        font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+        margin-right: 1.25rem;
+        box-shadow: 0 3px 10px rgba(41,128,185,0.35);
+      }
+      .step-row {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 1.5rem;
+      }
+      .step-content h6 { font-weight: 700; margin-bottom: 0.25rem; color: #2c3e50; }
+      .step-content p  { margin: 0; font-size: 0.875rem; color: var(--text-muted); }
+
+      /* ── BOM ──────────────────────────────────────────────── */
+      .bom-table th { background: var(--hvac-dark); color: #fff; border: none; }
+      .bom-table td { vertical-align: middle; }
+      .bom-total td { font-weight: 700; background: #eaf4fb; font-size: 1.05rem; }
+
+      /* ── Misc helpers ─────────────────────────────────────── */
+      .section-divider { border-top: 2px solid #eee; margin: 0; }
+      .text-hvac { color: var(--hvac-blue); }
+      .bg-hvac-dark { background-color: var(--hvac-dark); }
+      .section-label-sm {
+        font-size: 0.72rem; font-weight: 700; letter-spacing: 0.12em;
+        text-transform: uppercase; color: var(--hvac-blue); margin-bottom: 0.5rem;
+      }
+
+    </style>
+
+  </head>
+
+  <body id="page-top">
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNav">
+      <div class="container">
+        <a class="navbar-brand" href="index.html">Sensee.ca</a>
+        <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse"
+                data-target="#navbarResponsive" aria-controls="navbarResponsive"
+                aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarResponsive">
+          <ul class="navbar-nav ml-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="dashboard.html" target="_blank">NILM ⚡</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link active" href="hvac.html">HVAC Guard 🌡️</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="index.html#contact">Contact</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ── Hero ──────────────────────────────────────────────────────────────── -->
+    <section class="masthead-product text-center">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-9 mx-auto">
+            <div class="hero-badge">HVAC Vibration Guard</div>
+            <h1 class="text-uppercase font-weight-bold mb-3">
+              <strong>Your heat pump.<br>Protected.</strong>
+            </h1>
+            <p class="lead mb-4" style="opacity:0.85;">
+              Three independent layers of AI monitor your unit 24/7 — from the
+              accelerometer on the compressor housing to plain-English diagnosis on
+              your phone. Detects eight specific fault types weeks before they become failures.
+            </p>
+            <a href="#problem" class="btn btn-light btn-xl sr-button mr-3">
+              <i class="fa fa-arrow-down mr-2"></i>See how it works
+            </a>
+            <a href="#setup" class="btn btn-outline-light btn-xl sr-button">
+              <i class="fa fa-wrench mr-2"></i>Get started
+            </a>
+            <p class="hero-price">~$55 hardware &nbsp;·&nbsp; no subscription &nbsp;·&nbsp; ~$6 / year in electricity</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── The problem ────────────────────────────────────────────────────────── -->
+    <section id="problem" class="py-5 bg-light">
+      <div class="container">
+        <div class="row align-items-center">
+          <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="section-label-sm">The problem</div>
+            <h2 class="font-weight-bold mb-4">HVAC failures don't announce themselves.</h2>
+            <p class="text-muted mb-4">
+              Heat pumps and central AC units give almost no warning before failure. Bearings
+              degrade over months. Fan blades slowly go out of balance. Coils ice up gradually.
+              By the time you hear something wrong, the damage is usually done — and the timing
+              is always the worst possible: the hottest day of summer or the coldest night of winter.
+            </p>
+            <p class="text-muted">
+              Professional vibration monitoring systems exist, but they cost hundreds to thousands
+              of dollars per year in subscription fees — designed for commercial facilities, not homes.
+              HVAC Vibration Guard brings the same physics-based fault detection to any homeowner for
+              the price of a service call.
+            </p>
+          </div>
+          <div class="col-lg-6">
+            <div class="row">
+              <div class="col-6 mb-3">
+                <div class="problem-stat">
+                  <div class="stat-number">$1,500–3,000</div>
+                  <div class="stat-label">Typical compressor replacement cost</div>
+                </div>
+              </div>
+              <div class="col-6 mb-3">
+                <div class="problem-stat">
+                  <div class="stat-number">$200–500</div>
+                  <div class="stat-label">Emergency weekend call-out fee</div>
+                </div>
+              </div>
+              <div class="col-6 mb-3">
+                <div class="problem-stat">
+                  <div class="stat-number">$150–300</div>
+                  <div class="stat-label">Annual maintenance contract — per year, no AI</div>
+                </div>
+              </div>
+              <div class="col-6 mb-3">
+                <div class="problem-stat">
+                  <div class="stat-number" style="color:#27ae60;">~$55</div>
+                  <div class="stat-label">Sensee HVAC Guard — one time, no subscription</div>
+                </div>
+              </div>
+            </div>
+            <p class="text-muted" style="font-size:0.85rem;">
+              A single prevented compressor failure pays back the hardware <strong>30–50&times;</strong>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Three layers ───────────────────────────────────────────────────────── -->
+    <section id="layers" class="py-5">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <div class="section-label-sm">Architecture</div>
+            <h2 class="font-weight-bold">Three independent intelligence layers</h2>
+            <hr class="my-4">
+            <p class="text-muted">Each layer catches what the others might miss. No single point of failure in the detection chain.</p>
+          </div>
+        </div>
+        <div class="row">
+
+          <!-- Layer 1 -->
+          <div class="col-lg-4 mb-4 d-flex">
+            <div class="layer-card card w-100">
+              <div class="layer-header l1">
+                <div class="layer-num">Layer 1</div>
+                <h4 class="font-weight-bold mb-1">
+                  <i class="fa fa-microchip mr-2"></i>ESP32 Edge
+                </h4>
+                <p class="mb-0" style="opacity:0.85; font-size:0.9rem;">Signal processing at the source</p>
+              </div>
+              <div class="card-body">
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-tachometer"></i></div>
+                  <p><strong>400 Hz sampling</strong> — fast enough to capture all five diagnostic frequency bins up to 120 Hz (Nyquist 200 Hz)</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-signal"></i></div>
+                  <p><strong>Real FFT</strong> — 256-sample Hamming-windowed DFT resolves 33, 60, 66, 99, and 120 Hz with 1.5 Hz bin resolution</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-arrows-alt"></i></div>
+                  <p><strong>Per-axis RMS</strong> — X, Y, Z measured independently; asymmetry between X and Y is a fan imbalance signature</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-repeat"></i></div>
+                  <p><strong>State machine</strong> — tracks OFF / STARTING / RUNNING / STOPPING so every measurement carries operating context</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-wifi"></i></div>
+                  <p><strong>MQTT over TLS</strong> — payload published every 500 ms to HiveMQ Cloud; Android receives it in real time</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layer 2 -->
+          <div class="col-lg-4 mb-4 d-flex">
+            <div class="layer-card card w-100">
+              <div class="layer-header l2">
+                <div class="layer-num">Layer 2</div>
+                <h4 class="font-weight-bold mb-1">
+                  <i class="fa fa-android mr-2"></i>Android Adaptive AI
+                </h4>
+                <p class="mb-0" style="opacity:0.85; font-size:0.9rem;">Classical algorithms on your phone</p>
+              </div>
+              <div class="card-body">
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-graduation-cap"></i></div>
+                  <p><strong>Baseline learning</strong> — first 60 seconds of each run cycle, the system learns what normal looks like for your specific unit</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-line-chart"></i></div>
+                  <p><strong>EMA adaptive reference</strong> — the baseline drifts slowly with the unit's natural aging so hot summer days don't cause false alarms</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-area-chart"></i></div>
+                  <p><strong>CUSUM drift detection</strong> — accumulates tiny deviations over time; catches bearing wear weeks before any threshold is crossed</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-th"></i></div>
+                  <p><strong>Mahalanobis distance</strong> — treats all five FFT bins as a correlated vector; detects fingerprint shifts no single-bin ratio can see</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-sliders"></i></div>
+                  <p><strong>8 fault classifiers</strong> — each scored and blended; the dominant fault wins with a confidence percentage</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Layer 3 -->
+          <div class="col-lg-4 mb-4 d-flex">
+            <div class="layer-card card w-100">
+              <div class="layer-header l3">
+                <div class="layer-num">Layer 3</div>
+                <h4 class="font-weight-bold mb-1">
+                  <i class="fa fa-comments mr-2"></i>Gemini AI Diagnosis
+                </h4>
+                <p class="mb-0" style="opacity:0.85; font-size:0.9rem;">Plain English for the homeowner</p>
+              </div>
+              <div class="card-body">
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-bell"></i></div>
+                  <p><strong>Fault-triggered</strong> — Gemini is called only when the active fault type changes, not on every sample; no noise, no spam</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-file-text-o"></i></div>
+                  <p><strong>Full context</strong> — receives fault type, severity, confidence, frequency readings, rate of change, and operating history before responding</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-comment-o"></i></div>
+                  <p><strong>Plain English output</strong> — 2–3 sentence diagnosis in homeowner language: what it is, how serious, what to do next</p>
+                </div>
+                <div class="layer-spec">
+                  <div class="spec-icon"><i class="fa fa-question-circle"></i></div>
+                  <p><strong>Chat interface</strong> — ask follow-up questions. "Should I call someone today?" "Is this covered by warranty?" — answered in context</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ── The algorithms, explained ─────────────────────────────────────────── -->
+    <section id="algorithms" class="py-5 bg-light">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <div class="section-label-sm">Under the hood</div>
+            <h2 class="font-weight-bold">How the AI actually works</h2>
+            <hr class="my-4">
+            <p class="text-muted">Three classical algorithms, each solving a different detection problem. No black box — every alert has a traceable mathematical cause.</p>
+          </div>
+        </div>
+        <div class="row">
+
+          <!-- EMA -->
+          <div class="col-lg-4 mb-4 d-flex">
+            <div class="algo-card w-100">
+              <div class="algo-name">Algorithm 1</div>
+              <h5>EMA Adaptive Baseline</h5>
+              <p class="text-muted" style="font-size:0.875rem;">
+                A fixed threshold set in June will false-alarm every August — hotter weather legitimately
+                increases vibration. Exponential Moving Average continuously adjusts the reference point
+                with a time constant of ~8 minutes, so seasonal drift is absorbed automatically.
+              </p>
+              <div class="algo-analogy">
+                "Like how your body adjusts to summer heat. What felt uncomfortably warm in April feels
+                completely normal by August. The system recalibrates to your unit's real operating conditions,
+                not a factory spec."
+              </div>
+              <small class="text-muted">α = 0.001 · Time constant ≈ 8 min · Seeds from 60s baseline</small>
+            </div>
+          </div>
+
+          <!-- CUSUM -->
+          <div class="col-lg-4 mb-4 d-flex">
+            <div class="algo-card cusum w-100">
+              <div class="algo-name">Algorithm 2</div>
+              <h5>CUSUM Drift Detection</h5>
+              <p class="text-muted" style="font-size:0.875rem;">
+                Bearing wear happens over months — each reading is only fractionally above normal.
+                A 30-second rolling average never sees it. CUSUM accumulates tiny consistent deviations
+                like a savings account; when the balance crosses a threshold set at 5 standard deviations,
+                the alarm fires. Single spikes don't trigger it — only sustained drift does.
+              </p>
+              <div class="algo-analogy" style="border-left-color:#e67e22;">
+                "Like noticing someone is slowly turning up the thermostat one degree per week.
+                Each change is unnoticeable on its own. CUSUM is the only detector sensitive enough
+                to catch the cumulative effect before the room is unbearably hot."
+              </div>
+              <small class="text-muted">k = 0.5σ allowance · h = 5σ alarm · Detects drift ~10× earlier than window average</small>
+            </div>
+          </div>
+
+          <!-- Mahalanobis -->
+          <div class="col-lg-4 mb-4 d-flex">
+            <div class="algo-card mahl w-100">
+              <div class="algo-name">Algorithm 3</div>
+              <h5>Mahalanobis Distance</h5>
+              <p class="text-muted" style="font-size:0.875rem;">
+                Fan imbalance simultaneously elevates 33 Hz and 99 Hz while leaving 60 Hz unchanged —
+                a correlated five-bin fingerprint that no single ratio check can see. Mahalanobis
+                distance measures how far the current FFT vector is from the baseline distribution,
+                accounting for the correlations between all five bins at once.
+              </p>
+              <div class="algo-analogy" style="border-left-color:#8e44ad;">
+                "Like recognising someone not just by height, but by the combination of height, gait,
+                voice, and posture together. Each trait alone might be unremarkable. The pattern as a
+                whole is unmistakable."
+              </div>
+              <small class="text-muted">D² vs χ²(5, p=0.99) = 15.09 · 5×5 covariance model · Built from your unit's own baseline</small>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Fault types ────────────────────────────────────────────────────────── -->
+    <section id="faults" class="py-5">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <div class="section-label-sm">Detection coverage</div>
+            <h2 class="font-weight-bold">Eight fault types. Named, not guessed.</h2>
+            <hr class="my-4">
+            <p class="text-muted">Every alert identifies the specific mechanical cause and the algorithm that caught it — not a generic "vibration elevated" warning.</p>
+          </div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead class="thead-dark">
+              <tr>
+                <th style="width:44px;"></th>
+                <th>Fault</th>
+                <th>What's happening</th>
+                <th>Detection signal</th>
+                <th>Algorithm</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="fault-icon-cell">⚙</td>
+                <td><div class="fault-name">Fan Imbalance</div></td>
+                <td class="fault-signal">Dirty blades, bent fin, or assembly imbalance causing uneven rotation</td>
+                <td class="fault-signal">33 Hz BPF elevation + X/Y axis asymmetry</td>
+                <td><span class="badge-algo bg-ema">EMA</span><span class="badge-algo bg-mahl">Mahal</span></td>
+              </tr>
+              <tr>
+                <td class="fault-icon-cell">⟳</td>
+                <td><div class="fault-name">Bearing Wear</div></td>
+                <td class="fault-signal">Motor or fan bearing degradation — the earliest detectable mechanical failure</td>
+                <td class="fault-signal">99 Hz + 120 Hz harmonic rise, slow RMS drift</td>
+                <td><span class="badge-algo bg-cusum">CUSUM</span><span class="badge-algo bg-mahl">Mahal</span></td>
+              </tr>
+              <tr>
+                <td class="fault-icon-cell">⚠</td>
+                <td><div class="fault-name">Debris / Obstruction</div></td>
+                <td class="fault-signal">Leaves, ice, or foreign material contacting a rotating component</td>
+                <td class="fault-signal">Crest factor spikes (peak/RMS &gt; 3.5×) in &gt;10% of samples</td>
+                <td><span class="badge-algo bg-crest">Crest</span></td>
+              </tr>
+              <tr>
+                <td class="fault-icon-cell">〰</td>
+                <td><div class="fault-name">Panel Rattle</div></td>
+                <td class="fault-signal">Loose sheet metal cover or housing panel vibrating at grid harmonics</td>
+                <td class="fault-signal">99 Hz / 120 Hz bin dominant relative to total RMS</td>
+                <td><span class="badge-algo bg-rms">Ratio</span></td>
+              </tr>
+              <tr>
+                <td class="fault-icon-cell">❄</td>
+                <td><div class="fault-name">Coil Icing</div></td>
+                <td class="fault-signal">Ice formation on evaporator coil restricting airflow and straining compressor</td>
+                <td class="fault-signal">Compressor 60 Hz rise + sustained RMS uptrend combined</td>
+                <td><span class="badge-algo bg-ema">EMA</span><span class="badge-algo bg-rms">Trend</span></td>
+              </tr>
+              <tr>
+                <td class="fault-icon-cell">⚡</td>
+                <td><div class="fault-name">Startup Stress</div></td>
+                <td class="fault-signal">Abnormal compressor startup transient — signals capacitor or motor wear</td>
+                <td class="fault-signal">Startup amplitude profile deviation from baseline timing</td>
+                <td><span class="badge-algo bg-rms">State</span></td>
+              </tr>
+              <tr>
+                <td class="fault-icon-cell">◈</td>
+                <td><div class="fault-name">Spectral Anomaly</div></td>
+                <td class="fault-signal">FFT fingerprint changed in a way that doesn't match any named fault pattern</td>
+                <td class="fault-signal">Mahalanobis D² &gt; χ²(5, p=0.99) = 15.09 threshold</td>
+                <td><span class="badge-algo bg-mahl">Mahal</span></td>
+              </tr>
+              <tr>
+                <td class="fault-icon-cell">↑</td>
+                <td><div class="fault-name">Elevated Vibration</div></td>
+                <td class="fault-signal">Sustained RMS above adaptive baseline — general mechanical stress indicator</td>
+                <td class="fault-signal">Rolling average &gt;20% above EMA baseline for &gt;30 seconds</td>
+                <td><span class="badge-algo bg-ema">EMA</span><span class="badge-algo bg-rms">Trend</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Hardware ───────────────────────────────────────────────────────────── -->
+    <section id="hardware" class="py-5 bg-hvac-dark text-white">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <div class="section-label-sm" style="color:#5dade2;">Hardware</div>
+            <h2 class="font-weight-bold text-white">$55 bill of materials</h2>
+            <hr class="my-4" style="border-color:rgba(255,255,255,0.2);">
+            <p style="opacity:0.75;">Off-the-shelf components. No custom PCB. No soldering required beyond connecting four I²C wires.</p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-7 mb-4 mb-lg-0">
+            <table class="table bom-table table-bordered bg-white text-dark rounded">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th>Purpose</th>
+                  <th class="text-right" style="width:90px;">Cost</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>ESP32-S3</strong> (Freenove WROOM N8R8)</td>
+                  <td>Microcontroller, WiFi, MQTT, FFT</td>
+                  <td class="text-right">$12</td>
+                </tr>
+                <tr>
+                  <td><strong>LSM303D</strong> accelerometer breakout</td>
+                  <td>400 Hz vibration sampling, 3-axis</td>
+                  <td class="text-right">$4</td>
+                </tr>
+                <tr>
+                  <td><strong>INMP441</strong> MEMS microphone <em class="text-muted">(optional)</em></td>
+                  <td>Acoustic fault detection (future)</td>
+                  <td class="text-right">$2</td>
+                </tr>
+                <tr>
+                  <td><strong>IP65</strong> weatherproof enclosure</td>
+                  <td>Outdoor-rated housing</td>
+                  <td class="text-right">$8</td>
+                </tr>
+                <tr>
+                  <td><strong>Neodymium</strong> magnet mount</td>
+                  <td>Rigid coupling to compressor housing</td>
+                  <td class="text-right">$5</td>
+                </tr>
+                <tr>
+                  <td><strong>5V</strong> outdoor power adapter</td>
+                  <td>Continuous power</td>
+                  <td class="text-right">$10</td>
+                </tr>
+                <tr>
+                  <td>Wire, connectors, standoffs</td>
+                  <td>Assembly</td>
+                  <td class="text-right">$5</td>
+                </tr>
+                <tr>
+                  <td colspan="2"><i class="fa fa-bolt mr-1 text-muted"></i>Ongoing electricity (5W continuous)</td>
+                  <td class="text-right">~$6/yr</td>
+                </tr>
+                <tr class="bom-total">
+                  <td colspan="2"><strong>Total</strong></td>
+                  <td class="text-right"><strong>~$55</strong></td>
+                </tr>
+              </tbody>
+            </table>
+            <p style="opacity:0.6; font-size:0.82rem;" class="mt-2">
+              <i class="fa fa-info-circle mr-1"></i>
+              Solar + 18650 battery option (~$24 addition) eliminates the power cable entirely
+              for a fully wireless outdoor installation.
+            </p>
+          </div>
+          <div class="col-lg-5">
+            <h5 class="font-weight-bold mb-3" style="color:#5dade2;">Mounting note</h5>
+            <p style="opacity:0.8; font-size:0.9rem;">Mounting method has a large effect on signal quality. The neodymium magnet provides rigid metal-to-metal coupling — essential for capturing high-frequency bearing wear signals above 80 Hz. Foam tape or zip ties attenuate high frequencies and will miss early bearing degradation.</p>
+            <p style="opacity:0.8; font-size:0.9rem;">Best location: <strong>compressor top plate</strong> for compressor + fan coverage. Fan motor housing is second choice for fan-specific analysis.</p>
+            <div class="mt-4 p-3 rounded" style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);">
+              <div class="section-label-sm" style="color:#5dade2;">Wiring — 4 wires only</div>
+              <p class="mb-1" style="font-size:0.875rem; opacity:0.85;"><strong>LSM303D → ESP32-S3</strong></p>
+              <code style="font-size:0.8rem; opacity:0.75;">
+                VCC → 3.3V &nbsp;|&nbsp; GND → GND<br>
+                SDA → GPIO 8 &nbsp;|&nbsp; SCL → GPIO 9
+              </code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Getting started ────────────────────────────────────────────────────── -->
+    <section id="setup" class="py-5 bg-light">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <div class="section-label-sm">Getting started</div>
+            <h2 class="font-weight-bold">From parts to protected in an afternoon</h2>
+            <hr class="my-4">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-6 mb-4">
+
+            <div class="step-row">
+              <div class="step-circle">1</div>
+              <div class="step-content">
+                <h6>Order the parts</h6>
+                <p>~$55 from Amazon and AliExpress. The BOM above links to each component. No custom parts, no minimum order.</p>
+              </div>
+            </div>
+
+            <div class="step-row">
+              <div class="step-circle">2</div>
+              <div class="step-content">
+                <h6>Flash the firmware</h6>
+                <p>Open source firmware on GitHub. Flash via USB using PlatformIO. Set your WiFi credentials and MQTT broker — done in under 10 minutes.</p>
+              </div>
+            </div>
+
+            <div class="step-row">
+              <div class="step-circle">3</div>
+              <div class="step-content">
+                <h6>Mount the sensor</h6>
+                <p>Attach the neodymium magnet to the compressor housing. Run the USB cable into the IP65 enclosure. Rigid metal contact is the only requirement.</p>
+              </div>
+            </div>
+
+            <div class="step-row">
+              <div class="step-circle">4</div>
+              <div class="step-content">
+                <h6>Install the Android app</h6>
+                <p>Connect to the same MQTT broker. The app begins receiving data immediately and starts learning your unit's baseline on the first run cycle.</p>
+              </div>
+            </div>
+
+            <div class="step-row">
+              <div class="step-circle">5</div>
+              <div class="step-content">
+                <h6>Let it learn — then forget it</h6>
+                <p>After 60 seconds of the first RUNNING cycle, baseline learning completes. EMA, CUSUM, and Mahalanobis models are live. You'll get a Gemini notification if anything changes.</p>
+              </div>
+            </div>
+
+          </div>
+          <div class="col-lg-6">
+            <div class="p-4 rounded bg-white shadow-sm h-100">
+              <h5 class="font-weight-bold mb-3 text-hvac">Hardware-in-the-loop testing</h5>
+              <p class="text-muted" style="font-size:0.9rem;">
+                You don't need a broken heat pump to test the system. The Android app includes a
+                <strong>Hardware Test panel</strong> that injects fault signatures over MQTT — the ESP32
+                multiplies the real FFT bins by fault-type factors before publishing, so Android Layer 2
+                sees a full bearing wear or fan imbalance signature while the real sensor keeps running normally.
+              </p>
+              <p class="text-muted" style="font-size:0.9rem;">
+                Tap <strong>Fan ⚙</strong> and watch the fan imbalance score climb, the Mahalanobis D² spike,
+                and Gemini fire a plain-English diagnosis. Tap <strong>✓ Clear</strong> and everything returns
+                to baseline within two seconds.
+              </p>
+              <hr>
+              <h5 class="font-weight-bold mb-3 text-hvac">Physical fault induction</h5>
+              <p class="text-muted" style="font-size:0.9rem; margin-bottom:0;">
+                For real-sensor validation on a live unit: cable-tie a washer to a fan blade (imbalance),
+                loosen two panel screws (rattle), or hold a plastic ruler lightly against the fan guard (debris).
+                All are reversible and safe.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Contact / CTA ─────────────────────────────────────────────────────── -->
+    <section id="contact">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-8 mx-auto text-center">
+            <h2 class="section-heading">Interested?</h2>
+            <hr class="my-4">
+            <p class="mb-5 text-muted">
+              Early access, partnership, installation help, or just a question —
+              we read every message and respond personally.
+            </p>
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-lg-4 m-auto text-center">
+            <i class="fa fa-envelope-o fa-3x mb-3 sr-contact text-primary"></i>
+            <p><a href="mailto:sensitlabs@gmail.com">sensitlabs@gmail.com</a></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bootstrap core JavaScript -->
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Plugin JavaScript -->
+    <script src="vendor/jquery-easing/jquery.easing.min.js"></script>
+    <script src="vendor/scrollreveal/scrollreveal.min.js"></script>
+    <script src="vendor/magnific-popup/jquery.magnific-popup.min.js"></script>
+
+    <!-- Custom scripts for this template -->
+    <script src="js/creative.min.js"></script>
+
+  </body>
+
+</html>
