@@ -69,6 +69,18 @@
     justify-content: space-between; align-items: center;
   }
   #indoor-row.visible { display: flex; }
+
+
+  /* City selector row */
+  #city-selector-row {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  #city-select {
+    flex: 1; background: #fff; border: 1px solid #e0d8cc; border-radius: 10px;
+    padding: 6px 10px; font-size: 12px; color: #4a4238;
+    font-family: 'Georgia', serif; outline: none; cursor: pointer;
+  }
+  #city-select:focus { border-color: #7c9e8a; }
   .indoor-half { display: flex; align-items: center; gap: 7px; }
   .indoor-emoji { font-size: 14px; }
   .indoor-label { font-size: 9px; color: #9a8c78; text-transform: uppercase; letter-spacing: 0.8px; }
@@ -258,11 +270,68 @@
 </div>
 
 <div id="chat-section">
+  <!-- City selector -->
+  <div id="city-selector-row">
+    <span class="section-label" style="margin-bottom:0; flex-shrink:0">🌍 City</span>
+    <select id="city-select" onchange="onCityChange()">
+      <option value="">Compare to your city…</option>
+      <optgroup label="Canada">
+        <option value="Vancouver_BC">Vancouver, BC</option>
+        <option value="Victoria_BC">Victoria, BC</option>
+        <option value="Kelowna_BC">Kelowna, BC</option>
+        <option value="Calgary_AB">Calgary, AB</option>
+        <option value="Edmonton_AB">Edmonton, AB</option>
+        <option value="Regina_SK">Regina, SK</option>
+        <option value="Saskatoon_SK">Saskatoon, SK</option>
+        <option value="Winnipeg_MB">Winnipeg, MB</option>
+        <option value="Toronto_ON">Toronto, ON</option>
+        <option value="Ottawa_ON">Ottawa, ON</option>
+        <option value="Hamilton_ON">Hamilton, ON</option>
+        <option value="London_ON">London, ON</option>
+        <option value="Montreal_QC">Montreal, QC</option>
+        <option value="Quebec_City_QC">Quebec City, QC</option>
+        <option value="Moncton_NB">Moncton, NB</option>
+        <option value="Saint_John_NB">Saint John, NB</option>
+        <option value="Fredericton_NB">Fredericton, NB</option>
+        <option value="Halifax_NS">Halifax, NS</option>
+        <option value="Charlottetown_PE">Charlottetown, PE</option>
+        <option value="St_Johns_NL">St. John's, NL</option>
+      </optgroup>
+      <optgroup label="Global">
+        <option value="New_York_USA">New York, USA</option>
+        <option value="Los_Angeles_USA">Los Angeles, USA</option>
+        <option value="Mexico_City_MX">Mexico City, MX</option>
+        <option value="London_UK">London, UK</option>
+        <option value="Paris_FR">Paris, FR</option>
+        <option value="Berlin_DE">Berlin, DE</option>
+        <option value="Madrid_ES">Madrid, ES</option>
+        <option value="Rome_IT">Rome, IT</option>
+        <option value="Tokyo_JP">Tokyo, JP</option>
+        <option value="Seoul_KR">Seoul, KR</option>
+        <option value="Singapore_SG">Singapore, SG</option>
+        <option value="Hong_Kong_CN">Hong Kong, CN</option>
+        <option value="Shanghai_CN">Shanghai, CN</option>
+        <option value="Mumbai_IN">Mumbai, IN</option>
+        <option value="Bangkok_TH">Bangkok, TH</option>
+        <option value="Dubai_AE">Dubai, AE</option>
+        <option value="Riyadh_SA">Riyadh, SA</option>
+        <option value="Sydney_AU">Sydney, AU</option>
+        <option value="Melbourne_AU">Melbourne, AU</option>
+        <option value="Auckland_NZ">Auckland, NZ</option>
+        <option value="Johannesburg_ZA">Johannesburg, ZA</option>
+        <option value="Nairobi_KE">Nairobi, KE</option>
+        <option value="Cairo_EG">Cairo, EG</option>
+        <option value="Sao_Paulo_BR">São Paulo, BR</option>
+        <option value="Buenos_Aires_AR">Buenos Aires, AR</option>
+      </optgroup>
+    </select>
+  </div>
   <div id="chips">
     <div class="section-label">Ask me anything</div>
     <button class="chip" onclick="sendChip(this)">What's costing me the most?</button>
     <button class="chip" onclick="sendChip(this)">Any quick wins to save money?</button>
     <button class="chip" onclick="sendChip(this)">Best time to run laundry?</button>
+    <button class="chip" id="city-chip" onclick="sendCityChip()" style="display:none">How do I compare to my city?</button>
   </div>
   <div id="chat-header">
     <div class="section-label">Conversation</div>
@@ -277,6 +346,100 @@ const RATE  = 0.28;
 const EMOJI = { 'HVAC':'❄️','Elec Range':'🔥','Elec Dryer':'🌀','EV Charger':'⚡','Water Heater':'💧','Refrigerator':'🧊','Microwave':'📡','Washer':'🫧','Lighting':'💡','TV/Electronics':'📺' };
 
 let liveData=null, chatLoading=false, showingChat=false, chatTimeout=null;
+
+// ── City energy dataset ───────────────────────────────────────────────────────
+const CITY_DATA = {
+  // Canada
+  Vancouver_BC:    {kwh:10200,cost:0.14,carbon:20, profile:'mild_heating',         name:'Vancouver, BC'},
+  Victoria_BC:     {kwh: 9600,cost:0.14,carbon:20, profile:'mild_heating',         name:'Victoria, BC'},
+  Kelowna_BC:      {kwh:12800,cost:0.14,carbon:20, profile:'heating_dominant',     name:'Kelowna, BC'},
+  Calgary_AB:      {kwh: 9800,cost:0.19,carbon:540,profile:'heating_dominant',     name:'Calgary, AB'},
+  Edmonton_AB:     {kwh:10600,cost:0.19,carbon:540,profile:'heating_dominant',     name:'Edmonton, AB'},
+  Regina_SK:       {kwh:11900,cost:0.18,carbon:620,profile:'heating_dominant',     name:'Regina, SK'},
+  Saskatoon_SK:    {kwh:12200,cost:0.18,carbon:620,profile:'heating_dominant',     name:'Saskatoon, SK'},
+  Winnipeg_MB:     {kwh:12400,cost:0.10,carbon:10, profile:'heating_dominant',     name:'Winnipeg, MB'},
+  Toronto_ON:      {kwh: 9500,cost:0.17,carbon:40, profile:'mixed_heating_cooling',name:'Toronto, ON'},
+  Ottawa_ON:       {kwh:11200,cost:0.17,carbon:40, profile:'heating_dominant',     name:'Ottawa, ON'},
+  Hamilton_ON:     {kwh: 9800,cost:0.17,carbon:40, profile:'mixed_heating_cooling',name:'Hamilton, ON'},
+  London_ON:       {kwh:10300,cost:0.17,carbon:40, profile:'mixed_heating_cooling',name:'London, ON'},
+  Montreal_QC:     {kwh:21000,cost:0.09,carbon:5,  profile:'heating_dominant',     name:'Montreal, QC'},
+  Quebec_City_QC:  {kwh:23500,cost:0.09,carbon:5,  profile:'heating_dominant',     name:'Quebec City, QC'},
+  Moncton_NB:      {kwh:14750,cost:0.13,carbon:300,profile:'heating_dominant',     name:'Moncton, NB'},
+  Saint_John_NB:   {kwh:18330,cost:0.13,carbon:300,profile:'heating_dominant',     name:'Saint John, NB'},
+  Fredericton_NB:  {kwh:16200,cost:0.13,carbon:300,profile:'heating_dominant',     name:'Fredericton, NB'},
+  Halifax_NS:      {kwh:14900,cost:0.18,carbon:700,profile:'heating_dominant',     name:'Halifax, NS'},
+  Charlottetown_PE:{kwh:15400,cost:0.17,carbon:600,profile:'heating_dominant',     name:'Charlottetown, PE'},
+  St_Johns_NL:     {kwh:17800,cost:0.14,carbon:30, profile:'heating_dominant',     name:"St. John's, NL"},
+  // Global
+  New_York_USA:    {kwh:10500,cost:0.24,carbon:250,profile:'mixed_heating_cooling',name:'New York, USA'},
+  Los_Angeles_USA: {kwh: 6500,cost:0.28,carbon:200,profile:'cooling_dominant',    name:'Los Angeles, USA'},
+  Mexico_City_MX:  {kwh: 2800,cost:0.12,carbon:450,profile:'mild_cooling',        name:'Mexico City, MX'},
+  London_UK:       {kwh: 3500,cost:0.40,carbon:200,profile:'mild_heating',         name:'London, UK'},
+  Paris_FR:        {kwh: 3200,cost:0.38,carbon:60, profile:'mild_heating',         name:'Paris, FR'},
+  Berlin_DE:       {kwh: 3200,cost:0.48,carbon:300,profile:'heating_dominant',     name:'Berlin, DE'},
+  Madrid_ES:       {kwh: 4200,cost:0.32,carbon:150,profile:'cooling_dominant',    name:'Madrid, ES'},
+  Rome_IT:         {kwh: 3600,cost:0.34,carbon:200,profile:'cooling_dominant',    name:'Rome, IT'},
+  Tokyo_JP:        {kwh: 4500,cost:0.26,carbon:460,profile:'cooling_dominant',    name:'Tokyo, JP'},
+  Seoul_KR:        {kwh: 4200,cost:0.23,carbon:450,profile:'heating_dominant',     name:'Seoul, KR'},
+  Singapore_SG:    {kwh: 7200,cost:0.30,carbon:420,profile:'cooling_dominant',    name:'Singapore, SG'},
+  Hong_Kong_CN:    {kwh: 5400,cost:0.22,carbon:650,profile:'cooling_dominant',    name:'Hong Kong, CN'},
+  Shanghai_CN:     {kwh: 3800,cost:0.14,carbon:550,profile:'mixed_heating_cooling',name:'Shanghai, CN'},
+  Mumbai_IN:       {kwh: 1200,cost:0.10,carbon:700,profile:'cooling_dominant',    name:'Mumbai, IN'},
+  Bangkok_TH:      {kwh: 3000,cost:0.12,carbon:500,profile:'cooling_dominant',    name:'Bangkok, TH'},
+  Dubai_AE:        {kwh:12000,cost:0.10,carbon:430,profile:'extreme_cooling',     name:'Dubai, AE'},
+  Riyadh_SA:       {kwh:14000,cost:0.06,carbon:600,profile:'extreme_cooling',     name:'Riyadh, SA'},
+  Sydney_AU:       {kwh: 6500,cost:0.34,carbon:600,profile:'cooling_dominant',    name:'Sydney, AU'},
+  Melbourne_AU:    {kwh: 6200,cost:0.32,carbon:550,profile:'mixed_heating_cooling',name:'Melbourne, AU'},
+  Auckland_NZ:     {kwh: 7000,cost:0.30,carbon:100,profile:'mild_heating',        name:'Auckland, NZ'},
+  Johannesburg_ZA: {kwh: 4200,cost:0.18,carbon:900,profile:'mild_heating',        name:'Johannesburg, ZA'},
+  Nairobi_KE:      {kwh:   900,cost:0.20,carbon:150,profile:'mild_cooling',       name:'Nairobi, KE'},
+  Cairo_EG:        {kwh: 2600,cost:0.08,carbon:500,profile:'cooling_dominant',    name:'Cairo, EG'},
+  Sao_Paulo_BR:    {kwh: 2800,cost:0.18,carbon:100,profile:'mild_cooling',        name:'São Paulo, BR'},
+  Buenos_Aires_AR: {kwh: 3200,cost:0.12,carbon:350,profile:'mixed_heating_cooling',name:'Buenos Aires, AR'}
+};
+const SEASON_MULT = {winter:0.45, spring:0.20, summer:0.25, fall:0.10};
+
+function currentSeason() {
+  const m = new Date().getMonth() + 1;
+  if (m===12 || m<=2) return 'winter';
+  if (m<=5) return 'spring';
+  if (m<=8) return 'summer';
+  return 'fall';
+}
+
+function onCityChange() {
+  const key = document.getElementById('city-select').value;
+  localStorage.setItem('selectedCity', key || '');
+  document.getElementById('city-chip').style.display = key ? 'block' : 'none';
+}
+
+function sendCityChip() {
+  const key  = localStorage.getItem('selectedCity') || '';
+  const city = CITY_DATA[key];
+  if (!city) {
+    askAndroid('How does my energy use compare to typical homes globally?');
+    return;
+  }
+  const season     = currentSeason();
+  const medMonthly = Math.round(city.kwh * SEASON_MULT[season] / 3);
+  const monthly    = Math.round(liveData?.kwhMonth || 0);
+  askAndroid(
+    `How does my home compare to typical households in ${city.name} this ${season}? ` +
+    `I'm using about ${monthly} kWh this month — the seasonal median here is ${medMonthly} kWh. ` +
+    `The local grid is ${city.carbon} gCO₂/kWh and electricity costs $${city.cost}/kWh. ` +
+    `Give me a personalized comparison and one actionable tip.`
+  );
+}
+
+// Restore city selection on load
+(function restoreCity() {
+  const key = localStorage.getItem('selectedCity') || '';
+  if (key) {
+    const sel = document.getElementById('city-select');
+    sel.value = key;
+    document.getElementById('city-chip').style.display = 'block';
+  }
+})();
 
 function updateClock() {
   const t = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});

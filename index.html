@@ -5,10 +5,10 @@
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
+    <meta name="description" content="Sensee.ca — Home intelligence monitoring. NILM energy tracking and HVAC vibration fault detection powered by AI.">
+    <meta name="author" content="Sensee.ca">
 
-    <title>Sensee.ca</title>
+    <title>Sensee.ca — Home Intelligence Monitoring</title>
 
     <!-- Bootstrap core CSS -->
     <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
@@ -25,6 +25,148 @@
     <link href="css/creative.min.css" rel="stylesheet">
     <script src="https://code.s4d.io/widget-space/production/bundle.js"></script>
     <link rel="stylesheet" href="https://code.s4d.io/widget-space/production/main.css">
+
+    <style>
+      /* Product cards */
+      .product-card {
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+        transition: box-shadow 0.2s ease;
+        height: 100%;
+      }
+      .product-card:hover {
+        box-shadow: 0 8px 32px rgba(0,0,0,0.16);
+      }
+      .product-card .card-body {
+        padding: 2.5rem 2rem;
+      }
+      .product-icon-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.5rem;
+        font-size: 2rem;
+      }
+      .icon-nilm  { background: rgba(241,196,15,0.15); color: #e6b800; }
+      .icon-hvac  { background: rgba(52,152,219,0.15); color: #2980b9; }
+
+      /* Layer stack section */
+      .layer-row {
+        padding: 1.5rem 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+      }
+      .layer-row:last-child { border-bottom: none; }
+      .layer-number {
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        opacity: 0.6;
+        margin-bottom: 0.25rem;
+      }
+      .layer-icon {
+        font-size: 2.4rem;
+        margin-bottom: 0.75rem;
+      }
+
+      /* Fault grid */
+      .fault-card {
+        background: #fff;
+        border-radius: 8px;
+        padding: 1.5rem 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+        height: 100%;
+        transition: box-shadow 0.2s;
+      }
+      .fault-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+      .fault-icon {
+        font-size: 1.8rem;
+        margin-bottom: 0.75rem;
+        color: #2980b9;
+      }
+      .fault-card h6 {
+        font-weight: 700;
+        margin-bottom: 0.4rem;
+        color: #2c3e50;
+      }
+      .fault-card p {
+        font-size: 0.85rem;
+        color: #6c757d;
+        margin: 0;
+      }
+
+      /* BOM table */
+      .bom-table th {
+        background: #2c3e50;
+        color: #fff;
+        font-weight: 600;
+        border: none;
+      }
+      .bom-table td { vertical-align: middle; }
+      .bom-total td {
+        font-weight: 700;
+        background: #f0f4f8;
+        font-size: 1.05rem;
+      }
+
+      /* ROI comparison */
+      .roi-box {
+        border-radius: 8px;
+        padding: 1.75rem 1.5rem;
+        height: 100%;
+      }
+      .roi-box.sensee {
+        background: linear-gradient(135deg, #2980b9 0%, #1a5f7a 100%);
+        color: #fff;
+      }
+      .roi-box.alternative {
+        background: #f0f4f8;
+        color: #2c3e50;
+      }
+      .roi-price {
+        font-size: 2.5rem;
+        font-weight: 800;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+      }
+      .roi-label {
+        font-size: 0.8rem;
+        opacity: 0.75;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 1rem;
+      }
+      .roi-list { padding-left: 1.2rem; margin: 0; font-size: 0.9rem; }
+      .roi-list li { margin-bottom: 0.4rem; }
+
+      /* Section helpers */
+      .section-subhead {
+        font-size: 1.1rem;
+        opacity: 0.85;
+        max-width: 640px;
+        margin: 0 auto 2.5rem;
+      }
+      .bg-dark-blue { background-color: #1a2a3a; }
+
+      /* Masthead subtitle */
+      .masthead-subtitle {
+        font-size: 1.35rem;
+        font-weight: 300;
+        letter-spacing: 0.05em;
+        opacity: 0.85;
+        margin-bottom: 0.5rem;
+      }
+      .masthead-tagline {
+        font-size: 1rem;
+        opacity: 0.65;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+    </style>
 
   </head>
 
@@ -43,6 +185,9 @@
               <a class="nav-link" href="dashboard.html" target="_blank">NILM ⚡</a>
             </li>
             <li class="nav-item">
+              <a class="nav-link" href="hvac.html">HVAC Guard 🌡️</a>
+            </li>
+            <li class="nav-item">
               <a class="nav-link js-scroll-trigger" href="#contact">Contact</a>
             </li>
           </ul>
@@ -50,47 +195,333 @@
       </div>
     </nav>
 
+    <!-- Hero -->
     <header class="masthead text-center text-white d-flex">
       <div class="container my-auto">
         <div class="row">
           <div class="col-lg-10 mx-auto">
             <h1 class="text-uppercase">
-              <strong>innovate</strong>
+              <strong>Home intelligence.<br>Three layers deep.</strong>
             </h1>
             <hr>
           </div>
           <div class="col-lg-8 mx-auto">
-            <p class="text-faded mb-5">it's better</p>
+            <p class="masthead-subtitle text-faded mb-2">Know before it breaks.</p>
+            <p class="masthead-tagline text-faded mb-5">Energy monitoring &middot; HVAC fault detection &middot; AI insights</p>
+            <a class="btn btn-primary btn-xl sr-button js-scroll-trigger" href="#products">See Our Products</a>
           </div>
         </div>
       </div>
     </header>
 
-      <section class="bg-primary text-white">
-          <div id="demo">
-      <div id="news">
-        <div class="container text-center">
-          <h2 class="mb-4"></h2>
-          <a class="btn btn-light btn-xl sr-button" href="dashboard.html" target="_blank">NILM Dashboard ⚡</a>
+    <!-- Products Overview -->
+    <section id="products" class="py-5">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <h2 class="section-heading">Two systems. One home.</h2>
+            <hr class="my-4">
+            <p class="section-subhead text-muted">Sensee builds hardware-plus-AI products that give homeowners real visibility into the systems that matter most — energy and mechanical health.</p>
+          </div>
         </div>
+        <div class="row">
+
+          <!-- NILM Card -->
+          <div class="col-lg-6 mb-4 d-flex">
+            <div class="product-card card w-100">
+              <div class="card-body text-center">
+                <div class="product-icon-circle icon-nilm">
+                  <i class="fa fa-bolt"></i>
+                </div>
+                <h3 class="card-title font-weight-bold">NILM Energy Monitor</h3>
+                <p class="text-muted mb-3"><em>Non-Intrusive Load Monitoring</em></p>
+                <p class="card-text mb-4">One sensor at the breaker panel. No per-device hardware. AI disaggregates your whole-home current signal in real time — identifying every appliance, tracking usage patterns, and surfacing anomalies before they show up on your bill.</p>
+                <ul class="list-unstyled text-left mb-4">
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>Track every device without touching a single outlet</li>
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>Real-time web dashboard with per-device breakdown</li>
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>AI-generated energy insights and anomaly alerts</li>
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>Historical trends and cost estimation</li>
+                </ul>
+                <a href="dashboard.html" target="_blank" class="btn btn-primary btn-xl sr-button">
+                  <i class="fa fa-bolt mr-2"></i>Open Dashboard
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <!-- HVAC Card -->
+          <div class="col-lg-6 mb-4 d-flex">
+            <div class="product-card card w-100">
+              <div class="card-body text-center">
+                <div class="product-icon-circle icon-hvac">
+                  <i class="fa fa-thermometer-half"></i>
+                </div>
+                <h3 class="card-title font-weight-bold">HVAC Vibration Guard</h3>
+                <p class="text-muted mb-3"><em>ESP32 + Accelerometer + Gemini AI</em></p>
+                <p class="card-text mb-4">A $55 device mounted magnetically to your heat pump or AC unit. Three independent intelligence layers — edge signal processing, Android adaptive AI, and Gemini language diagnosis — detect mechanical faults weeks before they become failures.</p>
+                <ul class="list-unstyled text-left mb-4">
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>400 Hz FFT on 5 diagnostic frequency bins</li>
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>8 specific fault types identified by name</li>
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>Natural language diagnosis via Gemini AI</li>
+                  <li class="mb-2"><i class="fa fa-check-circle text-success mr-2"></i>Zero subscription fees. ~$6/year in electricity.</li>
+                </ul>
+                <a href="hvac.html" class="btn btn-primary btn-xl sr-button">
+                  <i class="fa fa-thermometer-half mr-2"></i>Learn More
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </section>
 
-  </div>
+    <!-- How HVAC Guard Works — Three Layers -->
+    <section class="bg-primary text-white py-5" id="how-it-works">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <h2 class="section-heading text-white">How HVAC Guard works</h2>
+            <hr class="light my-4">
+            <p class="section-subhead">Three independent intelligence layers, each catching what the others might miss.</p>
+          </div>
+        </div>
 
+        <!-- Layer 1 -->
+        <div class="row align-items-center layer-row py-4">
+          <div class="col-md-2 text-center mb-3 mb-md-0">
+            <div class="layer-number">Layer 1</div>
+            <div class="layer-icon sr-icon"><i class="fa fa-microchip"></i></div>
+          </div>
+          <div class="col-md-10">
+            <h4 class="font-weight-bold mb-2">ESP32 Edge Processing</h4>
+            <p class="mb-2" style="opacity:0.9;">The LSM303D accelerometer samples at 400 Hz directly on the unit. An onboard FFT resolves vibration into five diagnostic frequency bins (33, 60, 66, 99, and 120 Hz), computing per-axis RMS and peak values in real time. A state machine tracks the compressor lifecycle — OFF, STARTING, RUNNING, STOPPING — so every measurement carries operating context.</p>
+            <span class="badge badge-light mr-1">400 Hz sampling</span>
+            <span class="badge badge-light mr-1">5-bin FFT</span>
+            <span class="badge badge-light mr-1">Per-axis RMS</span>
+            <span class="badge badge-light">State machine</span>
+          </div>
+        </div>
+
+        <!-- Layer 2 -->
+        <div class="row align-items-center layer-row py-4">
+          <div class="col-md-2 text-center mb-3 mb-md-0">
+            <div class="layer-number">Layer 2</div>
+            <div class="layer-icon sr-icon"><i class="fa fa-android"></i></div>
+          </div>
+          <div class="col-md-10">
+            <h4 class="font-weight-bold mb-2">Android Adaptive AI</h4>
+            <p class="mb-2" style="opacity:0.9;">The companion Android app receives the edge data and applies statistical models calibrated to your specific unit. An EMA adaptive baseline adjusts to seasonal drift, while CUSUM drift detection and Mahalanobis distance analysis on the full FFT vector catch deviations that would otherwise be hidden in noise. Eight targeted fault classifiers compare the current spectral signature against known mechanical failure patterns.</p>
+            <span class="badge badge-light mr-1">EMA baseline</span>
+            <span class="badge badge-light mr-1">CUSUM drift</span>
+            <span class="badge badge-light mr-1">Mahalanobis distance</span>
+            <span class="badge badge-light mr-1">8 fault classifiers</span>
+            <span class="badge badge-light">Rate-of-change regression</span>
+          </div>
+        </div>
+
+        <!-- Layer 3 -->
+        <div class="row align-items-center layer-row py-4">
+          <div class="col-md-2 text-center mb-3 mb-md-0">
+            <div class="layer-number">Layer 3</div>
+            <div class="layer-icon sr-icon"><i class="fa fa-comments"></i></div>
+          </div>
+          <div class="col-md-10">
+            <h4 class="font-weight-bold mb-2">Gemini AI Diagnosis</h4>
+            <p class="mb-2" style="opacity:0.9;">When Layer 2 detects a fault state change, Gemini receives the full diagnostic context — frequency bin readings, fault type, severity trend, and operating history — and produces a plain-English explanation of what is likely happening and what to do about it. A persistent chat interface lets the homeowner ask follow-up questions in natural language without any technical knowledge required.</p>
+            <span class="badge badge-light mr-1">Natural language diagnosis</span>
+            <span class="badge badge-light mr-1">Fault-triggered alerts</span>
+            <span class="badge badge-light">Homeowner chat interface</span>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- What It Detects — 8 Faults -->
+    <section id="faults" class="py-5">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <h2 class="section-heading">Eight fault types. Named, not guessed.</h2>
+            <hr class="my-4">
+            <p class="section-subhead text-muted">Every alert comes with a specific mechanical cause — not a generic warning. The system knows the difference between a failing bearing and a loose panel, and tells you so.</p>
+          </div>
+        </div>
+        <div class="row">
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-cog"></i></div>
+              <h6>Fan Imbalance</h6>
+              <p>Blade-pass frequency elevation indicating a bent blade, debris accumulation, or imbalanced fan assembly.</p>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-refresh"></i></div>
+              <h6>Bearing Wear</h6>
+              <p>High-frequency harmonic rise combined with CUSUM drift — the earliest detectable sign of bearing degradation.</p>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-exclamation-triangle"></i></div>
+              <h6>Debris / Obstruction</h6>
+              <p>Intermittent crest factor spikes revealing contact between a rotating component and foreign material.</p>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-bars"></i></div>
+              <h6>Panel Rattle</h6>
+              <p>99 Hz and 120 Hz resonance peaks identifying loose sheet metal or cover panels vibrating at grid harmonics.</p>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-snowflake-o"></i></div>
+              <h6>Coil Icing</h6>
+              <p>Compressor frequency bin shift combined with sustained trend — detects ice formation that chokes airflow and strains the motor.</p>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-bolt"></i></div>
+              <h6>Startup Stress</h6>
+              <p>Abnormal startup transient profile — identifies hard-start conditions that shorten compressor life with each cycle.</p>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-th"></i></div>
+              <h6>Spectral Anomaly</h6>
+              <p>Mahalanobis multi-bin shape deviation — catches unusual spectral fingerprints that don't match any named fault but signal something has changed.</p>
+            </div>
+          </div>
+
+          <div class="col-md-6 col-lg-3 mb-4 d-flex">
+            <div class="fault-card text-center w-100">
+              <div class="fault-icon"><i class="fa fa-arrow-up"></i></div>
+              <h6>Elevated Vibration</h6>
+              <p>Sustained RMS trend exceeding adaptive baseline — a general mechanical stress indicator when no specific fault matches.</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- The Cost — BOM + ROI -->
+    <section class="bg-dark-blue text-white py-5" id="cost">
+      <div class="container">
+        <div class="row text-center mb-5">
+          <div class="col-lg-8 mx-auto">
+            <h2 class="section-heading text-white">The cost</h2>
+            <hr class="light my-4">
+            <p class="section-subhead">$55 in hardware. One-time. No subscription. No cloud dependency. Compare that to what it protects against.</p>
+          </div>
+        </div>
+
+        <div class="row mb-5">
+          <div class="col-lg-7 mb-4 mb-lg-0">
+            <h5 class="mb-3 text-white font-weight-bold"><i class="fa fa-list-ul mr-2"></i>Hardware Bill of Materials</h5>
+            <table class="table bom-table table-bordered bg-white text-dark rounded">
+              <thead>
+                <tr>
+                  <th>Component</th>
+                  <th class="text-right" style="width:120px;">Cost (USD)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><i class="fa fa-microchip mr-2 text-muted"></i>ESP32-S3 microcontroller</td>
+                  <td class="text-right">$12</td>
+                </tr>
+                <tr>
+                  <td><i class="fa fa-tachometer mr-2 text-muted"></i>LSM303D accelerometer module</td>
+                  <td class="text-right">$4</td>
+                </tr>
+                <tr>
+                  <td><i class="fa fa-microphone mr-2 text-muted"></i>INMP441 MEMS microphone <small class="text-muted">(optional)</small></td>
+                  <td class="text-right">$2</td>
+                </tr>
+                <tr>
+                  <td><i class="fa fa-shield mr-2 text-muted"></i>IP65 weatherproof enclosure</td>
+                  <td class="text-right">$8</td>
+                </tr>
+                <tr>
+                  <td><i class="fa fa-magnet mr-2 text-muted"></i>Neodymium magnet mount</td>
+                  <td class="text-right">$5</td>
+                </tr>
+                <tr>
+                  <td><i class="fa fa-plug mr-2 text-muted"></i>5V power supply</td>
+                  <td class="text-right">$10</td>
+                </tr>
+                <tr>
+                  <td><i class="fa fa-wrench mr-2 text-muted"></i>Connectors, wire, hardware</td>
+                  <td class="text-right">$5</td>
+                </tr>
+                <tr>
+                  <td><i class="fa fa-bolt mr-2 text-muted"></i>Ongoing electricity cost</td>
+                  <td class="text-right">~$6 / yr</td>
+                </tr>
+                <tr class="bom-total">
+                  <td><strong>Total hardware</strong></td>
+                  <td class="text-right"><strong>~$55</strong></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="col-lg-5">
+            <h5 class="mb-3 text-white font-weight-bold"><i class="fa fa-balance-scale mr-2"></i>Return on Investment</h5>
+            <div class="roi-box sensee mb-3">
+              <div class="roi-price">$55</div>
+              <div class="roi-label">Sensee HVAC Guard — one time</div>
+              <ul class="roi-list">
+                <li>No subscription, no cloud fees</li>
+                <li>Works offline on your local network</li>
+                <li>Early warning weeks before failure</li>
+                <li>Pays back if it prevents even one callout</li>
+              </ul>
+            </div>
+            <div class="roi-box alternative mb-3">
+              <div class="roi-price text-danger">$1,500–3,000</div>
+              <div class="roi-label text-muted">Compressor replacement — one event</div>
+              <ul class="roi-list text-muted">
+                <li>Emergency repair: $200–500 per visit</li>
+                <li>Annual maintenance contract: $150–300/yr</li>
+                <li>No advance warning of developing faults</li>
+              </ul>
+            </div>
+            <p class="mt-3" style="opacity:0.7; font-size:0.875rem;">A single prevented compressor failure pays back the hardware cost <strong>30–50&times;</strong>. The annual maintenance contract alone costs 3–5&times; more per year than this system costs once.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Contact -->
     <section id="contact">
       <div class="container">
         <div class="row">
           <div class="col-lg-8 mx-auto text-center">
-            <h2 class="section-heading"></h2>
+            <h2 class="section-heading">Get in touch</h2>
             <hr class="my-4">
-            <p class="mb-5"></p>
+            <p class="mb-5 text-muted">Interested in early access, partnership, or just have a question? We read every message.</p>
           </div>
         </div>
         <div class="row">
           <div class="col-lg-4 m-auto text-center">
-            <i class="fa fa-envelope-o fa-3x mb-3 sr-contact"></i>
-            <p><a href="mailto:sensitlabs@gmail.com">sensitlabs@gmail.com</a>
-            </p>
+            <i class="fa fa-envelope-o fa-3x mb-3 sr-contact text-primary"></i>
+            <p><a href="mailto:sensitlabs@gmail.com">sensitlabs@gmail.com</a></p>
           </div>
         </div>
       </div>
