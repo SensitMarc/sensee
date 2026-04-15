@@ -155,6 +155,50 @@ body {
 }
 .inj-hint { font-size: 10px; color: #8B949E; margin-top: 6px; }
 
+/* ── Gemini summary strip ───────────────────────────────────── */
+.gemini-strip { display: flex; gap: 6px; margin-top: 10px; }
+.gemini-bar   { width: 3px; border-radius: 2px; flex-shrink: 0; }
+.gemini-text  {
+  flex: 1; padding: 8px 10px; border-radius: 8px;
+  font-size: 12px; line-height: 1.55; color: rgba(230,237,243,0.9);
+}
+
+/* ── Chat section ───────────────────────────────────────────── */
+#chat-section { padding-bottom: 80px; }
+.chat-hdr { display: flex; justify-content: space-between; align-items: center; padding: 4px 0 2px; }
+.chat-hdr-lbl { font-size: 12px; font-weight: 600; color: #8B949E; }
+.chat-clear   { font-size: 11px; color: #8B949E; background: none; border: none; cursor: pointer; opacity: 0.6; }
+#chat-messages { display: flex; flex-direction: column; gap: 6px; }
+.bubble { max-width: 82%; padding: 8px 12px; border-radius: 12px; font-size: 13px; line-height: 1.5; word-break: break-word; }
+.bubble.user  { align-self: flex-end; background: rgba(31,111,235,0.22); border-bottom-right-radius: 3px; }
+.bubble.model { align-self: flex-start; background: #161B22; border-bottom-left-radius: 3px; }
+.empty-hint   { font-size: 13px; color: rgba(139,148,158,0.45); text-align: center; padding: 20px 0; }
+.tdots { display: flex; gap: 4px; padding: 8px 12px; align-self: flex-start; }
+.tdot  { width: 8px; height: 8px; border-radius: 50%; background: #58A6FF; animation: tdp 1.2s ease-in-out infinite; }
+.tdot:nth-child(2){animation-delay:.2s} .tdot:nth-child(3){animation-delay:.4s}
+@keyframes tdp{0%,60%,100%{opacity:.2}30%{opacity:1}}
+
+/* ── Fixed input bar ────────────────────────────────────────── */
+#input-bar {
+  position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 480px;
+  padding: 8px 14px 12px; background: #0D1117; border-top: 1px solid #21262D;
+  display: flex; gap: 8px; align-items: center;
+}
+#chat-input {
+  flex: 1; background: #161B22; border: 1px solid #30363D; border-radius: 22px;
+  padding: 9px 16px; color: #E6EDF3; font-size: 13px; outline: none;
+}
+#chat-input:focus { border-color: #1F6FEB; }
+#chat-input::placeholder { color: #8B949E; }
+#send-btn {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+  background: #21262D; border: none; cursor: pointer;
+  font-size: 16px; display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s; color: #8B949E;
+}
+#send-btn.active { background: #1F6FEB; color: #fff; }
+
 /* ── Misc ───────────────────────────────────────────────────── */
 .waiting { font-size: 11px; color: #8B949E; text-align: center; padding: 20px 0; }
 </style>
@@ -316,6 +360,12 @@ body {
       </div>
 
       <div class="desc-box" id="desc-box" style="display:none"></div>
+
+      <!-- Gemini Layer 3 summary (arrives via hvac/gemini_summary) -->
+      <div class="gemini-strip" id="gemini-strip" style="display:none">
+        <div class="gemini-bar" id="gemini-bar"></div>
+        <div class="gemini-text" id="gemini-text"></div>
+      </div>
     </div>
   </div>
 
@@ -338,7 +388,26 @@ body {
     </div>
   </div>
 
+  <!-- 8. Chat -->
+  <div id="chat-section">
+    <div class="chat-hdr">
+      <span class="chat-hdr-lbl">Ask Gemini</span>
+      <button class="chat-clear" id="chat-clear-btn" style="display:none" onclick="clearChat()">Clear</button>
+    </div>
+    <div id="chat-messages">
+      <div class="empty-hint" id="chat-empty">Ask about your HVAC health…</div>
+    </div>
+  </div>
+
 </div><!-- /content -->
+
+<!-- Fixed input bar -->
+<div id="input-bar">
+  <input id="chat-input" type="text" placeholder="Ask Gemini…"
+    oninput="document.getElementById('send-btn').className=this.value.trim()?'active':'';"
+    onkeydown="if(event.key==='Enter')sendChat()">
+  <button id="send-btn" onclick="sendChat()">➤</button>
+</div>
 
 <script>
 // ══════════════════════════════════════════════════
@@ -357,14 +426,23 @@ client.on('connect', () => {
   client.subscribe('hvac/vibration');
   client.subscribe('nilm/hvac');
   client.subscribe('nilm/sensors');
+  client.subscribe('hvac/chat_response');
+  client.subscribe('hvac/gemini_summary');
 });
 client.on('offline',   () => { $dot.style.background='#F85149'; $stxt.style.color='#F85149'; $stxt.textContent='OFFLINE'; });
 client.on('reconnect', () => { $dot.style.background='#D29922'; $stxt.style.color='#D29922'; $stxt.textContent='RECONNECTING'; });
 client.on('message', (topic, payload) => {
-  let d; try { d = JSON.parse(payload.toString()); } catch { return; }
-  if      (topic === 'hvac/vibration') onVibration(d);
-  else if (topic === 'nilm/hvac')      onHvac(d);
-  else if (topic === 'nilm/sensors')   onSensor(d);
+  const text = payload.toString();
+  if (topic === 'hvac/vibration' || topic === 'nilm/hvac' || topic === 'nilm/sensors') {
+    let d; try { d = JSON.parse(text); } catch { return; }
+    if      (topic === 'hvac/vibration') onVibration(d);
+    else if (topic === 'nilm/hvac')      onHvac(d);
+    else if (topic === 'nilm/sensors')   onSensor(d);
+  } else if (topic === 'hvac/chat_response') {
+    onChatResponse(text);
+  } else if (topic === 'hvac/gemini_summary') {
+    onGeminiSummary(text);
+  }
 });
 
 // ══════════════════════════════════════════════════
@@ -765,6 +843,68 @@ function toggleInject() {
   document.getElementById('inj-panel').style.display=injOpen?'block':'none';
   document.getElementById('inj-tog').textContent=injOpen?'▲ Hide':'▼ Inject';
 }
+
+// ══════════════════════════════════════════════════
+// Gemini — MQTT bridge (Android holds the API key)
+// ══════════════════════════════════════════════════
+let chatPending = false;
+
+function onGeminiSummary(text) {
+  const strip = document.getElementById('gemini-strip');
+  if (!text) { strip.style.display = 'none'; return; }
+  const sc = document.getElementById('sev-badge')?.style.color || '#2EA043';
+  document.getElementById('gemini-bar').style.background = sc;
+  document.getElementById('gemini-text').style.background = sc.replace(')', ',0.07)').replace('rgb','rgba');
+  document.getElementById('gemini-text').textContent = text;
+  strip.style.display = 'flex';
+}
+
+function onChatResponse(text) {
+  removeDots();
+  chatPending = false;
+  addBubble('model', text);
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const msg = input.value.trim();
+  if (!msg || chatPending) return;
+  input.value = '';
+  document.getElementById('send-btn').className = '';
+  addBubble('user', msg);
+  chatPending = true;
+  showDots();
+  client.publish('hvac/chat', msg, { retain: false });
+}
+
+function clearChat() {
+  document.getElementById('chat-messages').innerHTML =
+    '<div class="empty-hint" id="chat-empty">Ask about your HVAC health…</div>';
+  document.getElementById('chat-clear-btn').style.display = 'none';
+  chatPending = false;
+}
+
+function addBubble(role, text) {
+  const container = document.getElementById('chat-messages');
+  document.getElementById('chat-empty')?.remove();
+  document.getElementById('chat-clear-btn').style.display = 'inline';
+  const div = document.createElement('div');
+  div.className = 'bubble ' + role;
+  div.textContent = text;
+  container.appendChild(div);
+  div.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function showDots() {
+  const container = document.getElementById('chat-messages');
+  const dots = document.createElement('div');
+  dots.className = 'tdots'; dots.id = 'thinking-dots';
+  dots.innerHTML = '<div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>';
+  container.appendChild(dots);
+  dots.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function removeDots() { document.getElementById('thinking-dots')?.remove(); }
 
 function injectFault(cmd) {
   activeFaultCmd=cmd;
