@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HVAC Monitor · Sensee</title>
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #0D1117;
+  color: #E6EDF3;
+  font-family: -apple-system, 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+#header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #21262D;
+  position: sticky; top: 0; background: #0D1117; z-index: 10;
+}
+#header-title { font-size: 17px; font-weight: 700; }
+#status-row   { display: flex; align-items: center; gap: 8px; }
+#status-dot   { width: 8px; height: 8px; border-radius: 50%; background: #8B949E; transition: background 0.3s; }
+#status-text  { font-size: 11px; color: #8B949E; letter-spacing: 0.5px; }
+#reset-btn    { font-size: 11px; color: #8B949E; background: none; border: none; cursor: pointer; margin-right: 2px; }
+
+/* ── Content ────────────────────────────────────────────────── */
+#content { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Card ───────────────────────────────────────────────────── */
+.card { background: #161B22; border-radius: 14px; overflow: hidden; }
+.card-body { padding: 12px 14px; }
+.card-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.card-title { font-size: 13px; font-weight: 600; }
+.card-sub   { font-size: 11px; color: #8B949E; }
+
+/* ── 1. Status card ─────────────────────────────────────────── */
+#status-inner {
+  position: relative;
+  display: flex; align-items: center;
+  padding: 14px 20px; gap: 20px;
+}
+#status-glow {
+  position: absolute; inset: 0;
+  transition: background 0.6s;
+  pointer-events: none;
+}
+#status-onoff {
+  font-size: 40px; font-weight: 900;
+  width: 82px; flex-shrink: 0;
+  color: #1F6FEB; transition: color 0.6s;
+  position: relative;
+}
+#status-stats { display: flex; flex: 1; justify-content: space-around; position: relative; }
+.stat-item { text-align: center; }
+.stat-val   { font-size: 15px; font-weight: 700; }
+.stat-lbl   { font-size: 10px; color: #8B949E; margin-top: 1px; }
+
+/* ── 2. Climate ─────────────────────────────────────────────── */
+#climate-row {
+  background: #161B22; border-radius: 10px;
+  display: flex; gap: 20px; align-items: center;
+  padding: 10px 16px;
+}
+.temp-val { font-size: 14px; font-weight: 700; }
+.temp-lbl { font-size: 10px; color: #8B949E; }
+
+/* ── 3. Vib live ─────────────────────────────────────────────── */
+.state-pill { display: flex; align-items: center; gap: 5px; }
+.state-dot  { width: 7px; height: 7px; border-radius: 50%; }
+.state-txt  { font-size: 12px; font-weight: 600; }
+.meta-chips { display: flex; gap: 14px; }
+.meta-chip  { font-size: 11px; }
+.meta-chip-lbl { color: #8B949E; }
+.big-metrics { display: flex; margin-top: 10px; }
+.big-metric  { flex: 1; text-align: center; }
+.big-val { font-size: 16px; font-weight: 700; }
+.big-lbl { font-size: 10px; color: #8B949E; margin-top: 1px; }
+.axis-rows { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+.axis-row  { display: flex; align-items: center; gap: 6px; }
+.ax-lbl    { font-size: 10px; color: #8B949E; width: 10px; }
+.ax-track  { flex: 1; height: 6px; border-radius: 3px; background: #0D1117; overflow: hidden; }
+.ax-fill   { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.ax-val    { font-size: 10px; width: 54px; text-align: right; }
+
+/* ── 4. RMS chart ───────────────────────────────────────────── */
+#rms-canvas { width: 100%; height: 90px; display: block; }
+.chart-labels { display: flex; justify-content: space-between; margin-top: 4px; }
+.chart-labels span { font-size: 11px; color: #8B949E; }
+
+/* ── 5. FFT spectrum ────────────────────────────────────────── */
+.fft-bars { display: flex; justify-content: space-evenly; padding: 0 4px; }
+.fft-col  { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.fft-amp  { font-size: 9px; margin-bottom: 2px; }
+.fft-track {
+  width: 18px; height: 60px; border-radius: 4px;
+  background: #0D1117; position: relative; overflow: hidden;
+}
+.fft-fill {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  border-radius: 4px; transition: height 0.3s;
+}
+.fft-lbl { font-size: 8.5px; color: #8B949E; text-align: center; margin-top: 4px; line-height: 1.3; }
+
+/* ── 6. Health card ─────────────────────────────────────────── */
+.health-top   { display: flex; justify-content: space-between; align-items: flex-start; }
+.fault-row    { display: flex; align-items: center; gap: 7px; }
+.fault-icon   { font-size: 15px; }
+.fault-name   { font-size: 13px; font-weight: 600; }
+.fault-sub    { font-size: 10px; color: #8B949E; margin-top: 1px; }
+.sev-badge    { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 6px; }
+.conf-text    { font-size: 10px; color: #8B949E; margin-top: 3px; text-align: right; }
+.score-bars   { display: flex; gap: 8px; margin-top: 10px; }
+.score-col    { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.score-pct    { font-size: 9px; }
+.score-track  { width: 100%; height: 5px; border-radius: 3px; background: #0D1117; overflow: hidden; }
+.score-fill   { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.score-lbl    { font-size: 9px; color: #8B949E; }
+.cusum-wrap   { margin-top: 8px; }
+.cusum-hdr    { display: flex; justify-content: space-between; margin-bottom: 3px; }
+.cusum-lbl    { font-size: 10px; color: #8B949E; }
+.cusum-val    { font-size: 10px; font-weight: 600; }
+.cusum-track  { height: 5px; border-radius: 3px; background: #21262D; overflow: hidden; }
+.cusum-fill   { height: 100%; border-radius: 3px; transition: width 0.3s; }
+.roc-row      { display: flex; justify-content: space-between; margin-top: 8px; }
+.desc-box     {
+  margin-top: 10px; padding: 8px 10px;
+  border-radius: 8px; border-left: 3px solid transparent;
+  font-size: 12px; line-height: 1.55;
+  color: rgba(230,237,243,0.9);
+}
+
+/* ── 7. Fault injection ─────────────────────────────────────── */
+.inj-hdr  { display: flex; justify-content: space-between; align-items: center; }
+.inj-ttl  { font-size: 12px; font-weight: 600; }
+.inj-tog  { font-size: 11px; color: #8B949E; background: none; border: none; cursor: pointer; padding: 4px 8px; }
+.fault-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-top: 8px; }
+.fault-btn  {
+  padding: 7px 2px; border-radius: 8px;
+  background: transparent; font-size: 10px;
+  cursor: pointer; border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+.clear-btn  {
+  width: 100%; padding: 8px; margin-top: 6px;
+  border-radius: 8px;
+  border: 1px solid rgba(46,160,67,0.5);
+  background: rgba(46,160,67,0.08);
+  color: #2EA043; font-size: 11px; font-weight: 600; cursor: pointer;
+}
+.inj-hint { font-size: 10px; color: #8B949E; margin-top: 6px; }
+
+/* ── Misc ───────────────────────────────────────────────────── */
+.waiting { font-size: 11px; color: #8B949E; text-align: center; padding: 20px 0; }
+</style>
+</head>
+<body>
+
+<div id="header">
+  <span id="header-title">HVAC Monitor</span>
+  <div id="status-row">
+    <button id="reset-btn" onclick="resetLayer2()">Reset</button>
+    <div id="status-dot"></div>
+    <span id="status-text">CONNECTING</span>
+  </div>
+</div>
+
+<div id="content">
+
+  <!-- 1. ON/OFF status -->
+  <div class="card">
+    <div id="status-inner">
+      <div id="status-glow"></div>
+      <div id="status-onoff">OFF</div>
+      <div id="status-stats">
+        <div class="stat-item"><div class="stat-val" id="s-today">--</div><div class="stat-lbl">Today</div></div>
+        <div class="stat-item"><div class="stat-val" id="s-cycles">--</div><div class="stat-lbl">Cycles</div></div>
+        <div class="stat-item"><div class="stat-val" id="s-cost">--</div><div class="stat-lbl">Cost</div></div>
+        <div class="stat-item" id="s-cycle-wrap" style="display:none">
+          <div class="stat-val" id="s-cycle">--</div><div class="stat-lbl">Cycle</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Climate -->
+  <div id="climate-row">
+    <div><div class="temp-val" id="t-indoor">--</div><div class="temp-lbl">🏠 Indoor</div></div>
+    <div><div class="temp-val" id="t-outdoor">--</div><div class="temp-lbl">🌤 Outdoor</div></div>
+    <div id="t-delta-wrap" style="display:none">
+      <div class="temp-val" id="t-delta">--</div><div class="temp-lbl">ΔT</div>
+    </div>
+  </div>
+
+  <!-- 3. Live vibration -->
+  <div class="card">
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div class="state-pill">
+          <div class="state-dot" id="vib-dot" style="background:#8B949E"></div>
+          <span class="state-txt" id="vib-state" style="color:#8B949E">WAITING</span>
+        </div>
+        <div class="meta-chips">
+          <span id="mc-run" style="display:none" class="meta-chip">
+            <span class="meta-chip-lbl">Run </span><span id="mc-run-v">--</span>
+          </span>
+          <span id="mc-duty" style="display:none" class="meta-chip">
+            <span class="meta-chip-lbl">Duty </span><span id="mc-duty-v">--</span>
+          </span>
+        </div>
+      </div>
+      <div class="big-metrics">
+        <div class="big-metric"><div class="big-val" id="m-rms" style="color:#58A6FF">--</div><div class="big-lbl">RMS</div></div>
+        <div class="big-metric"><div class="big-val" id="m-peak">--</div><div class="big-lbl">Peak</div></div>
+        <div class="big-metric"><div class="big-val" id="m-trend">--</div><div class="big-lbl">Trend</div></div>
+      </div>
+      <div class="axis-rows" id="axis-rows">
+        <div class="waiting">Waiting for sensor data…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. RMS chart -->
+  <div class="card">
+    <div class="card-body">
+      <div class="card-row">
+        <span class="card-title">RMS Vibration</span>
+        <span class="card-sub">60s window</span>
+      </div>
+      <canvas id="rms-canvas"></canvas>
+      <div class="chart-labels">
+        <span id="chart-now">No data</span>
+        <span id="chart-baseline"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. FFT spectrum -->
+  <div class="card">
+    <div class="card-body">
+      <div class="card-row">
+        <span class="card-title">Frequency Spectrum</span>
+        <span class="card-sub">5 bins · Live</span>
+      </div>
+      <div class="fft-bars" id="fft-bars">
+        <div class="waiting">Waiting for FFT data…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Health & fault -->
+  <div class="card">
+    <div class="card-body">
+      <div class="health-top">
+        <div class="fault-row">
+          <span class="fault-icon" id="f-icon">✓</span>
+          <div>
+            <div class="fault-name" id="f-name">Normal</div>
+            <div class="fault-sub" id="f-sub">Collecting baseline…</div>
+          </div>
+        </div>
+        <div>
+          <div class="sev-badge" id="sev-badge" style="background:rgba(46,160,67,0.15);color:#2EA043">OK</div>
+          <div class="conf-text" id="conf-text"></div>
+        </div>
+      </div>
+
+      <div id="score-section" style="display:none">
+        <div class="score-bars">
+          <div class="score-col">
+            <span class="score-pct" id="sc-fan-p" style="color:#58A6FF">0%</span>
+            <div class="score-track"><div class="score-fill" id="sc-fan" style="background:#58A6FF;width:0%"></div></div>
+            <span class="score-lbl">Fan</span>
+          </div>
+          <div class="score-col">
+            <span class="score-pct" id="sc-brg-p" style="color:#D29922">0%</span>
+            <div class="score-track"><div class="score-fill" id="sc-brg" style="background:#D29922;width:0%"></div></div>
+            <span class="score-lbl">Bearing</span>
+          </div>
+          <div class="score-col">
+            <span class="score-pct" id="sc-deb-p" style="color:#F85149">0%</span>
+            <div class="score-track"><div class="score-fill" id="sc-deb" style="background:#F85149;width:0%"></div></div>
+            <span class="score-lbl">Debris</span>
+          </div>
+          <div class="score-col">
+            <span class="score-pct" id="sc-noi-p" style="color:#8B949E">0%</span>
+            <div class="score-track"><div class="score-fill" id="sc-noi" style="background:#8B949E;width:0%"></div></div>
+            <span class="score-lbl">Noise</span>
+          </div>
+          <div class="score-col">
+            <span class="score-pct" id="sc-mhl-p" style="color:#BC8CFF">0%</span>
+            <div class="score-track"><div class="score-fill" id="sc-mhl" style="background:#BC8CFF;width:0%"></div></div>
+            <span class="score-lbl">FFT Δ</span>
+          </div>
+        </div>
+
+        <div class="cusum-wrap" id="cusum-wrap" style="display:none">
+          <div class="cusum-hdr">
+            <span class="cusum-lbl">Drift accumulator</span>
+            <span class="cusum-val" id="cusum-lbl2" style="color:#388BFD">CUSUM 0%</span>
+          </div>
+          <div class="cusum-track">
+            <div class="cusum-fill" id="cusum-fill" style="background:#388BFD;width:0%"></div>
+          </div>
+        </div>
+
+        <div class="roc-row">
+          <span id="roc-txt" style="font-size:11px;color:#8B949E"></span>
+          <span id="det-txt" style="font-size:11px;color:#8B949E"></span>
+        </div>
+      </div>
+
+      <div class="desc-box" id="desc-box" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- 7. Fault injection -->
+  <div class="card">
+    <div class="card-body">
+      <div class="inj-hdr">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="inj-ttl" id="inj-ttl" style="color:#8B949E">Hardware Test</span>
+          <div id="inj-dot" style="display:none;width:7px;height:7px;border-radius:50%;background:#D29922"></div>
+          <span id="inj-lbl" style="display:none;font-size:11px;color:#D29922"></span>
+        </div>
+        <button class="inj-tog" id="inj-tog" onclick="toggleInject()">▼ Inject</button>
+      </div>
+      <div id="inj-panel" style="display:none">
+        <div class="fault-grid" id="fault-grid"></div>
+        <button class="clear-btn" id="clear-btn" style="display:none" onclick="injectFault('normal')">✓  Clear overlay</button>
+        <p class="inj-hint" id="inj-hint">Tap a fault to inject · tap again or Clear to reset</p>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<script>
+// ══════════════════════════════════════════════════
+// MQTT
+// ══════════════════════════════════════════════════
+const BROKER = '24ceca5dc9954efaa27fb7d6fa676a01.s1.eu.hivemq.cloud';
+const client = mqtt.connect(`wss://${BROKER}:8884/mqtt`, {
+  username: 'nilm-esp32', password: 'Mayaesp321!',
+  clientId: 'hvac-web-' + Math.random().toString(16).slice(2, 8),
+  reconnectPeriod: 3000
+});
+const $dot = document.getElementById('status-dot');
+const $stxt = document.getElementById('status-text');
+client.on('connect', () => {
+  $dot.style.background = '#2EA043'; $stxt.style.color = '#2EA043'; $stxt.textContent = 'LIVE';
+  client.subscribe('hvac/vibration');
+  client.subscribe('nilm/hvac');
+  client.subscribe('nilm/sensors');
+});
+client.on('offline',   () => { $dot.style.background='#F85149'; $stxt.style.color='#F85149'; $stxt.textContent='OFFLINE'; });
+client.on('reconnect', () => { $dot.style.background='#D29922'; $stxt.style.color='#D29922'; $stxt.textContent='RECONNECTING'; });
+client.on('message', (topic, payload) => {
+  let d; try { d = JSON.parse(payload.toString()); } catch { return; }
+  if      (topic === 'hvac/vibration') onVibration(d);
+  else if (topic === 'nilm/hvac')      onHvac(d);
+  else if (topic === 'nilm/sensors')   onSensor(d);
+});
+
+// ══════════════════════════════════════════════════
+// Layer 2 — ported from HvacVibrationEngine.kt
+// ══════════════════════════════════════════════════
+const BASELINE_TARGET = 120;   // 60s × 2 hz
+const TREND_WIN       = 60;    // 30s window
+const EMA_A           = 0.001;
+const CUSUM_K_F       = 0.5;
+const CUSUM_H_F       = 5.0;
+const MAHL_CHI2       = 15.09;
+const MAHL_REG        = 1e-4;
+const FAN_ASYM        = 0.20;
+const DEBRIS_CREST    = 3.5;
+const DEBRIS_RATE     = 0.10;
+const RATTLE_THRESH   = 0.40;
+const TREND_MED       = 20;
+const TREND_HIGH      = 40;
+const TREND_CRIT      = 70;
+const A_W             = [0.01, 0.05, 0.06, 0.11, 0.14];
+
+let win = [];           // rolling 600-sample window
+let blAcc = [];         // baseline accumulator
+let blRms = null, blFanR = null, blHfFrac = null, blSigma = null;
+let emaRms = null, emaFanR = null, emaHfFrac = null;
+let cusumHi = 0, cusumLo = 0, cusumK = 0, cusumH = 0;
+let fftMean = null, fftCovInv = null;
+let rmsHist = [];       // last 120 for chart
+let lastState = '';
+let faultFirstTs = 0;
+let activeFaultType = 'NORMAL';
+let injOpen = false, activeFaultCmd = 'normal';
+
+// ── Helpers ───────────────────────────────────────
+const fanRatio  = s => s.fft_amp?.length > 1 && s.fft_amp[1] > 0 ? s.fft_amp[0] / s.fft_amp[1] : 1.0;
+const hfFrac    = s => {
+  if (!s.fft_amp || s.fft_amp.length < 5) return 0;
+  const tot = s.fft_amp.reduce((a,b)=>a+b, 0);
+  return tot > 0 ? (s.fft_amp[3] + s.fft_amp[4]) / tot : 0;
+};
+
+// ── Baseline ──────────────────────────────────────
+function commitBaseline() {
+  const rmsList = blAcc.map(s => s.rms);
+  const mean    = rmsList.reduce((a,b)=>a+b,0) / rmsList.length;
+  const sigma   = Math.max(Math.sqrt(rmsList.map(v=>(v-mean)**2).reduce((a,b)=>a+b,0)/rmsList.length), mean*0.005);
+  blRms    = mean;  blSigma  = sigma;
+  blFanR   = blAcc.map(fanRatio).reduce((a,b)=>a+b,0) / blAcc.length;
+  blHfFrac = blAcc.map(hfFrac).reduce((a,b)=>a+b,0) / blAcc.length;
+  emaRms = mean; emaFanR = blFanR; emaHfFrac = blHfFrac;
+  cusumK = sigma * CUSUM_K_F; cusumH = sigma * CUSUM_H_F;
+  cusumHi = 0; cusumLo = 0;
+  const fftS = blAcc.map(s => s.fft_amp || [0,0,0,0,0]);
+  fftMean   = computeFftMean(fftS);
+  fftCovInv = computeFftCovInv(fftS, fftMean);
+}
+
+function updateEma(s) {
+  if (emaRms === null) return;
+  const old = emaRms;
+  emaRms    = EMA_A * s.rms        + (1-EMA_A) * emaRms;
+  emaFanR   = EMA_A * fanRatio(s)  + (1-EMA_A) * emaFanR;
+  emaHfFrac = EMA_A * hfFrac(s)    + (1-EMA_A) * emaHfFrac;
+  const dev = s.rms - old;
+  cusumHi = Math.max(0, cusumHi + dev - cusumK);
+  cusumLo = Math.max(0, cusumLo - dev - cusumK);
+}
+
+// ── Mahalanobis ───────────────────────────────────
+function computeFftMean(samples) {
+  const m = new Array(5).fill(0);
+  for (const s of samples) for (let i=0;i<5;i++) m[i] += (s[i]||0);
+  return m.map(v => v / samples.length);
+}
+function computeFftCovInv(samples, mean) {
+  const n = samples.length;
+  const cov = Array.from({length:5}, () => new Array(5).fill(0));
+  for (const s of samples) {
+    const d = s.map((v,i) => (v||0) - mean[i]);
+    for (let i=0;i<5;i++) for (let j=0;j<5;j++) cov[i][j] += d[i]*d[j];
+  }
+  for (let i=0;i<5;i++) { for (let j=0;j<5;j++) cov[i][j] /= Math.max(n-1,1); cov[i][i] += MAHL_REG; }
+  return invertMatrix(cov);
+}
+function invertMatrix(m) {
+  const n = m.length;
+  const aug = m.map((row,i) => [...row, ...Array.from({length:n}, (_,j) => i===j?1:0)]);
+  for (let c=0;c<n;c++) {
+    let mr=c;
+    for (let r=c+1;r<n;r++) if (Math.abs(aug[r][c])>Math.abs(aug[mr][c])) mr=r;
+    [aug[c],aug[mr]]=[aug[mr],aug[c]];
+    const pv=aug[c][c]; if (Math.abs(pv)<1e-8) return null;
+    for (let j=0;j<2*n;j++) aug[c][j]/=pv;
+    for (let r=0;r<n;r++) { if(r===c) continue; const f=aug[r][c]; for(let j=0;j<2*n;j++) aug[r][j]-=f*aug[c][j]; }
+  }
+  return aug.map(row => row.slice(n));
+}
+function mahal(fft) {
+  if (!fftCovInv || !fftMean) return 0;
+  const d = fft.map((v,i)=>(v||0)-fftMean[i]);
+  let d2=0;
+  for (let i=0;i<5;i++) { let r=0; for (let j=0;j<5;j++) r+=fftCovInv[i][j]*d[j]; d2+=r*d[i]; }
+  return Math.max(0, d2);
+}
+
+// ── Fault scores ──────────────────────────────────
+function scoreFan(running) {
+  if (!running.length) return 0;
+  const rec=running.slice(-TREND_WIN), blFr=emaFanR??blFanR??1.0;
+  const bpf=rec.reduce((s,x)=>s+Math.min(1,Math.max(0,(fanRatio(x)-blFr)/blFr/2)),0)/rec.length;
+  const asy=rec.reduce((s,x)=>s+Math.min(1,x.rms>0?Math.abs(x.rms_x-x.rms_y)/x.rms/FAN_ASYM:0),0)/rec.length;
+  return Math.min(1, bpf*0.6 + asy*0.4);
+}
+function scoreBearing(running, boost) {
+  if (!running.length) return Math.min(1, boost);
+  const blHf=emaHfFrac??blHfFrac??0.10, rec=running.slice(-TREND_WIN);
+  const avgHf=rec.reduce((s,x)=>s+hfFrac(x),0)/rec.length;
+  return Math.min(1, Math.min(1,Math.max(0,(avgHf-blHf)/blHf/3))*0.7 + boost*0.3);
+}
+function scoreDebris(running) {
+  if (!running.length) return 0;
+  const rec=running.slice(-TREND_WIN);
+  return Math.min(1, rec.filter(x=>x.rms>0&&x.peak/x.rms>DEBRIS_CREST).length/rec.length/DEBRIS_RATE);
+}
+function scoreRattle(running) {
+  if (!running.length) return 0;
+  const rec=running.slice(-TREND_WIN);
+  return Math.min(1, rec.reduce((s,x)=>s+(x.rms>0&&x.fft_amp?.length>3?x.fft_amp[3]/x.rms:0),0)/rec.length/RATTLE_THRESH);
+}
+function scoreNoise(s) {
+  if (!s.fft_amp) return 0;
+  return Math.min(1, s.fft_amp.reduce((s,v,i)=>s+(v||0)*A_W[i],0)/0.10);
+}
+function cusumBoost() { return cusumH>0 ? Math.min(1,cusumHi/cusumH)*0.6 : 0; }
+
+function rateOfChange(running) {
+  const pts=running.slice(-120); if (pts.length<10) return 0;
+  const n=pts.length, x0=pts[0]._ts;
+  let sx=0,sy=0,sxx=0,sxy=0;
+  for (const p of pts) { const x=(p._ts-x0)/1000,y=p.rms; sx+=x;sy+=y;sxx+=x*x;sxy+=x*y; }
+  const D=n*sxx-sx*sx; return D?((n*sxy-sx*sy)/D*60):0;
+}
+
+function analyse(cur) {
+  const running = win.filter(s=>s.state==='RUNNING');
+  const eff     = emaRms ?? blRms;
+  let rmsTrend  = 0;
+  if (eff>0 && running.length) {
+    const rec=running.slice(-TREND_WIN);
+    rmsTrend=(rec.reduce((s,x)=>s+x.rms,0)/rec.length - eff)/eff*100;
+  }
+  const fanRaw  = scoreFan(running);
+  const brgRaw  = scoreBearing(running, cusumBoost());
+  const debS    = scoreDebris(running);
+  const ratS    = scoreRattle(running);
+  const noiS    = scoreNoise(cur);
+  const mD2     = mahal(cur.fft_amp||[0,0,0,0,0]);
+  const mS      = Math.min(1, mD2/MAHL_CHI2);
+  const fanS    = Math.min(1, fanRaw*0.85 + mS*0.15);
+  const brgS    = Math.min(1, brgRaw*0.80 + mS*0.20);
+  const stwS    = win.filter(s=>s.state==='STARTING').slice(-30).some(s=>s.flags?.includes('startup_warn')) ? 0.8 : 0;
+  let iceS = 0;
+  if (eff!==null && running.length) {
+    const rec=running.slice(-TREND_WIN);
+    const blC=blAcc.reduce((s,x)=>s+(x.fft_amp?.[1]||0),0)/Math.max(blAcc.length,1);
+    const avC=rec.reduce((s,x)=>s+(x.fft_amp?.[1]||0),0)/Math.max(rec.length,1);
+    const cT=blC>0?(avC-blC)/blC:0;
+    if (rmsTrend>TREND_MED && cT>0.25) iceS=Math.min(1,rmsTrend/TREND_HIGH*0.5+cT*0.5);
+  }
+  const scores = {
+    FAN_IMBALANCE:fanS, BEARING_WEAR:brgS, DEBRIS:debS, PANEL_RATTLE:ratS,
+    STARTUP_STRESS:stwS, COIL_ICE:iceS, SPECTRAL_ANOMALY:mS
+  };
+  const best=Object.entries(scores).sort((a,b)=>b[1]-a[1])[0];
+  let faultType='NORMAL', confidence=1;
+  if (best&&best[1]>0.45) { faultType=best[0]; confidence=Math.min(1,best[1]); }
+  else if (rmsTrend>TREND_MED) { faultType='HIGH_VIBRATION'; confidence=Math.min(0.9,Math.max(0.3,rmsTrend/TREND_HIGH)); }
+  else { confidence=1-Math.min(0.9,fanS*0.25+brgS*0.25+debS*0.15+ratS*0.15+mS*0.20); }
+  let severity='OK';
+  if (faultType!=='NORMAL') {
+    if      (rmsTrend>TREND_CRIT||confidence>0.85) severity='CRITICAL';
+    else if (rmsTrend>TREND_HIGH||confidence>0.70) severity='HIGH';
+    else if (rmsTrend>TREND_MED ||confidence>0.50) severity='MEDIUM';
+    else                                            severity='LOW';
+  }
+  return { faultType, confidence, severity, rmsTrend, mD2, mS, fanS, brgS, debS, noiS, ratS, iceS, stwS, roc:rateOfChange(running) };
+}
+
+// ══════════════════════════════════════════════════
+// MQTT handlers
+// ══════════════════════════════════════════════════
+function onVibration(d) {
+  d._ts = Date.now();
+  if (d.state==='RUNNING' && lastState!=='RUNNING') { blAcc=[]; cusumHi=0; cusumLo=0; }
+  lastState = d.state;
+  win.push(d); if (win.length>600) win.shift();
+  if (d.state==='RUNNING' && blAcc.length<BASELINE_TARGET) {
+    blAcc.push(d);
+    if (blAcc.length===BASELINE_TARGET) commitBaseline();
+  }
+  if (d.state==='RUNNING' && emaRms!==null) updateEma(d);
+  rmsHist.push(d.rms); if (rmsHist.length>120) rmsHist.shift();
+  const rep = blRms!==null ? analyse(d) : null;
+  renderVibLive(d, rep);
+  renderRmsChart();
+  renderFft(d);
+  renderHealth(d, rep);
+}
+
+let hvacData=null, sensorData=null;
+function onHvac(d)   { hvacData=d;   renderStatus(); }
+function onSensor(d) { sensorData=d; renderClimate(); }
+
+function resetLayer2() {
+  win=[]; blAcc=[]; rmsHist=[];
+  blRms=null; blFanR=null; blHfFrac=null; blSigma=null;
+  emaRms=null; emaFanR=null; emaHfFrac=null;
+  cusumHi=0; cusumLo=0; cusumK=0; cusumH=0;
+  fftMean=null; fftCovInv=null;
+  lastState=''; faultFirstTs=0; activeFaultType='NORMAL';
+}
+
+// ══════════════════════════════════════════════════
+// Render
+// ══════════════════════════════════════════════════
+const RATE=0.12, HVAC_KW=1.5;
+const fmtDur=s=>{ if(!s)return'0m'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60); return h>0?`${h}h ${m}m`:`${m}m`; };
+const pc=n=>(n*100).toFixed(0)+'%', pf=n=>(n*100).toFixed(1)+'%';
+
+function renderStatus() {
+  if (!hvacData) return;
+  const on=hvacData.state==='ON';
+  const onoff=document.getElementById('status-onoff');
+  onoff.textContent=on?'ON':'OFF';
+  onoff.style.color=on?'#2EA043':'#1F6FEB';
+  document.getElementById('status-glow').style.background=on?'rgba(46,160,67,0.14)':'rgba(31,111,235,0.08)';
+  document.getElementById('s-today').textContent=fmtDur(hvacData.today_s);
+  document.getElementById('s-cycles').textContent=hvacData.cycles??'--';
+  document.getElementById('s-cost').textContent='$'+((hvacData.today_s/3600)*HVAC_KW*RATE).toFixed(2);
+  const cw=document.getElementById('s-cycle-wrap');
+  if (on && hvacData.runtime_s>0) { cw.style.display='block'; document.getElementById('s-cycle').textContent=fmtDur(hvacData.runtime_s); }
+  else cw.style.display='none';
+}
+
+function renderClimate() {
+  if (!sensorData) return;
+  document.getElementById('t-indoor').textContent=sensorData.tempC?.toFixed(1)+'°C';
+}
+
+const STATE_C={RUNNING:'#2EA043',STARTING:'#D29922',STOPPING:'rgba(88,166,255,0.7)',OFF:'#8B949E'};
+const FFT_C  =['#58A6FF','#D29922','#79C0FF','#8EC4FF','#E3A332'];
+const FFT_L  =['Fan<br>33Hz','Comp<br>60Hz','Fan<br>66Hz','Fan<br>99Hz','Comp<br>120Hz'];
+
+function renderVibLive(s, rep) {
+  const sc=STATE_C[s.state]||'#8B949E';
+  document.getElementById('vib-dot').style.background=sc;
+  document.getElementById('vib-state').style.color=sc;
+  document.getElementById('vib-state').textContent=s.state||'OFF';
+  const mr=document.getElementById('mc-run'), md=document.getElementById('mc-duty');
+  if (s.run_s>60) { mr.style.display='inline'; document.getElementById('mc-run-v').textContent=fmtDur(s.run_s); } else mr.style.display='none';
+  if (s.duty_pct>0) { md.style.display='inline'; document.getElementById('mc-duty-v').textContent=s.duty_pct+'%'; } else md.style.display='none';
+  document.getElementById('m-rms').textContent=s.rms?.toFixed(3)+'g';
+  const pk=document.getElementById('m-peak');
+  pk.textContent=s.peak?.toFixed(2)+'g'; pk.style.color=s.peak>2.5?'#F85149':'#E6EDF3';
+  const tr=document.getElementById('m-trend');
+  if (rep) {
+    const t=rep.rmsTrend, tc=t>40?'#F85149':t>20?'#D29922':t<-5?'#58A6FF':'#2EA043';
+    tr.textContent=(t>=0?'+':'')+t.toFixed(1)+'%'; tr.style.color=tc;
+  } else { tr.textContent='--'; tr.style.color='#8B949E'; }
+  const ar=document.getElementById('axis-rows');
+  if (s.rms>0) {
+    const mx=Math.max(s.rms_x,s.rms_y,s.rms_z,0.001);
+    ar.innerHTML=['X','Y','Z'].map((ax,i)=>{
+      const v=[s.rms_x,s.rms_y,s.rms_z][i], c=['#58A6FF','#79C0FF','#D2A8FF'][i];
+      return `<div class="axis-row"><span class="ax-lbl">${ax}</span><div class="ax-track"><div class="ax-fill" style="background:${c};width:${Math.min(100,v/mx*100).toFixed(1)}%"></div></div><span class="ax-val" style="color:${c}">${v?.toFixed(3)}g</span></div>`;
+    }).join('');
+  } else ar.innerHTML='<div class="waiting">Waiting for sensor data…</div>';
+}
+
+function renderRmsChart() {
+  const cv=document.getElementById('rms-canvas');
+  const W=cv.offsetWidth||452, H=90;
+  cv.width=W; cv.height=H;
+  const ctx=cv.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  if (rmsHist.length<2) {
+    ctx.strokeStyle='#21262D'; ctx.setLineDash([8,8]); ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(0,H/2); ctx.lineTo(W,H/2); ctx.stroke(); return;
+  }
+  const bl=emaRms??blRms, maxV=Math.max(...rmsHist,(bl||0)*1.5,0.1);
+  const yOf=v=>H-(v/maxV*H*0.88)-H*0.06;
+  if (bl) {
+    ctx.strokeStyle='rgba(46,160,67,0.5)'; ctx.setLineDash([12,6]); ctx.lineWidth=1.5;
+    const by=yOf(bl); ctx.beginPath(); ctx.moveTo(0,by); ctx.lineTo(W,by); ctx.stroke();
+  }
+  const step=W/(rmsHist.length-1), last=rmsHist[rmsHist.length-1];
+  const lc=(bl&&last>bl*1.4)?'#D29922':(bl&&last>bl*1.2)?'rgba(210,153,34,0.8)':'#58A6FF';
+  ctx.setLineDash([]); ctx.fillStyle='rgba(88,166,255,0.08)';
+  ctx.beginPath(); ctx.moveTo(0,H);
+  rmsHist.forEach((v,i)=>ctx.lineTo(i*step,yOf(v)));
+  ctx.lineTo((rmsHist.length-1)*step,H); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=lc; ctx.lineWidth=2;
+  ctx.beginPath(); rmsHist.forEach((v,i)=>{ if(!i) ctx.moveTo(0,yOf(v)); else ctx.lineTo(i*step,yOf(v)); }); ctx.stroke();
+  ctx.fillStyle=lc; ctx.beginPath(); ctx.arc((rmsHist.length-1)*step,yOf(last),4,0,2*Math.PI); ctx.fill();
+  document.getElementById('chart-now').textContent=last.toFixed(3)+'g now';
+  document.getElementById('chart-baseline').textContent=bl?`baseline ${bl.toFixed(3)}g`:(blAcc.length?`baseline ${blAcc.length}/${BASELINE_TARGET}`:'');
+}
+
+function renderFft(s) {
+  const fft=s.fft_amp; if (!fft||fft.length<5) return;
+  const mx=Math.max(...fft,0.01);
+  document.getElementById('fft-bars').innerHTML=fft.slice(0,5).map((a,i)=>`
+    <div class="fft-col">
+      <span class="fft-amp" style="color:${FFT_C[i]}">${a.toFixed(2)}g</span>
+      <div class="fft-track"><div class="fft-fill" style="background:${FFT_C[i]};height:${Math.min(100,a/mx*100).toFixed(1)}%"></div></div>
+      <div class="fft-lbl">${FFT_L[i]}</div>
+    </div>`).join('');
+}
+
+const FI={
+  NORMAL:{icon:'✓',label:'Normal',color:'#2EA043'},
+  FAN_IMBALANCE:{icon:'⚙',label:'Fan Imbalance',color:'#58A6FF'},
+  BEARING_WEAR:{icon:'⟳',label:'Bearing Wear',color:'#D29922'},
+  DEBRIS:{icon:'⚠',label:'Debris/Obstruction',color:'#F85149'},
+  STARTUP_STRESS:{icon:'⚡',label:'Startup Stress',color:'#FF8C00'},
+  COIL_ICE:{icon:'❄',label:'Coil Icing',color:'#79C0FF'},
+  PANEL_RATTLE:{icon:'〰',label:'Panel Rattle',color:'#8B949E'},
+  HIGH_VIBRATION:{icon:'↑',label:'Elevated Vibration',color:'#D29922'},
+  SPECTRAL_ANOMALY:{icon:'◈',label:'Spectral Anomaly',color:'#BC8CFF'},
+};
+const SC={OK:'#2EA043',LOW:'#3FB950',MEDIUM:'#D29922',HIGH:'#F85149',CRITICAL:'#FF0000'};
+const FD={
+  NORMAL:'Unit operating within normal parameters.',
+  FAN_IMBALANCE:'Fan blade-pass frequency elevated. Possible imbalance, dirty blades, or bent fan.',
+  BEARING_WEAR:'High-frequency harmonics rising. Early bearing wear detected — monitor closely.',
+  DEBRIS:'Irregular vibration spikes detected. Possible debris obstruction (leaves, ice, nest).',
+  STARTUP_STRESS:'Abnormal startup vibration. Check capacitor and compressor condition.',
+  COIL_ICE:'Compressor strain + rising vibration — possible coil icing or refrigerant issue.',
+  PANEL_RATTLE:'High-frequency panel resonance. Check and tighten outer housing fasteners.',
+  HIGH_VIBRATION:'Vibration elevated above adaptive baseline. Root cause not yet identified.',
+  SPECTRAL_ANOMALY:'FFT fingerprint shifted. Frequency mix changed — early multi-component fault possible.',
+};
+
+function renderHealth(s, rep) {
+  if (!rep) {
+    document.getElementById('f-sub').textContent=blAcc.length>=BASELINE_TARGET?'Awaiting RUNNING state…':`Collecting baseline… ${blAcc.length}/${BASELINE_TARGET}`;
+    return;
+  }
+  const fi=FI[rep.faultType]||FI.NORMAL, sc=SC[rep.severity]||'#2EA043';
+  document.getElementById('f-icon').textContent=fi.icon;
+  document.getElementById('f-name').textContent=fi.label;
+  document.getElementById('f-name').style.color=rep.faultType==='NORMAL'?'#E6EDF3':fi.color;
+  const eff=emaRms??blRms;
+  document.getElementById('f-sub').textContent=eff?`${rep.rmsTrend>=0?'+':''}${rep.rmsTrend.toFixed(1)}% vs ${eff.toFixed(3)}g baseline`:'--';
+  const badge=document.getElementById('sev-badge');
+  badge.textContent=rep.severity; badge.style.background=sc+'26'; badge.style.color=sc;
+  document.getElementById('conf-text').textContent=rep.faultType!=='NORMAL'?`${(rep.confidence*100).toFixed(0)}% conf.`:'';
+  document.getElementById('score-section').style.display='block';
+  [['sc-fan',rep.fanS],['sc-brg',rep.brgS],['sc-deb',rep.debS],['sc-noi',rep.noiS],['sc-mhl',rep.mS]].forEach(([id,v])=>{
+    document.getElementById(id+'-p').textContent=pc(v);
+    document.getElementById(id).style.width=pf(v);
+  });
+  if (cusumH>0) {
+    const frac=Math.min(1,cusumHi/cusumH), alarm=cusumHi>=cusumH;
+    const cc=alarm?'#F85149':frac>0.6?'#D29922':'#388BFD';
+    document.getElementById('cusum-wrap').style.display='block';
+    document.getElementById('cusum-lbl2').textContent=(alarm?'CUSUM ▲ ALARM':`CUSUM ${(frac*100).toFixed(0)}%${frac>0.6?' ▲':''}`);
+    document.getElementById('cusum-lbl2').style.color=cc;
+    document.getElementById('cusum-fill').style.width=pf(frac);
+    document.getElementById('cusum-fill').style.background=cc;
+  }
+  const roc=document.getElementById('roc-txt');
+  if (Math.abs(rep.roc)>0.0001) { roc.textContent=(rep.roc>=0?'↗ +':'↘ ')+rep.roc.toFixed(3)+' g/min'; roc.style.color=rep.roc>0.01?'#D29922':'#8B949E'; } else roc.textContent='';
+  const desc=FD[rep.faultType];
+  if (desc) { const b=document.getElementById('desc-box'); b.style.display='block'; b.textContent=desc; b.style.background=sc+'12'; b.style.borderLeftColor=sc+'66'; }
+  if (rep.faultType!==activeFaultType) { activeFaultType=rep.faultType; faultFirstTs=rep.faultType==='NORMAL'?0:Date.now(); }
+  const det=document.getElementById('det-txt');
+  if (faultFirstTs>0) { const ms=Date.now()-faultFirstTs; det.textContent=`First detected ${ms<60000?Math.floor(ms/1000)+'s':ms<3600000?Math.floor(ms/60000)+'m':Math.floor(ms/3600000)+'h'} ago`; } else det.textContent='';
+}
+
+// ══════════════════════════════════════════════════
+// Fault injection
+// ══════════════════════════════════════════════════
+const FAULTS=[
+  {cmd:'fan_imbalance', label:'Fan ⚙',    color:'#58A6FF'},
+  {cmd:'bearing_wear',  label:'Bearing ⟳', color:'#D29922'},
+  {cmd:'debris',        label:'Debris ⚠',  color:'#F85149'},
+  {cmd:'panel_rattle',  label:'Rattle 〰',  color:'#8B949E'},
+  {cmd:'coil_ice',      label:'Coil ❄',    color:'#79C0FF'},
+  {cmd:'startup_stress',label:'Startup ⚡', color:'#FF8C00'},
+];
+document.getElementById('fault-grid').innerHTML=FAULTS.map(f=>`
+  <button class="fault-btn" id="fb-${f.cmd}" onclick="injectFault('${f.cmd}')"
+    style="color:${f.color}99;border-color:${f.color}55">${f.label}</button>`).join('');
+
+function toggleInject() {
+  injOpen=!injOpen;
+  document.getElementById('inj-panel').style.display=injOpen?'block':'none';
+  document.getElementById('inj-tog').textContent=injOpen?'▲ Hide':'▼ Inject';
+}
+
+function injectFault(cmd) {
+  activeFaultCmd=cmd;
+  const active=cmd!=='normal';
+  document.getElementById('inj-ttl').style.color=active?'#D29922':'#8B949E';
+  document.getElementById('inj-dot').style.display=active?'inline-block':'none';
+  document.getElementById('inj-lbl').style.display=active?'inline':'none';
+  if (active) document.getElementById('inj-lbl').textContent=FAULTS.find(f=>f.cmd===cmd)?.label||cmd;
+  FAULTS.forEach(f=>{
+    const btn=document.getElementById('fb-'+f.cmd); if(!btn) return;
+    const on=cmd===f.cmd;
+    btn.style.color=on?f.color:f.color+'99';
+    btn.style.borderColor=on?f.color:f.color+'55';
+    btn.style.background=on?f.color+'26':'transparent';
+    btn.style.fontWeight=on?'700':'400';
+  });
+  document.getElementById('clear-btn').style.display=active?'block':'none';
+  document.getElementById('inj-hint').style.display=active?'none':'block';
+  client.publish('hvac/vibration/cmd', cmd, {retain:false});
+}
+</script>
+</body>
+</html>
