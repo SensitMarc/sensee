@@ -5,7 +5,7 @@
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="HVAC Vibration Guard — Three-layer AI system that detects heat pump and AC faults weeks before failure. ESP32 edge processing, Android adaptive AI, Gemini diagnosis. ~$55 hardware, no subscription.">
+    <meta name="description" content="HVAC Vibration Guard — Three-layer AI system that detects heat pump and AC faults weeks before failure. Edge processing, Android adaptive AI, Gemini diagnosis. No subscription.">
     <meta name="author" content="Sensee.ca">
 
     <title>HVAC Vibration Guard — Sensee.ca</title>
@@ -167,7 +167,7 @@
       .bg-rms   { background-color: #2980b9; }
       .bg-crest { background-color: #c0392b; }
 
-      /* ── Setup steps ──────────────────────────────────────── */
+      /* ── How it works steps ───────────────────────────────── */
       .step-circle {
         width: 48px; height: 48px;
         border-radius: 50%;
@@ -187,11 +187,6 @@
       }
       .step-content h6 { font-weight: 700; margin-bottom: 0.25rem; color: #2c3e50; }
       .step-content p  { margin: 0; font-size: 0.875rem; color: var(--text-muted); }
-
-      /* ── BOM ──────────────────────────────────────────────── */
-      .bom-table th { background: var(--hvac-dark); color: #fff; border: none; }
-      .bom-table td { vertical-align: middle; }
-      .bom-total td { font-weight: 700; background: #eaf4fb; font-size: 1.05rem; }
 
       /* ── Misc helpers ─────────────────────────────────────── */
       .section-divider { border-top: 2px solid #eee; margin: 0; }
@@ -250,10 +245,10 @@
             <a href="#problem" class="btn btn-light btn-xl sr-button mr-3">
               <i class="fa fa-arrow-down mr-2"></i>See how it works
             </a>
-            <a href="#setup" class="btn btn-outline-light btn-xl sr-button">
-              <i class="fa fa-wrench mr-2"></i>Get started
+            <a href="#contact" class="btn btn-outline-light btn-xl sr-button">
+              <i class="fa fa-envelope mr-2"></i>Order yours
             </a>
-            <p class="hero-price">~$55 hardware &nbsp;·&nbsp; no subscription &nbsp;·&nbsp; ~$6 / year in electricity</p>
+            <p class="hero-price">No subscription &nbsp;·&nbsp; Ships ready to mount &nbsp;·&nbsp; Installs in minutes</p>
           </div>
         </div>
       </div>
@@ -301,13 +296,13 @@
               </div>
               <div class="col-6 mb-3">
                 <div class="problem-stat">
-                  <div class="stat-number" style="color:#27ae60;">~$55</div>
-                  <div class="stat-label">Sensee HVAC Guard — one time, no subscription</div>
+                  <div class="stat-number" style="color:#27ae60; font-size:1.4rem;">No subscription</div>
+                  <div class="stat-label">Sensee HVAC Guard — one-time purchase, ships installed</div>
                 </div>
               </div>
             </div>
             <p class="text-muted" style="font-size:0.85rem;">
-              A single prevented compressor failure pays back the hardware <strong>30–50&times;</strong>.
+              A single prevented compressor failure covers the cost of protection <strong>many times over</strong>.
             </p>
           </div>
         </div>
@@ -593,104 +588,15 @@
       </div>
     </section>
 
-    <!-- ── Hardware ───────────────────────────────────────────────────────────── -->
-    <section id="hardware" class="py-5 bg-hvac-dark text-white">
-      <div class="container">
-        <div class="row text-center mb-5">
-          <div class="col-lg-8 mx-auto">
-            <div class="section-label-sm" style="color:#5dade2;">Hardware</div>
-            <h2 class="font-weight-bold text-white">$55 bill of materials</h2>
-            <hr class="my-4" style="border-color:rgba(255,255,255,0.2);">
-            <p style="opacity:0.75;">Off-the-shelf components. No custom PCB. No soldering required beyond connecting four I²C wires.</p>
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-lg-7 mb-4 mb-lg-0">
-            <table class="table bom-table table-bordered bg-white text-dark rounded">
-              <thead>
-                <tr>
-                  <th>Component</th>
-                  <th>Purpose</th>
-                  <th class="text-right" style="width:90px;">Cost</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><strong>ESP32-S3</strong> (Freenove WROOM N8R8)</td>
-                  <td>Microcontroller, WiFi, MQTT, FFT</td>
-                  <td class="text-right">$12</td>
-                </tr>
-                <tr>
-                  <td><strong>LSM303D</strong> accelerometer breakout</td>
-                  <td>400 Hz vibration sampling, 3-axis</td>
-                  <td class="text-right">$4</td>
-                </tr>
-                <tr>
-                  <td><strong>INMP441</strong> MEMS microphone <em class="text-muted">(optional)</em></td>
-                  <td>Acoustic fault detection (future)</td>
-                  <td class="text-right">$2</td>
-                </tr>
-                <tr>
-                  <td><strong>IP65</strong> weatherproof enclosure</td>
-                  <td>Outdoor-rated housing</td>
-                  <td class="text-right">$8</td>
-                </tr>
-                <tr>
-                  <td><strong>Neodymium</strong> magnet mount</td>
-                  <td>Rigid coupling to compressor housing</td>
-                  <td class="text-right">$5</td>
-                </tr>
-                <tr>
-                  <td><strong>5V</strong> outdoor power adapter</td>
-                  <td>Continuous power</td>
-                  <td class="text-right">$10</td>
-                </tr>
-                <tr>
-                  <td>Wire, connectors, standoffs</td>
-                  <td>Assembly</td>
-                  <td class="text-right">$5</td>
-                </tr>
-                <tr>
-                  <td colspan="2"><i class="fa fa-bolt mr-1 text-muted"></i>Ongoing electricity (5W continuous)</td>
-                  <td class="text-right">~$6/yr</td>
-                </tr>
-                <tr class="bom-total">
-                  <td colspan="2"><strong>Total</strong></td>
-                  <td class="text-right"><strong>~$55</strong></td>
-                </tr>
-              </tbody>
-            </table>
-            <p style="opacity:0.6; font-size:0.82rem;" class="mt-2">
-              <i class="fa fa-info-circle mr-1"></i>
-              Solar + 18650 battery option (~$24 addition) eliminates the power cable entirely
-              for a fully wireless outdoor installation.
-            </p>
-          </div>
-          <div class="col-lg-5">
-            <h5 class="font-weight-bold mb-3" style="color:#5dade2;">Mounting note</h5>
-            <p style="opacity:0.8; font-size:0.9rem;">Mounting method has a large effect on signal quality. The neodymium magnet provides rigid metal-to-metal coupling — essential for capturing high-frequency bearing wear signals above 80 Hz. Foam tape or zip ties attenuate high frequencies and will miss early bearing degradation.</p>
-            <p style="opacity:0.8; font-size:0.9rem;">Best location: <strong>compressor top plate</strong> for compressor + fan coverage. Fan motor housing is second choice for fan-specific analysis.</p>
-            <div class="mt-4 p-3 rounded" style="background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.12);">
-              <div class="section-label-sm" style="color:#5dade2;">Wiring — 4 wires only</div>
-              <p class="mb-1" style="font-size:0.875rem; opacity:0.85;"><strong>LSM303D → ESP32-S3</strong></p>
-              <code style="font-size:0.8rem; opacity:0.75;">
-                VCC → 3.3V &nbsp;|&nbsp; GND → GND<br>
-                SDA → GPIO 8 &nbsp;|&nbsp; SCL → GPIO 9
-              </code>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ── Getting started ────────────────────────────────────────────────────── -->
+    <!-- ── How it works ──────────────────────────────────────────────────────── -->
     <section id="setup" class="py-5 bg-light">
       <div class="container">
         <div class="row text-center mb-5">
           <div class="col-lg-8 mx-auto">
-            <div class="section-label-sm">Getting started</div>
-            <h2 class="font-weight-bold">From parts to protected in an afternoon</h2>
+            <div class="section-label-sm">How it works</div>
+            <h2 class="font-weight-bold">Protected in minutes. Monitored for years.</h2>
             <hr class="my-4">
+            <p class="text-muted">HVAC Vibration Guard ships fully assembled and pre-configured. No firmware to flash, no wiring, no broker to set up.</p>
           </div>
         </div>
         <div class="row">
@@ -699,24 +605,24 @@
             <div class="step-row">
               <div class="step-circle">1</div>
               <div class="step-content">
-                <h6>Order the parts</h6>
-                <p>~$55 from Amazon and AliExpress. The BOM above links to each component. No custom parts, no minimum order.</p>
+                <h6>Order &amp; receive</h6>
+                <p>Ships assembled in a weatherproof enclosure with magnet mount, power adapter, and everything needed for installation.</p>
               </div>
             </div>
 
             <div class="step-row">
               <div class="step-circle">2</div>
               <div class="step-content">
-                <h6>Flash the firmware</h6>
-                <p>Open source firmware on GitHub. Flash via USB using PlatformIO. Set your WiFi credentials and MQTT broker — done in under 10 minutes.</p>
+                <h6>Snap it on</h6>
+                <p>The neodymium magnet sticks directly to your compressor housing — no drilling, no brackets. Takes about 60 seconds.</p>
               </div>
             </div>
 
             <div class="step-row">
               <div class="step-circle">3</div>
               <div class="step-content">
-                <h6>Mount the sensor</h6>
-                <p>Attach the neodymium magnet to the compressor housing. Run the USB cable into the IP65 enclosure. Rigid metal contact is the only requirement.</p>
+                <h6>Connect to your WiFi</h6>
+                <p>Scan a QR code to configure your network on first boot. The device connects to the Sensee cloud over TLS — no port forwarding or router changes needed.</p>
               </div>
             </div>
 
@@ -724,7 +630,7 @@
               <div class="step-circle">4</div>
               <div class="step-content">
                 <h6>Install the Android app</h6>
-                <p>Connect to the same MQTT broker. The app begins receiving data immediately and starts learning your unit's baseline on the first run cycle.</p>
+                <p>Scan a second QR code to pair the app to your device. Live data appears immediately.</p>
               </div>
             </div>
 
@@ -732,32 +638,27 @@
               <div class="step-circle">5</div>
               <div class="step-content">
                 <h6>Let it learn — then forget it</h6>
-                <p>After 60 seconds of the first RUNNING cycle, baseline learning completes. EMA, CUSUM, and Mahalanobis models are live. You'll get a Gemini notification if anything changes.</p>
+                <p>Within the first run cycle, the system learns your unit's normal vibration fingerprint. EMA, CUSUM, and Mahalanobis models go live automatically. You'll hear from it only when something changes.</p>
               </div>
             </div>
 
           </div>
           <div class="col-lg-6">
             <div class="p-4 rounded bg-white shadow-sm h-100">
-              <h5 class="font-weight-bold mb-3 text-hvac">Hardware-in-the-loop testing</h5>
-              <p class="text-muted" style="font-size:0.9rem;">
-                You don't need a broken heat pump to test the system. The Android app includes a
-                <strong>Hardware Test panel</strong> that injects fault signatures over MQTT — the ESP32
-                multiplies the real FFT bins by fault-type factors before publishing, so Android Layer 2
-                sees a full bearing wear or fan imbalance signature while the real sensor keeps running normally.
-              </p>
-              <p class="text-muted" style="font-size:0.9rem;">
-                Tap <strong>Fan ⚙</strong> and watch the fan imbalance score climb, the Mahalanobis D² spike,
-                and Gemini fire a plain-English diagnosis. Tap <strong>✓ Clear</strong> and everything returns
-                to baseline within two seconds.
-              </p>
-              <hr>
-              <h5 class="font-weight-bold mb-3 text-hvac">Physical fault induction</h5>
-              <p class="text-muted" style="font-size:0.9rem; margin-bottom:0;">
-                For real-sensor validation on a live unit: cable-tie a washer to a fan blade (imbalance),
-                loosen two panel screws (rattle), or hold a plastic ruler lightly against the fan guard (debris).
-                All are reversible and safe.
-              </p>
+              <h5 class="font-weight-bold mb-3 text-hvac">What you get</h5>
+              <ul class="list-unstyled" style="font-size:0.9rem; color:#444;">
+                <li class="mb-3"><i class="fa fa-check-circle text-success mr-2"></i><strong>Assembled device</strong> — weatherproof IP65 enclosure, pre-flashed, pre-configured</li>
+                <li class="mb-3"><i class="fa fa-check-circle text-success mr-2"></i><strong>Neodymium magnet mount</strong> — rigid metal-to-metal coupling for accurate high-frequency capture</li>
+                <li class="mb-3"><i class="fa fa-check-circle text-success mr-2"></i><strong>Android app</strong> — real-time dashboard, vibration charts, and Gemini AI chat</li>
+                <li class="mb-3"><i class="fa fa-check-circle text-success mr-2"></i><strong>Eight fault detectors</strong> — named alerts with confidence scores, not generic warnings</li>
+                <li class="mb-3"><i class="fa fa-check-circle text-success mr-2"></i><strong>No subscription</strong> — one-time purchase, cloud connectivity included</li>
+                <li class="mb-3"><i class="fa fa-check-circle text-success mr-2"></i><strong>Ongoing AI</strong> — Gemini diagnosis fires automatically when a new fault is detected</li>
+              </ul>
+              <div class="mt-3 p-3 rounded" style="background:#eaf4fb; border-left:4px solid var(--hvac-blue);">
+                <p class="mb-0" style="font-size:0.875rem; color:#2c3e50;">
+                  <strong>Typical install time: under 5 minutes.</strong> If you run into anything, we respond personally to every support message — usually same day.
+                </p>
+              </div>
             </div>
           </div>
         </div>
