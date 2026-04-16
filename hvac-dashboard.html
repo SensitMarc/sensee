@@ -904,14 +904,22 @@ async function sendChat() {
   showDots();
 
   // Build HVAC context snapshot to send with every message
+  // If a fault was injected, use that as the fault context (baseline may not be established yet)
+  const injKey = activeFaultCmd && activeFaultCmd !== 'normal' ? INJECT_KEY[activeFaultCmd] : null;
+  const faultLabel = injKey ? (FI[injKey]?.label || injKey)
+                            : (document.getElementById('f-name')?.textContent || 'Normal');
+  const faultSev   = injKey ? 'MEDIUM'
+                            : (document.getElementById('sev-badge')?.textContent || 'OK');
+  const gemSummary = document.getElementById('gemini-text')?.textContent || '';
   const hvacContext = {
-    state:     lastState || 'unknown',
-    todayMin:  hvacData ? Math.round((hvacData.today_s||0)/60) : 0,
-    cycles:    hvacData?.cycles ?? 0,
-    indoorC:   sensorData?.tempC ?? null,
-    faultType: document.getElementById('f-name')?.textContent || 'Normal',
-    severity:  document.getElementById('sev-badge')?.textContent || 'OK',
-    rmsTrend:  parseFloat(document.getElementById('m-trend')?.textContent) || 0,
+    state:        lastState || 'unknown',
+    todayMin:     hvacData ? Math.round((hvacData.today_s||0)/60) : 0,
+    cycles:       hvacData?.cycles ?? 0,
+    indoorC:      sensorData?.tempC ?? null,
+    faultType:    faultLabel,
+    severity:     faultSev,
+    rmsTrend:     parseFloat(document.getElementById('m-trend')?.textContent) || 0,
+    geminiSummary: gemSummary,  // last diagnosis text so chat can reference it
   };
 
   try {
