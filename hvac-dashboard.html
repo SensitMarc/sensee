@@ -962,6 +962,16 @@ function showDots() {
 
 function removeDots() { document.getElementById('thinking-dots')?.remove(); }
 
+// Map inject cmd → Layer 2 fault key
+const INJECT_KEY = {
+  fan_imbalance:  'FAN_IMBALANCE',
+  bearing_wear:   'BEARING_WEAR',
+  debris:         'DEBRIS',
+  panel_rattle:   'PANEL_RATTLE',
+  coil_ice:       'COIL_ICE',
+  startup_stress: 'STARTUP_STRESS',
+};
+
 function injectFault(cmd) {
   activeFaultCmd=cmd;
   const active=cmd!=='normal';
@@ -980,6 +990,31 @@ function injectFault(cmd) {
   document.getElementById('clear-btn').style.display=active?'block':'none';
   document.getElementById('inj-hint').style.display=active?'none':'block';
   client.publish('hvac/vibration/cmd', cmd, {retain:false});
+
+  // Immediately ask Gemini about the injected fault — don't wait for Layer 2 to detect it
+  if (active) {
+    const key = INJECT_KEY[cmd];
+    if (key) {
+      activeFaultType = key;   // prevent duplicate trigger from Layer 2
+      faultFirstTs = Date.now();
+      triggerDiagnosis({
+        faultType:    FI[key]?.label || key,
+        severity:     'MEDIUM',
+        confidence:   0.85,
+        rmsTrend:     0,
+        rateOfChange: 0,
+        fanScore: 0, bearingScore: 0, debrisScore: 0, mahalScore: 0, mahalD2: 0,
+        todayMin: hvacData ? Math.round((hvacData.today_s||0)/60) : 0,
+        cycles:   hvacData?.cycles ?? 0,
+        description: FD[key] || ''
+      });
+    }
+  } else {
+    // Cleared — hide Gemini strip and reset fault tracking
+    activeFaultType = 'NORMAL';
+    faultFirstTs = 0;
+    document.getElementById('gemini-strip').style.display = 'none';
+  }
 }
 </script>
 </body>
