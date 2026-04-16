@@ -683,14 +683,30 @@ function renderStatus() {
 }
 
 // ── Outdoor temperature (Open-Meteo, no API key) ──────────────
-let outdoorC = null;
+let outdoorC  = null;
+let forecast7 = null;   // [{ day:'Mon', high:28, low:18 }, ...]
 
 async function fetchOutdoorTemp(lat, lon) {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m&temperature_unit=celsius&forecast_days=1`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}`
+              + `&current=temperature_2m`
+              + `&daily=temperature_2m_max,temperature_2m_min`
+              + `&temperature_unit=celsius&forecast_days=7&timezone=auto`;
     const res  = await fetch(url);
     const data = await res.json();
     outdoorC = data?.current?.temperature_2m ?? null;
+
+    // Build 7-day array
+    const days  = data?.daily?.time                ?? [];
+    const highs = data?.daily?.temperature_2m_max  ?? [];
+    const lows  = data?.daily?.temperature_2m_min  ?? [];
+    const DAY   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    forecast7   = days.map((d, i) => ({
+      day:  DAY[new Date(d).getDay()],
+      high: Math.round(highs[i]),
+      low:  Math.round(lows[i])
+    }));
+
     renderClimate();
   } catch (_) {}
 }
@@ -966,6 +982,7 @@ async function sendChat() {
     cycles:       hvacData?.cycles ?? 0,
     indoorC:      sensorData?.tempC ?? null,
     outdoorC:     outdoorC,
+    forecast7:    forecast7,
     faultType:    faultLabel,
     severity:     faultSev,
     rmsTrend:     parseFloat(document.getElementById('m-trend')?.textContent) || 0,
