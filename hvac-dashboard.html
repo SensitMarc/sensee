@@ -682,9 +682,58 @@ function renderStatus() {
   else cw.style.display='none';
 }
 
+// ── Outdoor temperature (Open-Meteo, no API key) ──────────────
+let outdoorC = null;
+
+async function fetchOutdoorTemp(lat, lon) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}&current=temperature_2m&temperature_unit=celsius&forecast_days=1`;
+    const res  = await fetch(url);
+    const data = await res.json();
+    outdoorC = data?.current?.temperature_2m ?? null;
+    renderClimate();
+  } catch (_) {}
+}
+
+async function startWeather() {
+  // Try browser geolocation first, fall back to IP-based
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(
+      pos => fetchOutdoorTemp(pos.coords.latitude, pos.coords.longitude),
+      async () => {
+        try {
+          const r = await fetch('https://ipapi.co/json/');
+          const d = await r.json();
+          if (d.latitude && d.longitude) fetchOutdoorTemp(d.latitude, d.longitude);
+        } catch (_) {}
+      },
+      { timeout: 8000, maximumAge: 1800000 }
+    );
+  } else {
+    try {
+      const r = await fetch('https://ipapi.co/json/');
+      const d = await r.json();
+      if (d.latitude && d.longitude) fetchOutdoorTemp(d.latitude, d.longitude);
+    } catch (_) {}
+  }
+  // Refresh every 30 minutes
+  setInterval(startWeather, 30 * 60 * 1000);
+}
+
+startWeather();
+
 function renderClimate() {
   if (!sensorData) return;
-  document.getElementById('t-indoor').textContent=sensorData.tempC?.toFixed(1)+'°C';
+  const inC = sensorData.tempC;
+  document.getElementById('t-indoor').textContent = inC != null ? inC.toFixed(1)+'°C' : '--';
+  if (outdoorC != null) {
+    document.getElementById('t-outdoor').textContent = outdoorC.toFixed(1)+'°C';
+    if (inC != null) {
+      const delta = inC - outdoorC;
+      document.getElementById('t-delta').textContent = (delta >= 0 ? '+' : '') + delta.toFixed(1)+'°C';
+      document.getElementById('t-delta-wrap').style.display = 'block';
+    }
+  }
 }
 
 const STATE_C={RUNNING:'#2EA043',STARTING:'#D29922',STOPPING:'rgba(88,166,255,0.7)',OFF:'#8B949E'};
@@ -916,6 +965,7 @@ async function sendChat() {
     todayMin:     hvacData ? Math.round((hvacData.today_s||0)/60) : 0,
     cycles:       hvacData?.cycles ?? 0,
     indoorC:      sensorData?.tempC ?? null,
+    outdoorC:     outdoorC,
     faultType:    faultLabel,
     severity:     faultSev,
     rmsTrend:     parseFloat(document.getElementById('m-trend')?.textContent) || 0,
