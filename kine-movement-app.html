@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movement Capture</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f5f2;
+    --panel: #ffffff;
+    --border: #e2e0da;
+    --text: #1f1e1c;
+    --text-secondary: #6b6a65;
+    --accent: #1d6e5a;
+    --accent-light: #e1f5ee;
+    --danger: #c0392b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 16px;
+  }
+  h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
+  .sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  button {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    color: var(--text);
+  }
+  button:hover { background: #f0efea; }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.primary:hover { opacity: 0.9; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.danger { color: var(--danger); border-color: var(--danger); }
+  input[type=file] { display: none; }
+  .status {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 8px;
+  }
+  .status.error { color: var(--danger); }
+  .status.ok { color: var(--accent); }
+  .video-wrap {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  video { display: block; width: 100%; height: auto; }
+  canvas.overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+  .joint-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .joint-card {
+    background: var(--accent-light);
+    border-radius: 8px;
+    padding: 8px 10px;
+  }
+  .joint-card .label { font-size: 11px; color: var(--text-secondary); }
+  .joint-card .value { font-size: 18px; font-weight: 600; color: var(--accent); }
+  label.chk {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-secondary);
+  }
+  .chart-wrap { position: relative; height: 220px; margin-top: 10px; }
+  .footer-note { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Movement capture and visualization</h1>
+<p class="sub">Live webcam or uploaded video — pose tracking with joint angle graphs. Assistive tool only, not a diagnostic device.</p>
+
+<div class="panel">
+  <div class="row">
+    <button id="btnWebcam">Start webcam</button>
+    <button id="btnUploadTrigger">Upload video</button>
+    <input type="file" id="fileInput" accept="video/*">
+    <button id="btnStop" class="danger" disabled>Stop</button>
+    <button id="btnReset">Reset chart</button>
+  </div>
+  <div id="status" class="status">Loading pose model…</div>
+</div>
+
+<div class="panel">
+  <div class="video-wrap">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay" class="overlay"></canvas>
+  </div>
+
+  <div class="joint-grid" id="jointGrid"></div>
+</div>
+
+<div class="panel">
+  <div class="row" id="jointToggles"></div>
+  <div class="chart-wrap"><canvas id="chart"></canvas></div>
+  <div class="footer-note">Angle in degrees. Rolling window of the last 300 samples.</div>
+</div>
+
+<script type="module">
+import {
+  PoseLandmarker,
+  FilesetResolver
+} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs";
+
+const statusEl = document.getElementById('status');
+const video = document.getElementById('video');
+const overlay = document.getElementById('overlay');
+const ctx = overlay.getContext('2d');
+const jointGrid = document.getElementById('jointGrid');
+const jointToggles = document.getElementById('jointToggles');
+const fileInput = document.getElementById('fileInput');
+
+const btnWebcam = document.getElementById('btnWebcam');
+const btnUploadTrigger = document.getElementById('btnUploadTrigger');
+const btnStop = document.getElementById('btnStop');
+const btnReset = document.getElementById('btnReset');
+
+function setStatus(msg, kind) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status' + (kind ? ' ' + kind : '');
+}
+
+// Landmark indices (BlazePose 33-point)
+const L = {
+  leftShoulder: 11, rightShoulder: 12,
+  leftElbow: 13, rightElbow: 14,
+  leftWrist: 15, rightWrist: 16,
+  leftHip: 23, rightHip: 24,
+  leftKnee: 25, rightKnee: 26,
+  leftAnkle: 27, rightAnkle: 28
+};
+
+const JOINTS = [
+  { key: 'leftElbow', label: 'L elbow', triplet: [L.leftShoulder, L.leftElbow, L.leftWrist], color: '#1d6e5a' },
+  { key: 'rightElbow', label: 'R elbow', triplet: [L.rightShoulder, L.rightElbow, L.rightWrist], color: '#d85a30' },
+  { key: 'leftKnee', label: 'L knee', triplet: [L.leftHip, L.leftKnee, L.leftAnkle], color: '#378ada' },
+  { key: 'rightKnee', label: 'R knee', triplet: [L.rightHip, L.rightKnee, L.rightAnkle], color: '#993c1d' },
+  { key: 'leftHip', label: 'L hip', triplet: [L.leftShoulder, L.leftHip, L.leftKnee], color: '#7f77dd' },
+  { key: 'rightHip', label: 'R hip', triplet: [L.rightShoulder, L.rightHip, L.rightKnee], color: '#d4537e' }
+];
+
+const CONNECTIONS = [
+  [11,12],[11,13],[13,15],[12,14],[14,16],
+  [11,23],[12,24],[23,24],
+  [23,25],[25,27],[24,26],[26,28],
+  [27,29],[27,31],[28,30],[28,32],[29,31],[30,32]
+];
+
+// Build joint value cards + toggles
+const activeJoints = new Set(['leftElbow', 'rightElbow', 'leftKnee', 'rightKnee']);
+JOINTS.forEach(j => {
+  const card = document.createElement('div');
+  card.className = 'joint-card';
+  card.innerHTML = `<div class="label">${j.label}</div><div class="value" id="val-${j.key}">–</div>`;
+  jointGrid.appendChild(card);
+
+  const wrap = document.createElement('label');
+  wrap.className = 'chk';
+  wrap.innerHTML = `<input type="checkbox" data-joint="${j.key}" ${activeJoints.has(j.key) ? 'checked' : ''}> ${j.label}`;
+  jointToggles.appendChild(wrap);
+});
+
+jointToggles.addEventListener('change', (e) => {
+  const key = e.target.getAttribute('data-joint');
+  if (!key) return;
+  if (e.target.checked) activeJoints.add(key); else activeJoints.delete(key);
+  chart.data.datasets.forEach(ds => {
+    if (ds.jointKey) ds.hidden = !activeJoints.has(ds.jointKey);
+  });
+  chart.update();
+});
+
+// Angle calculation
+function angleAt(a, b, c) {
+  const v1 = { x: a.x - b.x, y: a.y - b.y };
+  const v2 = { x: c.x - b.x, y: c.y - b.y };
+  const dot = v1.x * v2.x + v1.y * v2.y;
+  const mag1 = Math.hypot(v1.x, v1.y);
+  const mag2 = Math.hypot(v2.x, v2.y);
+  if (mag1 === 0 || mag2 === 0) return null;
+  const cos = Math.min(1, Math.max(-1, dot / (mag1 * mag2)));
+  return Math.round(Math.acos(cos) * (180 / Math.PI));
+}
+
+// Chart setup
+const chartCtx = document.getElementById('chart').getContext('2d');
+const chart = new Chart(chartCtx, {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: JOINTS.map(j => ({
+      label: j.label,
+      data: [],
+      borderColor: j.color,
+      backgroundColor: j.color,
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.25,
+      jointKey: j.key,
+      hidden: !activeJoints.has(j.key)
+    }))
+  },
+  options: {
+    animation: false,
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { display: true, ticks: { maxTicksLimit: 6, font: { size: 10 } } },
+      y: { min: 0, max: 190, title: { display: true, text: 'degrees', font: { size: 11 } } }
+    },
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } } }
+  }
+});
+
+const MAX_SAMPLES = 300;
+let frameCount = 0;
+
+function pushSample(angles) {
+  frameCount++;
+  chart.data.labels.push(frameCount);
+  JOINTS.forEach((j, i) => {
+    chart.data.datasets[i].data.push(angles[j.key] ?? null);
+  });
+  if (chart.data.labels.length > MAX_SAMPLES) {
+    chart.data.labels.shift();
+    chart.data.datasets.forEach(ds => ds.data.shift());
+  }
+  chart.update('none');
+}
+
+// Pose landmarker setup
+let poseLandmarker;
+let runningMode = 'VIDEO';
+let stream = null;
+let rafId = null;
+let lastVideoTime = -1;
+
+async function initPoseLandmarker() {
+  setStatus('Loading vision runtime (WASM)…');
+  let vision;
+  try {
+    vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm"
+    );
+  } catch (err) {
+    console.error('FilesetResolver failed', err);
+    setStatus('Could not load the vision runtime. Check your connection and try again. (' + err.message + ')', 'error');
+    return;
+  }
+
+  setStatus('Downloading pose model (a few MB, first load only)…');
+  try {
+    poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+        delegate: "CPU"
+      },
+      runningMode: runningMode,
+      numPoses: 1
+    });
+  } catch (errGpu) {
+    console.error('CPU delegate failed', errGpu);
+    setStatus('Failed to load pose model: ' + errGpu.message, 'error');
+    return;
+  }
+
+  setStatus('Model ready. Start webcam or upload a video.', 'ok');
+  btnWebcam.disabled = false;
+  btnUploadTrigger.disabled = false;
+}
+
+function resizeOverlay() {
+  overlay.width = video.videoWidth || video.clientWidth;
+  overlay.height = video.videoHeight || video.clientHeight;
+}
+
+function drawSkeleton(landmarks) {
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#1d6e5a';
+  CONNECTIONS.forEach(([a, b]) => {
+    const p1 = landmarks[a], p2 = landmarks[b];
+    if (!p1 || !p2) return;
+    ctx.beginPath();
+    ctx.moveTo(p1.x * overlay.width, p1.y * overlay.height);
+    ctx.lineTo(p2.x * overlay.width, p2.y * overlay.height);
+    ctx.stroke();
+  });
+  ctx.fillStyle = '#d85a30';
+  landmarks.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x * overlay.width, p.y * overlay.height, 3.5, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+}
+
+function computeAngles(landmarks) {
+  const angles = {};
+  JOINTS.forEach(j => {
+    const [ai, bi, ci] = j.triplet;
+    const a = landmarks[ai], b = landmarks[bi], c = landmarks[ci];
+    if (a && b && c) {
+      const ang = angleAt(a, b, c);
+      angles[j.key] = ang;
+      const el = document.getElementById('val-' + j.key);
+      if (el) el.textContent = ang !== null ? ang + '°' : '–';
+    }
+  });
+  return angles;
+}
+
+function predictLoop() {
+  if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+    lastVideoTime = video.currentTime;
+    const result = poseLandmarker.detectForVideo(video, performance.now());
+    if (result.landmarks && result.landmarks.length > 0) {
+      const landmarks = result.landmarks[0];
+      drawSkeleton(landmarks);
+      const angles = computeAngles(landmarks);
+      pushSample(angles);
+    } else {
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+    }
+  }
+  rafId = requestAnimationFrame(predictLoop);
+}
+
+function stopAll() {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = null;
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
+  video.pause();
+  video.srcObject = null;
+  video.removeAttribute('src');
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  btnStop.disabled = true;
+  setStatus('Stopped.', null);
+}
+
+btnWebcam.addEventListener('click', async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+    video.srcObject = stream;
+    await video.play();
+    resizeOverlay();
+    btnStop.disabled = false;
+    setStatus('Webcam running.', 'ok');
+    lastVideoTime = -1;
+    if (!rafId) predictLoop();
+  } catch (err) {
+    setStatus('Camera access denied or unavailable: ' + err.message, 'error');
+  }
+});
+
+btnUploadTrigger.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  video.srcObject = null;
+  video.src = url;
+  video.loop = true;
+  video.onloadedmetadata = () => {
+    resizeOverlay();
+    video.play();
+    btnStop.disabled = false;
+    setStatus('Playing uploaded video: ' + file.name, 'ok');
+    lastVideoTime = -1;
+    if (!rafId) predictLoop();
+  };
+});
+
+btnStop.addEventListener('click', stopAll);
+btnReset.addEventListener('click', () => {
+  frameCount = 0;
+  chart.data.labels = [];
+  chart.data.datasets.forEach(ds => ds.data = []);
+  chart.update();
+});
+
+window.addEventListener('resize', resizeOverlay);
+
+btnWebcam.disabled = true;
+btnUploadTrigger.disabled = true;
+
+const initTimeout = setTimeout(() => {
+  if (!poseLandmarker) {
+    setStatus('Still stuck loading after 20s — likely a blocked network request (CDN or model host unreachable from this page). Try opening the downloaded file in a normal browser tab instead of a media viewer, or check your connection.', 'error');
+  }
+}, 20000);
+
+initPoseLandmarker()
+  .catch(err => {
+    console.error('Init failed', err);
+    setStatus('Failed to load pose model: ' + err.message, 'error');
+  })
+  .finally(() => clearTimeout(initTimeout));
+</script>
+
+</body>
+</html>
