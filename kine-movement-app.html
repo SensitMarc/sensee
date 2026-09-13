@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Movement Capture</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <style>
   :root {
     --bg: #f6f5f2;
@@ -106,6 +106,12 @@
     <button id="btnStop" class="danger" disabled>Stop</button>
     <button id="btnReset">Reset chart</button>
   </div>
+  <div class="row" style="margin-top:8px;">
+    <button id="btnRecord">● Record</button>
+    <button id="btnExport" disabled>Export CSV</button>
+    <label class="chk" style="margin-left:4px;"><input type="checkbox" id="chkSmooth" checked> Smooth chart</label>
+    <span id="recordCount" class="footer-note"></span>
+  </div>
   <div id="status" class="status">Loading pose model…</div>
 </div>
 
@@ -130,6 +136,21 @@ import {
   FilesetResolver
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs";
 
+window.addEventListener('error', (e) => {
+  const el = document.getElementById('status');
+  if (el) {
+    el.textContent = 'Script error: ' + (e.message || 'unknown') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '');
+    el.className = 'status error';
+  }
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const el = document.getElementById('status');
+  if (el) {
+    el.textContent = 'Promise error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason));
+    el.className = 'status error';
+  }
+});
+
 const statusEl = document.getElementById('status');
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
@@ -142,6 +163,14 @@ const btnWebcam = document.getElementById('btnWebcam');
 const btnUploadTrigger = document.getElementById('btnUploadTrigger');
 const btnStop = document.getElementById('btnStop');
 const btnReset = document.getElementById('btnReset');
+const btnRecord = document.getElementById('btnRecord');
+const btnExport = document.getElementById('btnExport');
+const chkSmooth = document.getElementById('chkSmooth');
+const recordCountEl = document.getElementById('recordCount');
+const btnGenerate = document.getElementById('btnGenerate');
+const modelSelect = document.getElementById('modelSelect');
+const llmStatusEl = document.getElementById('llmStatus');
+const draftOutput = document.getElementById('draftOutput');
 
 function setStatus(msg, kind) {
   statusEl.textContent = msg;
@@ -192,6 +221,7 @@ jointToggles.addEventListener('change', (e) => {
   const key = e.target.getAttribute('data-joint');
   if (!key) return;
   if (e.target.checked) activeJoints.add(key); else activeJoints.delete(key);
+  if (!chart) return;
   chart.data.datasets.forEach(ds => {
     if (ds.jointKey) ds.hidden = !activeJoints.has(ds.jointKey);
   });
@@ -211,8 +241,10 @@ function angleAt(a, b, c) {
 }
 
 // Chart setup
+let chart;
+try {
 const chartCtx = document.getElementById('chart').getContext('2d');
-const chart = new Chart(chartCtx, {
+chart = new Chart(chartCtx, {
   type: 'line',
   data: {
     labels: [],
@@ -239,15 +271,47 @@ const chart = new Chart(chartCtx, {
     plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } } }
   }
 });
+} catch (chartErr) {
+  console.error('Chart init failed', chartErr);
+  setStatus('Chart library failed to load (angle graph disabled): ' + chartErr.message, 'error');
+}
 
 const MAX_SAMPLES = 300;
 let frameCount = 0;
 
-function pushSample(angles) {
+const SMOOTH_WINDOW = 5;
+const smoothBuffers = {};
+JOINTS.forEach(j => { smoothBuffers[j.key] = []; });
+
+function smooth(key, rawVal) {
+  if (rawVal === null || rawVal === undefined) return rawVal;
+  const buf = smoothBuffers[key];
+  buf.push(rawVal);
+  if (buf.length > SMOOTH_WINDOW) buf.shift();
+  const sum = buf.reduce((a, b) => a + b, 0);
+  return Math.round(sum / buf.length);
+}
+
+let isRecording = false;
+let recordedData = [];
+let recordStartTime = null;
+
+function pushSample(rawAngles) {
   frameCount++;
+
+  if (isRecording) {
+    const row = { frame: frameCount, t_seconds: ((performance.now() - recordStartTime) / 1000).toFixed(2) };
+    JOINTS.forEach(j => { row[j.key] = rawAngles[j.key] ?? ''; });
+    recordedData.push(row);
+    recordCountEl.textContent = recordedData.length + ' samples recorded';
+  }
+
+  if (!chart) return;
   chart.data.labels.push(frameCount);
   JOINTS.forEach((j, i) => {
-    chart.data.datasets[i].data.push(angles[j.key] ?? null);
+    const raw = rawAngles[j.key];
+    const val = chkSmooth.checked ? smooth(j.key, raw) : (raw ?? null);
+    chart.data.datasets[i].data.push(val ?? null);
   });
   if (chart.data.labels.length > MAX_SAMPLES) {
     chart.data.labels.shift();
@@ -405,12 +469,189 @@ fileInput.addEventListener('change', () => {
 btnStop.addEventListener('click', stopAll);
 btnReset.addEventListener('click', () => {
   frameCount = 0;
+  JOINTS.forEach(j => { smoothBuffers[j.key] = []; });
+  if (!chart) return;
   chart.data.labels = [];
   chart.data.datasets.forEach(ds => ds.data = []);
   chart.update();
 });
 
+btnRecord.addEventListener('click', () => {
+  isRecording = !isRecording;
+  if (isRecording) {
+    recordedData = [];
+    recordStartTime = performance.now();
+    btnRecord.textContent = '■ Stop recording';
+    btnExport.disabled = true;
+    recordCountEl.textContent = '0 samples recorded';
+  } else {
+    btnRecord.textContent = '● Record';
+    btnExport.disabled = recordedData.length === 0;
+    btnGenerate.disabled = recordedData.length === 0;
+    recordCountEl.textContent = recordedData.length + ' samples ready to export';
+  }
+});
+
+btnExport.addEventListener('click', () => {
+  if (recordedData.length === 0) return;
+  const headers = ['frame', 't_seconds', ...JOINTS.map(j => j.key)];
+  const rows = recordedData.map(r => headers.map(h => r[h] ?? '').join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'movement-session-' + new Date().toISOString().replace(/[:.]/g, '-') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
 window.addEventListener('resize', resizeOverlay);
+
+// ---- Local LLM assessment draft (Qwen2.5-1.5B via WebLLM / WebGPU) ----
+let webllmEngine = null;
+let webllmLoadedModel = null;
+
+function computeMetrics(data) {
+  const stats = {};
+  JOINTS.forEach(j => {
+    const vals = data.map(r => parseFloat(r[j.key])).filter(v => !isNaN(v));
+    if (vals.length === 0) return;
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
+    stats[j.key] = { min, max, rom: max - min, avg };
+  });
+  return stats;
+}
+
+function buildPrompt(stats) {
+  const lines = [];
+  const pairs = [['leftElbow', 'rightElbow', 'Elbow'], ['leftKnee', 'rightKnee', 'Knee'], ['leftHip', 'rightHip', 'Hip']];
+  Object.entries(stats).forEach(([key, s]) => {
+    const label = JOINTS.find(j => j.key === key)?.label || key;
+    lines.push(`${label}: range ${s.min}-${s.max} deg (ROM ${s.rom} deg), avg ${s.avg} deg`);
+  });
+  const asym = [];
+  pairs.forEach(([lk, rk, name]) => {
+    if (stats[lk] && stats[rk]) {
+      const diff = Math.abs(stats[lk].rom - stats[rk].rom);
+      asym.push(`${name} ROM difference (L vs R): ${diff} deg`);
+    }
+  });
+  return "Joint angle data from a recorded movement session:\n" + lines.join("\n") +
+    "\n\nLeft/right symmetry:\n" + asym.join("\n");
+}
+
+function buildDeterministicSummary(stats) {
+  const lines = [];
+  lines.push('MOVEMENT SESSION — COMPUTED SUMMARY (no AI narrative)');
+  lines.push('');
+  JOINTS.forEach(j => {
+    const s = stats[j.key];
+    if (!s) return;
+    lines.push(`${j.label}: range of motion ${s.rom}\u00B0  (min ${s.min}\u00B0, max ${s.max}\u00B0, avg ${s.avg}\u00B0)`);
+  });
+  lines.push('');
+  lines.push('Left / right symmetry (range-of-motion difference):');
+  const pairs = [['leftElbow', 'rightElbow', 'Elbow'], ['leftKnee', 'rightKnee', 'Knee'], ['leftHip', 'rightHip', 'Hip']];
+  let anyPair = false;
+  pairs.forEach(([lk, rk, name]) => {
+    if (stats[lk] && stats[rk]) {
+      anyPair = true;
+      const diff = Math.abs(stats[lk].rom - stats[rk].rom);
+      lines.push(`  ${name}: ${diff}\u00B0 difference between sides`);
+    }
+  });
+  if (!anyPair) lines.push('  (not enough tracked joints on both sides to compare)');
+  lines.push('');
+  lines.push('This is a computed summary of recorded joint angles — not an AI-written narrative and not a diagnosis. For practitioner review.');
+  return lines.join('\n');
+}
+
+async function ensureEngine(modelId, onProgress) {
+  if (webllmEngine && webllmLoadedModel === modelId) return webllmEngine;
+
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) {
+    throw new Error('No compatible GPU adapter found on this device/browser — WebGPU is reported present but unusable here.');
+  }
+
+  const webllm = await import("https://esm.run/@mlc-ai/web-llm");
+
+  const engine = new webllm.MLCEngine({
+    initProgressCallback: (report) => onProgress(report.text || 'Loading model…')
+  });
+  await engine.reload(modelId);
+
+  webllmEngine = engine;
+  webllmLoadedModel = modelId;
+  return webllmEngine;
+}
+
+btnGenerate.addEventListener('click', async () => {
+  if (recordedData.length === 0) return;
+  btnGenerate.disabled = true;
+  draftOutput.value = '';
+  const stats = computeMetrics(recordedData);
+
+  if (!navigator.gpu) {
+    llmStatusEl.textContent = 'WebGPU is not available in this browser — showing a computed summary instead of an AI draft.';
+    llmStatusEl.className = 'status';
+    draftOutput.value = buildDeterministicSummary(stats);
+    btnGenerate.disabled = false;
+    return;
+  }
+
+  // Release camera/video/pose-tracking GPU resources first — running them
+  // alongside the LLM load is what's exhausting the GPU on mobile.
+  if (rafId || stream) {
+    stopAll();
+    llmStatusEl.textContent = 'Stopped tracking to free up GPU memory before loading the model…';
+    await new Promise(r => setTimeout(r, 500));
+  }
+  if (poseLandmarker) {
+    try { poseLandmarker.close(); } catch (e) { /* ignore */ }
+    poseLandmarker = null;
+  }
+
+  const selectedModel = modelSelect.value;
+  try {
+    llmStatusEl.textContent = 'Loading local language model (first time only — size depends on model chosen)…';
+    llmStatusEl.className = 'status';
+    const engine = await ensureEngine(selectedModel, (msg) => {
+      llmStatusEl.textContent = msg;
+    });
+
+    llmStatusEl.textContent = 'Analyzing session data…';
+    const dataSummary = buildPrompt(stats);
+
+    const systemPrompt = "You assist a kinesiology practitioner by drafting objective, factual notes from motion-capture data for them to review and edit. Do not diagnose or name any condition. Note ranges of motion and any notable left/right differences. Plain language, under 150 words.";
+
+    const completion = await engine.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: dataSummary }
+      ],
+      temperature: 0.4
+    });
+
+    draftOutput.value = completion.choices[0].message.content;
+    llmStatusEl.textContent = 'AI draft generated — review and edit before sharing with the client.';
+    llmStatusEl.className = 'status ok';
+  } catch (err) {
+    console.error('LLM generation failed, falling back to computed summary', err);
+    webllmEngine = null; // force a clean retry next click rather than reusing a broken engine
+    webllmLoadedModel = null;
+    draftOutput.value = buildDeterministicSummary(stats);
+    llmStatusEl.textContent = 'Local AI failed on this device (' + (err && err.message ? err.message : String(err)) + ') — showing a computed summary instead.';
+    llmStatusEl.className = 'status error';
+  } finally {
+    btnGenerate.disabled = recordedData.length === 0;
+  }
+});
 
 btnWebcam.disabled = true;
 btnUploadTrigger.disabled = true;
@@ -428,6 +669,20 @@ initPoseLandmarker()
   })
   .finally(() => clearTimeout(initTimeout));
 </script>
+
+<div class="panel">
+  <div class="row">
+    <button id="btnGenerate" disabled>Generate assessment draft (local AI)</button>
+    <select id="modelSelect" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
+      <option value="SmolLM2-360M-Instruct-q4f16_1-MLC">SmolLM2-360M (~376MB — smallest verified option, try this first on phones)</option>
+      <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5-0.5B (~950MB — safer on phones)</option>
+      <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5-1.5B (~1.6GB — needs a stronger GPU)</option>
+    </select>
+  </div>
+  <div id="llmStatus" class="status">Record a session first, then generate a draft.</div>
+  <textarea id="draftOutput" rows="10" style="width:100%; margin-top:10px; font-size:13px; border:1px solid var(--border); border-radius:8px; padding:8px; font-family:inherit; resize:vertical;" placeholder="Draft will appear here for practitioner review and editing."></textarea>
+  <div class="footer-note">Runs a small language model (Qwen2.5-1.5B) entirely in your browser via WebGPU — no data leaves the device. This is a draft for practitioner review, not a diagnosis.</div>
+</div>
 
 </body>
 </html>
