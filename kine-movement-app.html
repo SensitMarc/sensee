@@ -116,6 +116,10 @@
 </div>
 
 <div class="panel">
+  <div class="row" style="margin-bottom:10px;">
+    <label class="chk"><input type="checkbox" id="chkPrivacy" checked> Privacy mode — show skeleton only, hide camera image</label>
+  </div>
+  <div class="footer-note" id="privacyNote" style="margin-bottom:8px;"></div>
   <div class="video-wrap">
     <video id="video" playsinline muted></video>
     <canvas id="overlay" class="overlay"></canvas>
@@ -128,6 +132,60 @@
   <div class="row" id="jointToggles"></div>
   <div class="chart-wrap"><canvas id="chart"></canvas></div>
   <div class="footer-note">Angle in degrees. Rolling window of the last 300 samples.</div>
+</div>
+
+<div class="panel" style="border-color:#1d6e5a; border-width:2px;">
+  <h1 style="font-size:16px; margin-bottom:4px;">Posture monitoring — long session</h1>
+  <p class="sub" style="font-size:12px; margin-bottom:10px;">
+    Designed to run for a full work session next to a client at their desk. Tracks forward head posture,
+    shoulder level, and torso lean at a low sampling rate — not full-speed rep tracking.
+    <strong>Camera placement matters:</strong> a 3/4-angle view (not straight-on, not pure side profile)
+    is the best practical compromise — pure side view hides one shoulder, straight-on under-reads forward
+    head lean. These thresholds are configurable heuristics for spotting patterns over time, not clinical
+    diagnostic cutoffs.
+  </p>
+
+  <div class="row" style="flex-direction:column; align-items:stretch; gap:6px;">
+    <label style="font-size:12px; color:var(--text-secondary);">Sample every</label>
+    <select id="postureInterval" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
+      <option value="2000">2 seconds</option>
+      <option value="5000" selected>5 seconds (recommended for hours-long sessions)</option>
+      <option value="10000">10 seconds</option>
+      <option value="30000">30 seconds</option>
+    </select>
+  </div>
+
+  <div class="row" style="margin-top:10px;">
+    <button id="btnPostureStart">▶ Start posture session</button>
+    <button id="btnPostureStop" class="danger" disabled>■ Stop session</button>
+    <button id="btnPostureExport" disabled>Export posture CSV</button>
+    <button id="btnPostureAiReport" disabled>Generate AI report</button>
+  </div>
+
+  <div id="postureStatusRow" style="margin-top:12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+    <div id="postureBadge" style="padding:8px 16px; border-radius:20px; font-weight:600; font-size:14px; background:#e2e0da; color:var(--text-secondary);">Not started</div>
+    <div style="font-size:13px; color:var(--text-secondary);">Elapsed: <span id="postureElapsed">00:00:00</span></div>
+    <div style="font-size:13px; color:var(--text-secondary);">Samples: <span id="postureSampleCount">0</span></div>
+  </div>
+
+  <div class="joint-grid" style="margin-top:12px;">
+    <div class="joint-card">
+      <div class="label">Forward head</div>
+      <div class="value" id="val-forwardHead">–</div>
+    </div>
+    <div class="joint-card">
+      <div class="label">Shoulder tilt</div>
+      <div class="value" id="val-shoulderTilt">–</div>
+    </div>
+    <div class="joint-card">
+      <div class="label">Torso lean</div>
+      <div class="value" id="val-torsoLean">–</div>
+    </div>
+  </div>
+
+  <div id="postureSummaryBox" style="margin-top:12px; font-size:13px; white-space:pre-wrap; display:none; background:var(--accent-light); border-radius:8px; padding:10px;"></div>
+
+  <div class="footer-note" id="wakeLockNote" style="margin-top:8px;"></div>
 </div>
 
 <script type="module">
@@ -155,6 +213,20 @@ const statusEl = document.getElementById('status');
 const video = document.getElementById('video');
 const overlay = document.getElementById('overlay');
 const ctx = overlay.getContext('2d');
+const chkPrivacy = document.getElementById('chkPrivacy');
+const privacyNote = document.getElementById('privacyNote');
+
+function updatePrivacyUI() {
+  if (chkPrivacy.checked) {
+    video.style.opacity = '0';
+    privacyNote.textContent = 'No camera image is shown or saved — this is a computed stick figure drawn only from calculated joint positions.';
+  } else {
+    video.style.opacity = '1';
+    privacyNote.textContent = 'Privacy mode is off — the camera/video image is visible on screen (still not recorded or uploaded anywhere; only joint-angle numbers can be exported).';
+  }
+}
+chkPrivacy.addEventListener('change', updatePrivacyUI);
+updatePrivacyUI();
 const jointGrid = document.getElementById('jointGrid');
 const jointToggles = document.getElementById('jointToggles');
 const fileInput = document.getElementById('fileInput');
@@ -168,7 +240,8 @@ const btnExport = document.getElementById('btnExport');
 const chkSmooth = document.getElementById('chkSmooth');
 const recordCountEl = document.getElementById('recordCount');
 const btnGenerate = document.getElementById('btnGenerate');
-const modelSelect = document.getElementById('modelSelect');
+const supabaseUrlInput = document.getElementById('supabaseUrl');
+const rememberKeyChk = document.getElementById('rememberKey');
 const llmStatusEl = document.getElementById('llmStatus');
 const draftOutput = document.getElementById('draftOutput');
 
@@ -179,6 +252,7 @@ function setStatus(msg, kind) {
 
 // Landmark indices (BlazePose 33-point)
 const L = {
+  nose: 0, leftEar: 7, rightEar: 8,
   leftShoulder: 11, rightShoulder: 12,
   leftElbow: 13, rightElbow: 14,
   leftWrist: 15, rightWrist: 16,
@@ -366,8 +440,39 @@ function resizeOverlay() {
   overlay.height = video.videoHeight || video.clientHeight;
 }
 
+// Rough body-outline order for a filled "silhouette" fill (not anatomically
+// exact — just enough to read as a human silhouette rather than a bare stick figure)
+const SILHOUETTE_OUTLINE = [
+  L.leftWrist, L.leftElbow, L.leftShoulder,
+  L.rightShoulder, L.rightElbow, L.rightWrist,
+  L.rightShoulder, L.rightHip, L.rightKnee, L.rightAnkle,
+  L.leftAnkle, L.leftKnee, L.leftHip, L.leftShoulder
+];
+
 function drawSkeleton(landmarks) {
   ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+  if (chkPrivacy.checked) {
+    // Solid neutral background — blocks any video pixels from showing
+    // through; everything drawn from here on is computed geometry only.
+    ctx.fillStyle = '#12241f';
+    ctx.fillRect(0, 0, overlay.width, overlay.height);
+
+    // Soft filled silhouette so it reads as a body, not just lines
+    ctx.beginPath();
+    let started = false;
+    SILHOUETTE_OUTLINE.forEach(idx => {
+      const p = landmarks[idx];
+      if (!p) return;
+      const x = p.x * overlay.width, y = p.y * overlay.height;
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(29, 110, 90, 0.35)';
+    ctx.fill();
+  }
+
   ctx.lineWidth = 3;
   ctx.strokeStyle = '#1d6e5a';
   CONNECTIONS.forEach(([a, b]) => {
@@ -401,6 +506,260 @@ function computeAngles(landmarks) {
   return angles;
 }
 
+// ---- Posture monitoring (long session) ----
+const POSTURE_THRESHOLDS = {
+  forwardHead: { caution: 15, poor: 25 },
+  shoulderTilt: { caution: 5, poor: 10 },
+  torsoLean: { caution: 10, poor: 20 }
+};
+
+function angleFromVertical(fromPt, toPt) {
+  // Angle between the vertical (straight up) and the vector fromPt -> toPt, in degrees.
+  const dx = toPt.x - fromPt.x;
+  const dy = fromPt.y - toPt.y; // image y grows downward; flip so "up" is positive
+  return Math.round(Math.abs(Math.atan2(dx, dy)) * (180 / Math.PI));
+}
+
+function computePostureMetrics(landmarks) {
+  const ls = landmarks[L.leftShoulder], rs = landmarks[L.rightShoulder];
+  const lh = landmarks[L.leftHip], rh = landmarks[L.rightHip];
+  const le = landmarks[L.leftEar], re = landmarks[L.rightEar];
+  const nose = landmarks[L.nose];
+  if (!ls || !rs || !lh || !rh) return null;
+
+  const shoulderMid = { x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 };
+  const hipMid = { x: (lh.x + rh.x) / 2, y: (lh.y + rh.y) / 2 };
+
+  // Forward head: angle from vertical between shoulder midpoint and ear midpoint (fallback to nose)
+  let headPt = null;
+  if (le && re) headPt = { x: (le.x + re.x) / 2, y: (le.y + re.y) / 2 };
+  else if (nose) headPt = nose;
+  const forwardHead = headPt ? angleFromVertical(shoulderMid, headPt) : null;
+
+  // Shoulder tilt: angle of the shoulder line from horizontal
+  const dx = rs.x - ls.x, dy = rs.y - ls.y;
+  const shoulderTilt = Math.round(Math.abs(Math.atan2(dy, dx)) * (180 / Math.PI));
+
+  // Torso lean: angle from vertical between hip midpoint and shoulder midpoint
+  const torsoLean = angleFromVertical(hipMid, shoulderMid);
+
+  return { forwardHead, shoulderTilt, torsoLean };
+}
+
+function classify(value, thresholds) {
+  if (value === null || value === undefined) return null;
+  if (value >= thresholds.poor) return 'poor';
+  if (value >= thresholds.caution) return 'caution';
+  return 'good';
+}
+
+function overallStatus(metrics) {
+  const statuses = [
+    classify(metrics.forwardHead, POSTURE_THRESHOLDS.forwardHead),
+    classify(metrics.shoulderTilt, POSTURE_THRESHOLDS.shoulderTilt),
+    classify(metrics.torsoLean, POSTURE_THRESHOLDS.torsoLean)
+  ].filter(Boolean);
+  if (statuses.includes('poor')) return 'poor';
+  if (statuses.includes('caution')) return 'caution';
+  if (statuses.length === 0) return null;
+  return 'good';
+}
+
+const STATUS_COLORS = {
+  good: { bg: '#dff3ea', fg: '#1d6e5a', label: 'Good posture' },
+  caution: { bg: '#fdf0d5', fg: '#a5680a', label: 'Caution' },
+  poor: { bg: '#fbe0dc', fg: '#c0392b', label: 'Poor posture' }
+};
+
+let postureActive = false;
+let postureLog = [];
+let postureIntervalMs = 5000;
+let postureLastSampleAt = 0;
+let postureSessionStart = 0;
+let postureElapsedTimer = null;
+let wakeLockSentinel = null;
+
+const btnPostureStart = document.getElementById('btnPostureStart');
+const btnPostureStop = document.getElementById('btnPostureStop');
+const btnPostureExport = document.getElementById('btnPostureExport');
+const btnPostureAiReport = document.getElementById('btnPostureAiReport');
+const postureIntervalSelect = document.getElementById('postureInterval');
+const postureBadge = document.getElementById('postureBadge');
+const postureElapsedEl = document.getElementById('postureElapsed');
+const postureSampleCountEl = document.getElementById('postureSampleCount');
+const postureSummaryBox = document.getElementById('postureSummaryBox');
+const wakeLockNote = document.getElementById('wakeLockNote');
+
+function formatElapsed(ms) {
+  const totalSec = Math.floor(ms / 1000);
+  const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+  const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+  const s = String(totalSec % 60).padStart(2, '0');
+  return `${h}:${m}:${s}`;
+}
+
+function updatePostureBadge(status) {
+  const c = STATUS_COLORS[status] || { bg: '#e2e0da', fg: 'var(--text-secondary)', label: 'No data' };
+  postureBadge.style.background = c.bg;
+  postureBadge.style.color = c.fg;
+  postureBadge.textContent = c.label;
+}
+
+async function requestWakeLock() {
+  try {
+    if ('wakeLock' in navigator) {
+      wakeLockSentinel = await navigator.wakeLock.request('screen');
+      wakeLockNote.textContent = 'Screen wake lock active — this device should stay awake for the session. Still recommended: plug it in and don\u2019t close the laptop lid.';
+      wakeLockSentinel.addEventListener('release', () => {
+        wakeLockNote.textContent = 'Screen wake lock was released (tab backgrounded or system override) — check the device hasn\u2019t gone to sleep.';
+      });
+    } else {
+      wakeLockNote.textContent = 'This browser doesn\u2019t support keeping the screen awake automatically — please disable sleep/screensaver manually for the session.';
+    }
+  } catch (err) {
+    wakeLockNote.textContent = 'Could not lock the screen awake (' + err.message + ') — please disable sleep manually for the session.';
+  }
+}
+
+function releaseWakeLock() {
+  if (wakeLockSentinel) {
+    wakeLockSentinel.release().catch(() => {});
+    wakeLockSentinel = null;
+  }
+}
+
+btnPostureStart.addEventListener('click', async () => {
+  postureActive = true;
+  postureLog = [];
+  postureIntervalMs = parseInt(postureIntervalSelect.value, 10);
+  postureLastSampleAt = 0;
+  postureSessionStart = performance.now();
+  btnPostureStart.disabled = true;
+  btnPostureStop.disabled = false;
+  btnPostureExport.disabled = true;
+  postureIntervalSelect.disabled = true;
+  postureSummaryBox.style.display = 'none';
+  postureSampleCountEl.textContent = '0';
+  updatePostureBadge(null);
+  await requestWakeLock();
+
+  postureElapsedTimer = setInterval(() => {
+    postureElapsedEl.textContent = formatElapsed(performance.now() - postureSessionStart);
+  }, 1000);
+});
+
+btnPostureStop.addEventListener('click', () => {
+  postureActive = false;
+  btnPostureStart.disabled = false;
+  btnPostureStop.disabled = true;
+  btnPostureExport.disabled = postureLog.length === 0;
+  btnPostureAiReport.disabled = postureLog.length === 0;
+  postureIntervalSelect.disabled = false;
+  if (postureElapsedTimer) clearInterval(postureElapsedTimer);
+  releaseWakeLock();
+
+  if (postureLog.length > 0) {
+    postureSummaryBox.style.display = 'block';
+    postureSummaryBox.textContent = buildPostureSummary(postureLog);
+  }
+});
+
+btnPostureAiReport.addEventListener('click', async () => {
+  if (postureLog.length === 0) return;
+  const functionUrl = supabaseUrlInput.value.trim();
+  if (!functionUrl) {
+    postureSummaryBox.style.display = 'block';
+    postureSummaryBox.textContent = 'No Supabase function URL set (see the AI draft panel below) — showing the computed summary instead.\n\n' + buildPostureSummary(postureLog);
+    return;
+  }
+  btnPostureAiReport.disabled = true;
+  postureSummaryBox.style.display = 'block';
+  postureSummaryBox.textContent = 'Generating AI report…';
+  try {
+    const prompt = buildPosturePrompt(postureLog);
+    const text = await callAssessmentBackend(functionUrl, prompt);
+    postureSummaryBox.textContent = text;
+  } catch (err) {
+    console.error('Posture AI report failed, falling back to computed summary', err);
+    postureSummaryBox.textContent = 'AI report failed (' + (err && err.message ? err.message : String(err)) + ') — showing the computed summary instead.\n\n' + buildPostureSummary(postureLog);
+  } finally {
+    btnPostureAiReport.disabled = postureLog.length === 0;
+  }
+});
+
+btnPostureExport.addEventListener('click', () => {
+  if (postureLog.length === 0) return;
+  const headers = ['timestamp', 'elapsed_seconds', 'forwardHead', 'shoulderTilt', 'torsoLean', 'status'];
+  const rows = postureLog.map(r => headers.map(h => r[h] ?? '').join(','));
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'posture-session-' + new Date().toISOString().replace(/[:.]/g, '-') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+function buildPostureSummary(log) {
+  const counts = { good: 0, caution: 0, poor: 0 };
+  log.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+  const total = log.length || 1;
+  const pct = (n) => Math.round((n / total) * 100);
+
+  const avg = (key) => {
+    const vals = log.map(r => r[key]).filter(v => typeof v === 'number');
+    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  };
+
+  const lines = [];
+  lines.push('POSTURE SESSION SUMMARY');
+  lines.push(`Duration: ${formatElapsed((log.length ? (log[log.length - 1].elapsed_seconds * 1000) : 0))}  —  ${total} samples`);
+  lines.push('');
+  lines.push(`Good posture:   ${pct(counts.good)}% of session`);
+  lines.push(`Caution:        ${pct(counts.caution)}% of session`);
+  lines.push(`Poor posture:   ${pct(counts.poor)}% of session`);
+  lines.push('');
+  lines.push('Average angles over the session:');
+  lines.push(`  Forward head lean: ${avg('forwardHead')}°`);
+  lines.push(`  Shoulder tilt:     ${avg('shoulderTilt')}°`);
+  lines.push(`  Torso lean:        ${avg('torsoLean')}°`);
+  lines.push('');
+  lines.push('Computed thresholds, not a clinical diagnosis — for practitioner review.');
+  return lines.join('\n');
+}
+
+function handlePostureFrame(landmarks) {
+  const metrics = computePostureMetrics(landmarks);
+  if (!metrics) return;
+
+  ['forwardHead', 'shoulderTilt', 'torsoLean'].forEach(key => {
+    const el = document.getElementById('val-' + key);
+    if (el) el.textContent = metrics[key] !== null ? metrics[key] + '°' : '–';
+  });
+
+  const status = overallStatus(metrics);
+  if (status) updatePostureBadge(status);
+
+  if (!postureActive) return;
+
+  const now = performance.now();
+  if (now - postureLastSampleAt < postureIntervalMs) return;
+  postureLastSampleAt = now;
+
+  postureLog.push({
+    timestamp: new Date().toISOString(),
+    elapsed_seconds: ((now - postureSessionStart) / 1000).toFixed(1),
+    forwardHead: metrics.forwardHead,
+    shoulderTilt: metrics.shoulderTilt,
+    torsoLean: metrics.torsoLean,
+    status: status
+  });
+  postureSampleCountEl.textContent = String(postureLog.length);
+}
+
 function predictLoop() {
   if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
@@ -410,6 +769,7 @@ function predictLoop() {
       drawSkeleton(landmarks);
       const angles = computeAngles(landmarks);
       pushSample(angles);
+      handlePostureFrame(landmarks);
     } else {
       ctx.clearRect(0, 0, overlay.width, overlay.height);
     }
@@ -430,6 +790,10 @@ function stopAll() {
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   btnStop.disabled = true;
   setStatus('Stopped.', null);
+
+  if (postureActive) {
+    btnPostureStop.click();
+  }
 }
 
 btnWebcam.addEventListener('click', async () => {
@@ -510,9 +874,18 @@ btnExport.addEventListener('click', () => {
 
 window.addEventListener('resize', resizeOverlay);
 
-// ---- Local LLM assessment draft (Qwen2.5-1.5B via WebLLM / WebGPU) ----
-let webllmEngine = null;
-let webllmLoadedModel = null;
+document.addEventListener('visibilitychange', async () => {
+  if (postureActive && document.visibilityState === 'visible' && !wakeLockSentinel) {
+    await requestWakeLock();
+  }
+});
+
+// ---- Gemini-powered assessment draft ----
+const STORAGE_KEY = 'sensee_supabase_function_url';
+try {
+  const savedUrl = localStorage.getItem(STORAGE_KEY);
+  if (savedUrl) supabaseUrlInput.value = savedUrl;
+} catch (e) { /* localStorage unavailable — fine, URL just won't persist */ }
 
 function computeMetrics(data) {
   const stats = {};
@@ -571,24 +944,39 @@ function buildDeterministicSummary(stats) {
   return lines.join('\n');
 }
 
-async function ensureEngine(modelId, onProgress) {
-  if (webllmEngine && webllmLoadedModel === modelId) return webllmEngine;
+function buildPosturePrompt(log) {
+  const counts = { good: 0, caution: 0, poor: 0 };
+  log.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+  const total = log.length || 1;
+  const pct = (n) => Math.round((n / total) * 100);
+  const avg = (key) => {
+    const vals = log.map(r => r[key]).filter(v => typeof v === 'number');
+    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+  };
+  const durationSec = log.length ? parseFloat(log[log.length - 1].elapsed_seconds) : 0;
 
-  const adapter = await navigator.gpu.requestAdapter();
-  if (!adapter) {
-    throw new Error('No compatible GPU adapter found on this device/browser — WebGPU is reported present but unusable here.');
-  }
+  return "Posture monitoring session data (office desk setting, webcam-based, sampled periodically over the session):\n" +
+    `Duration: ${formatElapsed(durationSec * 1000)}, ${total} samples\n\n` +
+    `Time in good posture: ${pct(counts.good)}%\n` +
+    `Time in caution range: ${pct(counts.caution)}%\n` +
+    `Time in poor posture: ${pct(counts.poor)}%\n\n` +
+    `Average forward head lean: ${avg('forwardHead')} degrees from vertical\n` +
+    `Average shoulder tilt: ${avg('shoulderTilt')} degrees from horizontal\n` +
+    `Average torso lean: ${avg('torsoLean')} degrees from vertical`;
+}
 
-  const webllm = await import("https://esm.run/@mlc-ai/web-llm");
-
-  const engine = new webllm.MLCEngine({
-    initProgressCallback: (report) => onProgress(report.text || 'Loading model…')
+async function callAssessmentBackend(functionUrl, userPrompt) {
+  const res = await fetch(functionUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ statsPrompt: userPrompt })
   });
-  await engine.reload(modelId);
-
-  webllmEngine = engine;
-  webllmLoadedModel = modelId;
-  return webllmEngine;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(data.error || `Request failed with status ${res.status}`);
+  }
+  if (!data.text) throw new Error('Backend returned no text.');
+  return data.text;
 }
 
 btnGenerate.addEventListener('click', async () => {
@@ -597,56 +985,38 @@ btnGenerate.addEventListener('click', async () => {
   draftOutput.value = '';
   const stats = computeMetrics(recordedData);
 
-  if (!navigator.gpu) {
-    llmStatusEl.textContent = 'WebGPU is not available in this browser — showing a computed summary instead of an AI draft.';
+  const functionUrl = supabaseUrlInput.value.trim();
+
+  try {
+    if (rememberKeyChk.checked && functionUrl) {
+      localStorage.setItem(STORAGE_KEY, functionUrl);
+    } else if (!rememberKeyChk.checked) {
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  } catch (e) { /* ignore storage errors */ }
+
+  if (!functionUrl) {
+    llmStatusEl.textContent = 'No Supabase function URL set — showing a computed summary instead of an AI draft.';
     llmStatusEl.className = 'status';
     draftOutput.value = buildDeterministicSummary(stats);
     btnGenerate.disabled = false;
     return;
   }
 
-  // Release camera/video/pose-tracking GPU resources first — running them
-  // alongside the LLM load is what's exhausting the GPU on mobile.
-  if (rafId || stream) {
-    stopAll();
-    llmStatusEl.textContent = 'Stopped tracking to free up GPU memory before loading the model…';
-    await new Promise(r => setTimeout(r, 500));
-  }
-  if (poseLandmarker) {
-    try { poseLandmarker.close(); } catch (e) { /* ignore */ }
-    poseLandmarker = null;
-  }
-
-  const selectedModel = modelSelect.value;
   try {
-    llmStatusEl.textContent = 'Loading local language model (first time only — size depends on model chosen)…';
+    llmStatusEl.textContent = 'Sending session summary to your backend…';
     llmStatusEl.className = 'status';
-    const engine = await ensureEngine(selectedModel, (msg) => {
-      llmStatusEl.textContent = msg;
-    });
 
-    llmStatusEl.textContent = 'Analyzing session data…';
     const dataSummary = buildPrompt(stats);
+    const text = await callAssessmentBackend(functionUrl, dataSummary);
 
-    const systemPrompt = "You assist a kinesiology practitioner by drafting objective, factual notes from motion-capture data for them to review and edit. Do not diagnose or name any condition. Note ranges of motion and any notable left/right differences. Plain language, under 150 words.";
-
-    const completion = await engine.chat.completions.create({
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: dataSummary }
-      ],
-      temperature: 0.4
-    });
-
-    draftOutput.value = completion.choices[0].message.content;
+    draftOutput.value = text;
     llmStatusEl.textContent = 'AI draft generated — review and edit before sharing with the client.';
     llmStatusEl.className = 'status ok';
   } catch (err) {
-    console.error('LLM generation failed, falling back to computed summary', err);
-    webllmEngine = null; // force a clean retry next click rather than reusing a broken engine
-    webllmLoadedModel = null;
+    console.error('Backend call failed, falling back to computed summary', err);
     draftOutput.value = buildDeterministicSummary(stats);
-    llmStatusEl.textContent = 'Local AI failed on this device (' + (err && err.message ? err.message : String(err)) + ') — showing a computed summary instead.';
+    llmStatusEl.textContent = 'Backend call failed (' + (err && err.message ? err.message : String(err)) + ') — showing a computed summary instead.';
     llmStatusEl.className = 'status error';
   } finally {
     btnGenerate.disabled = recordedData.length === 0;
@@ -671,17 +1041,17 @@ initPoseLandmarker()
 </script>
 
 <div class="panel">
-  <div class="row">
-    <button id="btnGenerate" disabled>Generate assessment draft (local AI)</button>
-    <select id="modelSelect" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
-      <option value="SmolLM2-360M-Instruct-q4f16_1-MLC">SmolLM2-360M (~376MB — smallest verified option, try this first on phones)</option>
-      <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5-0.5B (~950MB — safer on phones)</option>
-      <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5-1.5B (~1.6GB — needs a stronger GPU)</option>
-    </select>
+  <div class="row" style="flex-direction:column; align-items:stretch; gap:6px;">
+    <label style="font-size:12px; color:var(--text-secondary);">Supabase Edge Function URL (your API key stays server-side, never exposed here)</label>
+    <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co/functions/v1/generate-assessment" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
+    <label class="chk"><input type="checkbox" id="rememberKey" checked> Remember this URL in this browser</label>
+  </div>
+  <div class="row" style="margin-top:10px;">
+    <button id="btnGenerate" disabled>Generate assessment draft</button>
   </div>
   <div id="llmStatus" class="status">Record a session first, then generate a draft.</div>
   <textarea id="draftOutput" rows="10" style="width:100%; margin-top:10px; font-size:13px; border:1px solid var(--border); border-radius:8px; padding:8px; font-family:inherit; resize:vertical;" placeholder="Draft will appear here for practitioner review and editing."></textarea>
-  <div class="footer-note">Runs a small language model (Qwen2.5-1.5B) entirely in your browser via WebGPU — no data leaves the device. This is a draft for practitioner review, not a diagnosis.</div>
+  <div class="footer-note">Sends only the computed joint-angle stats (not video) to your Supabase function, which forwards them to Gemini. If no URL is set or the call fails, a computed summary is shown instead. This is a draft for practitioner review, not a diagnosis.</div>
 </div>
 
 </body>
