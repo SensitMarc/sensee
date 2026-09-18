@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Movement Capture</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<title>Exercise Tracker</title>
 <style>
   :root {
     --bg: #f6f5f2;
@@ -15,198 +14,275 @@
     --accent: #1d6e5a;
     --accent-light: #e1f5ee;
     --danger: #c0392b;
+    --track-accent: #d85a30;
+    --history-accent: #7f77dd;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     background: var(--bg);
     color: var(--text);
-    padding: 16px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100vh;
   }
-  h1 { font-size: 18px; font-weight: 600; margin: 0 0 4px; }
-  .sub { font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; }
+  h1 { font-size: 16px; font-weight: 600; margin: 0; }
+  h2 { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+  .sub { font-size: 11.5px; color: var(--text-secondary); margin: 1px 0 0; }
+
+  .topbar { flex: none; }
+
+  .layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .drawer { flex: 0 0 auto; display: flex; flex-direction: column; min-height: 0; }
+  .drawer-handle {
+    flex: none; width: 100%; display: flex; align-items: center; gap: 6px;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+    padding: 6px 12px; font-size: 11.5px; font-weight: 600; color: var(--text-secondary);
+    cursor: pointer; text-align: left;
+  }
+  .drawer-handle:hover { background: #f0efea; color: var(--text); }
+  .drawer .split-row { margin-top: 8px; }
+  .drawer.collapsed .split-row { display: none; }
+  .drawer.collapsed #drawerToggleIcon { display: inline-block; transform: rotate(180deg); }
+
+  .split-row {
+    flex: 0 0 clamp(240px, 34vh, 360px);
+    min-height: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .split-row > .panel { display: flex; flex-direction: column; overflow-y: auto; }
+  @media (max-width: 760px) {
+    .split-row { grid-template-columns: 1fr; flex-basis: auto; overflow-y: auto; }
+  }
+
   .panel {
     background: var(--panel);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 14px;
-    margin-bottom: 14px;
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-height: 0;
   }
-  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .panel.accent-track { border-top: 3px solid var(--track-accent); flex: none; }
+  .panel.accent-save { border-top: 3px solid var(--track-accent); flex: none; }
+  .panel.accent-history { border-top: 3px solid var(--history-accent); flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; }
+  .panel.panel-camera { flex: 1 1 auto; display: flex; flex-direction: column; overflow: hidden; }
+
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; flex: none; }
+  .row + .row { margin-top: 6px; }
+  .toggles { flex-direction: column; align-items: flex-start; gap: 3px; }
+
   button {
     background: var(--panel);
     border: 1px solid var(--border);
     border-radius: 8px;
-    padding: 9px 14px;
-    font-size: 13px;
+    padding: 7px 12px;
+    font-size: 12.5px;
     font-weight: 500;
     cursor: pointer;
     color: var(--text);
   }
+  button.small { font-size: 11px; padding: 4px 9px; }
   button:hover { background: #f0efea; }
   button.primary { background: var(--accent); color: white; border-color: var(--accent); }
-  button.primary:hover { opacity: 0.9; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   button.danger { color: var(--danger); border-color: var(--danger); }
   input[type=file] { display: none; }
-  .status {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 8px;
+  input[type=text], input[type=email], input[type=password] {
+    padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 12.5px; width: 100%;
   }
+  select {
+    padding: 6px 8px; border-radius: 8px; border: 1px solid var(--border); font-size: 12.5px;
+  }
+  .field { margin-bottom: 6px; flex: none; }
+  .field label { display: block; font-size: 10.5px; color: var(--text-secondary); margin-bottom: 2px; }
+
+  .status { font-size: 11px; color: var(--text-secondary); margin-top: 5px; flex: none; }
   .status.error { color: var(--danger); }
   .status.ok { color: var(--accent); }
+
   .video-wrap {
-    position: relative;
-    width: 100%;
-    max-width: 480px;
-    margin: 0 auto;
-    background: #000;
-    border-radius: 10px;
-    overflow: hidden;
+    position: relative; width: 100%; margin: 6px 0; flex: 1 1 auto; min-height: 90px;
+    background: #000; border-radius: 8px; overflow: hidden;
   }
-  video { display: block; width: 100%; height: auto; }
-  canvas.overlay {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+  video { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scaleX(-1); }
+  canvas.overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+  .stat-grid {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-bottom: 6px; flex: none;
   }
-  .joint-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .joint-card {
-    background: var(--accent-light);
-    border-radius: 8px;
-    padding: 8px 10px;
-  }
-  .joint-card .label { font-size: 11px; color: var(--text-secondary); }
-  .joint-card .value { font-size: 18px; font-weight: 600; color: var(--accent); }
-  label.chk {
-    display: flex; align-items: center; gap: 6px;
-    font-size: 12px; color: var(--text-secondary);
-  }
-  .chart-wrap { position: relative; height: 220px; margin-top: 10px; }
-  .footer-note { font-size: 11px; color: var(--text-secondary); margin-top: 4px; }
+  @media (max-width: 520px) { .stat-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+  .stat-card { background: var(--accent-light); border-radius: 7px; padding: 5px 7px; }
+  .stat-card .label { font-size: 9.5px; color: var(--text-secondary); }
+  .stat-card .value { font-size: 15px; font-weight: 600; color: var(--accent); }
+
+  label.chk { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-secondary); }
+  .footer-note { font-size: 10.5px; color: var(--text-secondary); margin-top: 3px; flex: none; }
+  .vision-log { max-height: 50px; overflow-y: auto; background: var(--bg); border-radius: 6px; padding: 5px; }
+
+  details.hint { font-size: 11px; color: var(--text-secondary); margin: 5px 0; flex: none; }
+  details.hint summary { cursor: pointer; font-weight: 500; color: var(--text); list-style: none; }
+  details.hint summary::-webkit-details-marker { display: none; }
+  details.hint summary::before { content: '▸ '; }
+  details.hint[open] summary::before { content: '▾ '; }
+  details.hint[open] { max-height: 110px; overflow-y: auto; }
+  details.hint p { margin: 5px 0 0; line-height: 1.45; }
+
+  .history-scroll { flex: 1 1 auto; min-height: 40px; overflow-y: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 11.5px; table-layout: fixed; }
+  th { text-align: left; padding: 4px 7px; border-bottom: 1px solid var(--border); color: var(--text-secondary); position: sticky; top: 0; background: var(--panel); }
+  td { padding: 4px 7px; border-bottom: 1px solid var(--border); }
+  td.summary-cell { max-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+
+  .badge { padding: 6px 12px; border-radius: 18px; font-weight: 600; font-size: 12px; }
+  .rep-count { font-size: 12px; color: var(--text-secondary); }
+
+  #status, #privacyNote, #visionNote, #gestureNote { flex: none; }
 </style>
 </head>
 <body>
 
-<h1>Movement capture and visualization</h1>
-<p class="sub">Live webcam or uploaded video — pose tracking with joint angle graphs. Assistive tool only, not a diagnostic device.</p>
-
-<div class="panel">
-  <div class="row">
-    <button id="btnWebcam">Start webcam</button>
-    <button id="btnUploadTrigger">Upload video</button>
-    <input type="file" id="fileInput" accept="video/*">
-    <button id="btnStop" class="danger" disabled>Stop</button>
-    <button id="btnReset">Reset chart</button>
-  </div>
-  <div class="row" style="margin-top:8px;">
-    <button id="btnRecord">● Record</button>
-    <button id="btnExport" disabled>Export CSV</button>
-    <label class="chk" style="margin-left:4px;"><input type="checkbox" id="chkSmooth" checked> Smooth chart</label>
-    <span id="recordCount" class="footer-note"></span>
-  </div>
-  <div id="status" class="status">Loading pose model…</div>
+<div class="topbar">
+  <h1>Exercise Tracker</h1>
+  <p class="sub">Point the camera at yourself, move — reps are detected automatically and an on-device AI guesses the exercise. Everything stays on this device: no login, no server, nothing uploaded.</p>
 </div>
 
-<div class="panel">
-  <div class="row" style="margin-bottom:10px;">
-    <label class="chk"><input type="checkbox" id="chkPrivacy" checked> Privacy mode — show skeleton only, hide camera image</label>
-  </div>
-  <div class="footer-note" id="privacyNote" style="margin-bottom:8px;"></div>
-  <div class="video-wrap">
-    <video id="video" playsinline muted></video>
-    <canvas id="overlay" class="overlay"></canvas>
-  </div>
+<div class="layout">
 
-  <div class="joint-grid" id="jointGrid"></div>
-</div>
-
-<div class="panel">
-  <div class="row" id="jointToggles"></div>
-  <div class="chart-wrap"><canvas id="chart"></canvas></div>
-  <div class="footer-note">Angle in degrees. Rolling window of the last 300 samples.</div>
-</div>
-
-<div class="panel" style="border-color:#1d6e5a; border-width:2px;">
-  <h1 style="font-size:16px; margin-bottom:4px;">Posture monitoring — long session</h1>
-  <p class="sub" style="font-size:12px; margin-bottom:10px;">
-    Designed to run for a full work session next to a client at their desk. Tracks forward head posture,
-    shoulder level, and torso lean at a low sampling rate — not full-speed rep tracking.
-    <strong>Camera placement matters:</strong> a 3/4-angle view (not straight-on, not pure side profile)
-    is the best practical compromise — pure side view hides one shoulder, straight-on under-reads forward
-    head lean. These thresholds are configurable heuristics for spotting patterns over time, not clinical
-    diagnostic cutoffs.
-  </p>
-
-  <div class="row" style="flex-direction:column; align-items:stretch; gap:6px;">
-    <label style="font-size:12px; color:var(--text-secondary);">Sample every</label>
-    <select id="postureInterval" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
-      <option value="2000">2 seconds</option>
-      <option value="5000" selected>5 seconds (recommended for hours-long sessions)</option>
-      <option value="10000">10 seconds</option>
-      <option value="30000">30 seconds</option>
-    </select>
-  </div>
-
-  <div class="row" style="margin-top:10px;">
-    <button id="btnPostureStart">▶ Start posture session</button>
-    <button id="btnPostureStop" class="danger" disabled>■ Stop session</button>
-    <button id="btnPostureExport" disabled>Export posture CSV</button>
-    <button id="btnPostureAiReport" disabled>Generate AI report</button>
-  </div>
-
-  <div id="postureStatusRow" style="margin-top:12px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-    <div id="postureBadge" style="padding:8px 16px; border-radius:20px; font-weight:600; font-size:14px; background:#e2e0da; color:var(--text-secondary);">Not started</div>
-    <div style="font-size:13px; color:var(--text-secondary);">Elapsed: <span id="postureElapsed">00:00:00</span></div>
-    <div style="font-size:13px; color:var(--text-secondary);">Samples: <span id="postureSampleCount">0</span></div>
-  </div>
-
-  <div class="joint-grid" style="margin-top:12px;">
-    <div class="joint-card">
-      <div class="label">Forward head</div>
-      <div class="value" id="val-forwardHead">–</div>
+  <div class="panel panel-camera video-section">
+    <h2>Camera</h2>
+    <div class="row">
+      <button id="btnWebcam" class="primary">Start webcam</button>
+      <button id="btnUploadTrigger">Upload video instead</button>
+      <input type="file" id="fileInput" accept="video/*">
+      <button id="btnStop" class="danger" disabled>Stop</button>
     </div>
-    <div class="joint-card">
-      <div class="label">Shoulder tilt</div>
-      <div class="value" id="val-shoulderTilt">–</div>
+    <div class="row toggles">
+      <label class="chk"><input type="checkbox" id="chkPrivacy" checked> Privacy mode — skeleton only, hide camera image</label>
+      <label class="chk"><input type="checkbox" id="chkVision"> Continuous vision analysis (SmolVLM, local) — sends live frames to a second on-device model</label>
+      <label class="chk"><input type="checkbox" id="chkGesture" checked> Hands-free zone gestures — reach into a corner and hold to start/stop tracking or save</label>
     </div>
-    <div class="joint-card">
-      <div class="label">Torso lean</div>
-      <div class="value" id="val-torsoLean">–</div>
+    <div class="footer-note" id="privacyNote"></div>
+    <div class="footer-note" id="visionNote" style="color:var(--danger);"></div>
+    <div class="footer-note" id="gestureNote">Camera start still needs a click — everything after that can be done hands-free once tracking begins.</div>
+
+    <div class="video-wrap">
+      <video id="video" playsinline muted></video>
+      <canvas id="overlay" class="overlay"></canvas>
     </div>
+    <div id="status" class="status">Loading pose model…</div>
+    <div id="visionLog" class="footer-note vision-log" style="display:none;"></div>
   </div>
 
-  <div id="postureSummaryBox" style="margin-top:12px; font-size:13px; white-space:pre-wrap; display:none; background:var(--accent-light); border-radius:8px; padding:10px;"></div>
+  <div class="drawer collapsed" id="drawer">
+    <button class="drawer-handle" id="drawerToggle" aria-expanded="false" aria-controls="splitRow" type="button">
+      <span id="drawerToggleIcon">▲</span> Controls &amp; history
+    </button>
+    <div class="split-row" id="splitRow">
 
-  <div class="footer-note" id="wakeLockNote" style="margin-top:8px;"></div>
+    <div class="panel accent-track">
+      <h2>Track reps</h2>
+      <details class="hint">
+        <summary>How detection works</summary>
+        <p>Self-calibrating — no setup needed. Tracks hip-driven movement (squats, deadlifts, lunges),
+        arm-driven movement (curls, presses, raises — works seated too), or a repeating dance/movement
+        pattern. It locks onto whichever body region shows a real repeating motion first, so stay in one
+        mode of movement per session for the cleanest count. Dance or freeform movement may under-count
+        if it isn't built from a clear repeating shape.</p>
+      </details>
+
+      <div class="row">
+        <button id="btnTrackStart" class="primary">▶ Start tracking</button>
+        <button id="btnTrackStop" class="danger" disabled>■ Stop</button>
+        <button id="btnTrackReset">Reset</button>
+      </div>
+
+      <div class="row" style="margin-top:10px; align-items:center; gap:12px;">
+        <div id="trackBadge" class="badge" style="background:#e2e0da; color:var(--text-secondary);">Not started</div>
+        <div class="rep-count">Reps: <span id="repCount">0</span><span id="lockedJointLabel"></span></div>
+      </div>
+    </div>
+
+    <div class="panel accent-save">
+      <h2>Session summary</h2>
+      <div class="field">
+        <label>Summary (auto-generated, edit as needed)</label>
+        <textarea id="sessionSummary" rows="3" placeholder="Complete a few reps to generate a summary…" style="width:100%; font-family:inherit; font-size:12.5px; padding:6px 8px; border-radius:8px; border:1px solid var(--border); resize:vertical;"></textarea>
+      </div>
+      <div class="field">
+        <label>Model (local, WebGPU)</label>
+        <select id="identifyModelSelect" style="width:100%;">
+          <option value="Qwen2.5-1.5B-Instruct-q4f16_1-MLC">Qwen2.5-1.5B (~1.6GB)</option>
+          <option value="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">Qwen2.5-0.5B (~950MB, lighter)</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="btnIdentify" disabled>✨ Enhance with AI</button>
+      </div>
+      <div id="identifyStatus" class="status"></div>
+
+      <div class="row" style="margin-top:10px;">
+        <button id="btnSaveSession" class="primary" disabled>Save session</button>
+        <span id="saveSessionStatus" class="footer-note"></span>
+      </div>
+
+      <details class="hint">
+        <summary>Details</summary>
+        <p>Rep detection watches for a return to your standing reference angle after a drop of at least ~15°, so
+        it adapts to your depth automatically. The summary above is generated instantly from the measured numbers —
+        no AI needed to save. "Enhance with AI" rewrites it in nicer prose using an on-device WebGPU model (nothing
+        sent anywhere); first use per model downloads it (~1–1.6GB) and caches it in the browser. Tracking pauses
+        briefly while the model loads.</p>
+      </details>
+    </div>
+
+    <div class="panel accent-history">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <h2>Your history</h2>
+        <button id="btnClearHistory" class="small">Clear history</button>
+      </div>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Current streak</div><div class="value" id="statStreak">–</div></div>
+        <div class="stat-card"><div class="label">Best (reps)</div><div class="value" id="statBestReps">–</div></div>
+        <div class="stat-card"><div class="label">All-time reps</div><div class="value" id="statTotalReps">–</div></div>
+        <div class="stat-card"><div class="label">Sessions</div><div class="value" id="statSessionCount">–</div></div>
+      </div>
+      <div class="history-scroll">
+        <table id="historyTable">
+          <colgroup><col style="width:64px"><col style="width:40px"><col style="width:64px"><col></colgroup>
+          <thead><tr><th>Date</th><th>Reps</th><th>Avg depth°</th><th>Summary</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+      <div id="historyStatus" class="status">No sessions saved yet — your first save will show up here.</div>
+    </div>
+
+  </div>
+  </div>
 </div>
 
 <script type="module">
-import {
-  PoseLandmarker,
-  FilesetResolver
-} from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs";
+
+import { PoseLandmarker, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/vision_bundle.mjs";
 
 window.addEventListener('error', (e) => {
   const el = document.getElementById('status');
-  if (el) {
-    el.textContent = 'Script error: ' + (e.message || 'unknown') + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '');
-    el.className = 'status error';
-  }
+  if (el) { el.textContent = 'Script error: ' + (e.message || 'unknown'); el.className = 'status error'; }
 });
 window.addEventListener('unhandledrejection', (e) => {
   const el = document.getElementById('status');
-  if (el) {
-    el.textContent = 'Promise error: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason));
-    el.className = 'status error';
-  }
+  if (el) { el.textContent = 'Promise error: ' + (e.reason?.message || String(e.reason)); el.className = 'status error'; }
 });
 
 const statusEl = document.getElementById('status');
@@ -215,44 +291,63 @@ const overlay = document.getElementById('overlay');
 const ctx = overlay.getContext('2d');
 const chkPrivacy = document.getElementById('chkPrivacy');
 const privacyNote = document.getElementById('privacyNote');
-
-function updatePrivacyUI() {
-  if (chkPrivacy.checked) {
-    video.style.opacity = '0';
-    privacyNote.textContent = 'No camera image is shown or saved — this is a computed stick figure drawn only from calculated joint positions.';
-  } else {
-    video.style.opacity = '1';
-    privacyNote.textContent = 'Privacy mode is off — the camera/video image is visible on screen (still not recorded or uploaded anywhere; only joint-angle numbers can be exported).';
-  }
-}
-chkPrivacy.addEventListener('change', updatePrivacyUI);
-updatePrivacyUI();
-const jointGrid = document.getElementById('jointGrid');
-const jointToggles = document.getElementById('jointToggles');
+const chkVision = document.getElementById('chkVision');
+const visionNote = document.getElementById('visionNote');
+const visionLog = document.getElementById('visionLog');
 const fileInput = document.getElementById('fileInput');
-
 const btnWebcam = document.getElementById('btnWebcam');
 const btnUploadTrigger = document.getElementById('btnUploadTrigger');
 const btnStop = document.getElementById('btnStop');
-const btnReset = document.getElementById('btnReset');
-const btnRecord = document.getElementById('btnRecord');
-const btnExport = document.getElementById('btnExport');
-const chkSmooth = document.getElementById('chkSmooth');
-const recordCountEl = document.getElementById('recordCount');
-const btnGenerate = document.getElementById('btnGenerate');
-const supabaseUrlInput = document.getElementById('supabaseUrl');
-const rememberKeyChk = document.getElementById('rememberKey');
-const llmStatusEl = document.getElementById('llmStatus');
-const draftOutput = document.getElementById('draftOutput');
+const drawer = document.getElementById('drawer');
+const drawerToggle = document.getElementById('drawerToggle');
+
+// Collapsed by default: video gets nearly the full page. All the controls in
+// here are also reachable hands-free via the on-video zones (see
+// PoseConfirmGesture below), so this drawer is a manual/inspection fallback,
+// not the primary way to interact — safe to hide until asked for.
+drawerToggle.addEventListener('click', () => {
+  const collapsed = drawer.classList.toggle('collapsed');
+  drawerToggle.setAttribute('aria-expanded', String(!collapsed));
+});
 
 function setStatus(msg, kind) {
   statusEl.textContent = msg;
   statusEl.className = 'status' + (kind ? ' ' + kind : '');
 }
 
+function updatePrivacyUI() {
+  if (chkVision.checked) {
+    video.style.opacity = chkPrivacy.checked ? '0' : '1';
+    privacyNote.textContent = 'Vision analysis is ON — actual video frames ARE being read by a local model, even though the display below only shows the skeleton. "Skeleton only" describes what you see, not what gets analyzed.';
+    privacyNote.className = 'footer-note';
+    privacyNote.style.color = 'var(--danger)';
+  } else if (chkPrivacy.checked) {
+    video.style.opacity = '0';
+    privacyNote.textContent = 'No camera image is shown, analyzed, or saved — a computed stick figure only.';
+    privacyNote.style.color = '';
+  } else {
+    video.style.opacity = '1';
+    privacyNote.textContent = 'Privacy mode off — image visible on screen (still never recorded or uploaded).';
+    privacyNote.style.color = '';
+  }
+}
+chkPrivacy.addEventListener('change', updatePrivacyUI);
+chkVision.addEventListener('change', () => {
+  updatePrivacyUI();
+  if (chkVision.checked) {
+    visionNote.textContent = 'This sends live camera frames to a second local model (SmolVLM). Nothing leaves your device, but this is a different privacy claim than joint-only tracking — frames are actually being read, not just positions.';
+    visionLog.style.display = 'block';
+    startVisionLoop();
+  } else {
+    visionNote.textContent = '';
+    visionLog.style.display = 'none';
+    stopVisionLoop();
+  }
+});
+updatePrivacyUI();
+
 // Landmark indices (BlazePose 33-point)
 const L = {
-  nose: 0, leftEar: 7, rightEar: 8,
   leftShoulder: 11, rightShoulder: 12,
   leftElbow: 13, rightElbow: 14,
   leftWrist: 15, rightWrist: 16,
@@ -261,175 +356,830 @@ const L = {
   leftAnkle: 27, rightAnkle: 28
 };
 
-const JOINTS = [
-  { key: 'leftElbow', label: 'L elbow', triplet: [L.leftShoulder, L.leftElbow, L.leftWrist], color: '#1d6e5a' },
-  { key: 'rightElbow', label: 'R elbow', triplet: [L.rightShoulder, L.rightElbow, L.rightWrist], color: '#d85a30' },
-  { key: 'leftKnee', label: 'L knee', triplet: [L.leftHip, L.leftKnee, L.leftAnkle], color: '#378ada' },
-  { key: 'rightKnee', label: 'R knee', triplet: [L.rightHip, L.rightKnee, L.rightAnkle], color: '#993c1d' },
-  { key: 'leftHip', label: 'L hip', triplet: [L.leftShoulder, L.leftHip, L.leftKnee], color: '#7f77dd' },
-  { key: 'rightHip', label: 'R hip', triplet: [L.rightShoulder, L.rightHip, L.rightKnee], color: '#d4537e' }
-];
-
 const CONNECTIONS = [
   [11,12],[11,13],[13,15],[12,14],[14,16],
   [11,23],[12,24],[23,24],
-  [23,25],[25,27],[24,26],[26,28],
-  [27,29],[27,31],[28,30],[28,32],[29,31],[30,32]
+  [23,25],[25,27],[24,26],[26,28]
 ];
 
-// Build joint value cards + toggles
-const activeJoints = new Set(['leftElbow', 'rightElbow', 'leftKnee', 'rightKnee']);
-JOINTS.forEach(j => {
-  const card = document.createElement('div');
-  card.className = 'joint-card';
-  card.innerHTML = `<div class="label">${j.label}</div><div class="value" id="val-${j.key}">–</div>`;
-  jointGrid.appendChild(card);
+const SILHOUETTE_OUTLINE = [
+  L.leftShoulder, L.rightShoulder, L.rightHip, L.rightKnee, L.rightAnkle,
+  L.leftAnkle, L.leftKnee, L.leftHip, L.leftShoulder
+];
 
-  const wrap = document.createElement('label');
-  wrap.className = 'chk';
-  wrap.innerHTML = `<input type="checkbox" data-joint="${j.key}" ${activeJoints.has(j.key) ? 'checked' : ''}> ${j.label}`;
-  jointToggles.appendChild(wrap);
-});
-
-jointToggles.addEventListener('change', (e) => {
-  const key = e.target.getAttribute('data-joint');
-  if (!key) return;
-  if (e.target.checked) activeJoints.add(key); else activeJoints.delete(key);
-  if (!chart) return;
-  chart.data.datasets.forEach(ds => {
-    if (ds.jointKey) ds.hidden = !activeJoints.has(ds.jointKey);
-  });
-  chart.update();
-});
-
-// Angle calculation
 function angleAt(a, b, c) {
   const v1 = { x: a.x - b.x, y: a.y - b.y };
   const v2 = { x: c.x - b.x, y: c.y - b.y };
   const dot = v1.x * v2.x + v1.y * v2.y;
-  const mag1 = Math.hypot(v1.x, v1.y);
-  const mag2 = Math.hypot(v2.x, v2.y);
+  const mag1 = Math.hypot(v1.x, v1.y), mag2 = Math.hypot(v2.x, v2.y);
   if (mag1 === 0 || mag2 === 0) return null;
   const cos = Math.min(1, Math.max(-1, dot / (mag1 * mag2)));
   return Math.round(Math.acos(cos) * (180 / Math.PI));
 }
 
-// Chart setup
-let chart;
-try {
-const chartCtx = document.getElementById('chart').getContext('2d');
-chart = new Chart(chartCtx, {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: JOINTS.map(j => ({
-      label: j.label,
-      data: [],
-      borderColor: j.color,
-      backgroundColor: j.color,
-      borderWidth: 2,
-      pointRadius: 0,
-      tension: 0.25,
-      jointKey: j.key,
-      hidden: !activeJoints.has(j.key)
-    }))
-  },
-  options: {
-    animation: false,
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: { display: true, ticks: { maxTicksLimit: 6, font: { size: 10 } } },
-      y: { min: 0, max: 190, title: { display: true, text: 'degrees', font: { size: 11 } } }
-    },
-    plugins: { legend: { position: 'bottom', labels: { font: { size: 10 }, boxWidth: 10 } } }
+function angleFromVertical(fromPt, toPt) {
+  const dx = toPt.x - fromPt.x;
+  const dy = fromPt.y - toPt.y;
+  return Math.round(Math.abs(Math.atan2(dx, dy)) * (180 / Math.PI));
+}
+
+// ---- Hands-free zone gestures (dwell-to-confirm) ----
+// Reuses the same landmarks this app already computes each frame via
+// poseLandmarker.detectForVideo — no separate hand-tracking model, no
+// second camera call. See predictLoop() for the one-line wire-in.
+
+// One Euro Filter (Casiez et al.): adaptive smoothing, heavy while a point
+// is nearly still (steadies the dwell hold), light during fast motion (a
+// real squat/deadlift shouldn't feel laggy). Plain fixed-alpha smoothing
+// can't do both.
+class OneEuroFilter {
+  constructor(mincutoff = 1.0, beta = 0.4, dcutoff = 1.0) {
+    this.mincutoff = mincutoff; this.beta = beta; this.dcutoff = dcutoff;
+    this.xPrev = null; this.dxPrev = 0; this.tPrev = null;
+  }
+  _alpha(cutoff, dt) {
+    const tau = 1.0 / (2 * Math.PI * cutoff);
+    return 1.0 / (1.0 + tau / dt);
+  }
+  filter(x, tMs) {
+    if (this.tPrev === null) { this.tPrev = tMs; this.xPrev = x; return x; }
+    const dt = Math.max((tMs - this.tPrev) / 1000, 1e-3);
+    this.tPrev = tMs;
+    const dx = (x - this.xPrev) / dt;
+    const aD = this._alpha(this.dcutoff, dt);
+    const dxHat = aD * dx + (1 - aD) * this.dxPrev;
+    const cutoff = this.mincutoff + this.beta * Math.abs(dxHat);
+    const a = this._alpha(cutoff, dt);
+    const xHat = a * x + (1 - a) * this.xPrev;
+    this.xPrev = xHat; this.dxPrev = dxHat;
+    return xHat;
+  }
+}
+
+class LandmarkSmoother {
+  constructor(mincutoff = 1.0, beta = 0.4) {
+    this.mincutoff = mincutoff; this.beta = beta;
+    this.filters = {}; this.visPrev = {};
+  }
+  smooth(landmarks, tMs) {
+    if (!landmarks) return landmarks;
+    return landmarks.map((p, i) => {
+      if (!p) return p;
+      if (!this.filters[i]) {
+        this.filters[i] = {
+          x: new OneEuroFilter(this.mincutoff, this.beta),
+          y: new OneEuroFilter(this.mincutoff, this.beta)
+        };
+      }
+      const f = this.filters[i];
+      const x = f.x.filter(p.x, tMs);
+      const y = f.y.filter(p.y, tMs);
+      const prevVis = this.visPrev[i] ?? p.visibility;
+      const visibility = p.visibility === undefined ? undefined : prevVis * 0.7 + p.visibility * 0.3;
+      this.visPrev[i] = visibility;
+      return { x, y, z: p.z, visibility };
+    });
+  }
+}
+
+// The video IS CSS-mirrored for display (see the `video` CSS rule) — but
+// this class deliberately isn't. It runs hit-testing against raw, unmirrored
+// landmark coordinates the whole way through; only drawGestureZones() (the
+// drawing layer) mirrors the zone's screen position to match. Keeping this
+// class in raw space means it's agnostic to whatever display transform the
+// app applies — mirror or not, the geometry math here doesn't change.
+class PoseConfirmGesture {
+  constructor({ zones, dwellMs = 700, isAvailable, onConfirm, onProgress }) {
+    this.zones = zones;
+    this.dwellMs = dwellMs;
+    this.isAvailable = isAvailable || (() => true);
+    this.onConfirm = onConfirm || (() => {});
+    this.onProgress = onProgress || (() => {});
+    this.state = {};
+    zones.forEach(z => { this.state[z.id] = { progress: 0, armed: true }; });
+    this._lastT = performance.now();
+  }
+
+  _handPoints(landmarks) {
+    if (!landmarks) return [];
+    // Blend wrist->index by index visibility instead of a hard pick — a hard
+    // switch between two different anatomical points is itself a jump.
+    const blend = (wristIdx, indexIdx) => {
+      const w = landmarks[wristIdx], i = landmarks[indexIdx];
+      if (!w && !i) return null;
+      if (!i) return w;
+      if (!w) return i;
+      const vis = i.visibility === undefined ? 1 : i.visibility;
+      const t = Math.max(0, Math.min(1, (vis - 0.35) / (0.75 - 0.35)));
+      return { x: w.x + (i.x - w.x) * t, y: w.y + (i.y - w.y) * t };
+    };
+    return [blend(L.leftWrist, 19), blend(L.rightWrist, 20)].filter(Boolean);
+  }
+
+  update(landmarks, W, H) {
+    const now = performance.now();
+    const dt = now - this._lastT;
+    this._lastT = now;
+
+    const points = this._handPoints(landmarks).map(p => ({ x: p.x * W, y: p.y * H }));
+
+    this.zones.forEach(z => {
+      const zx = (z.left / 100) * W, zy = (z.top / 100) * H;
+      const zw = (z.w / 100) * W, zh = (z.h / 100) * H;
+      const inside = points.some(p => p.x >= zx && p.x <= zx + zw && p.y >= zy && p.y <= zy + zh);
+      const avail = this.isAvailable(z.id);
+      const st = this.state[z.id];
+
+      if (inside && avail && st.armed) {
+        st.progress = Math.min(1, st.progress + dt / this.dwellMs);
+        if (st.progress >= 1) {
+          st.progress = 0;
+          st.armed = false; // require exit before re-arming
+          this.onConfirm(z.id);
+        }
+      } else {
+        st.progress = Math.max(0, st.progress - dt / (this.dwellMs * 0.5));
+        if (!inside) st.armed = true;
+      }
+      this.onProgress(z.id, st.progress, inside && avail);
+    });
+  }
+}
+
+function drawSkeleton(landmarks) {
+  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  // Video is CSS-mirrored (transform: scaleX(-1)) for a natural, mirror-like
+  // feel — canvas is not, so every x drawn here is flipped to match: raw
+  // landmark x (unmirrored) maps to screen position (width - x). Angle math
+  // in computeMetrics() is unaffected by this — reflection preserves angles,
+  // so that function still works on raw, unflipped landmarks.
+  const mx = (p) => (1 - p.x) * overlay.width;
+  if (chkPrivacy.checked) {
+    ctx.fillStyle = '#12241f';
+    ctx.fillRect(0, 0, overlay.width, overlay.height);
+    ctx.beginPath();
+    let started = false;
+    SILHOUETTE_OUTLINE.forEach(idx => {
+      const p = landmarks[idx];
+      if (!p) return;
+      const x = mx(p), y = p.y * overlay.height;
+      if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+    });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(29, 110, 90, 0.35)';
+    ctx.fill();
+  }
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = '#1d6e5a';
+  CONNECTIONS.forEach(([a, b]) => {
+    const p1 = landmarks[a], p2 = landmarks[b];
+    if (!p1 || !p2) return;
+    ctx.beginPath();
+    ctx.moveTo(mx(p1), p1.y * overlay.height);
+    ctx.lineTo(mx(p2), p2.y * overlay.height);
+    ctx.stroke();
+  });
+  ctx.fillStyle = '#d85a30';
+  landmarks.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(mx(p), p.y * overlay.height, 3.5, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+}
+
+const gestureFlashUntil = {};
+function flashGestureZone(id) { gestureFlashUntil[id] = performance.now() + 350; }
+
+function drawGestureZones() {
+  const W = overlay.width, H = overlay.height;
+  const now = performance.now();
+  ZONE_DEFS.forEach(z => {
+    // Zone hit-testing (PoseConfirmGesture.update) runs entirely in raw,
+    // unmirrored landmark space — unchanged. Only where we DRAW the zone is
+    // mirrored, so it visually lines up with the CSS-mirrored video: a
+    // rectangle spanning raw [left, left+w] maps to screen [W-left-w, W-left].
+    const rawX = (z.left / 100) * W;
+    const w = (z.w / 100) * W, h = (z.h / 100) * H;
+    const x = W - rawX - w;
+    const y = (z.top / 100) * H;
+    const st = gesture.state[z.id];
+    const available = zoneAvailable(z.id);
+    const flashing = (gestureFlashUntil[z.id] || 0) > now;
+
+    ctx.strokeStyle = flashing ? '#d85a30' : (available ? 'rgba(29,110,90,0.7)' : 'rgba(107,106,101,0.4)');
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, w, h);
+
+    // Solid pill behind bold white text — a translucent label over live video
+    // was hard to read against a variable background. This isn't.
+    const label = zoneLabel(z.id);
+    ctx.font = '700 13px -apple-system, sans-serif';
+    const textW = ctx.measureText(label).width;
+    const padX = 6, pillH = 20, pillY = y + 4;
+    const pillW = Math.min(textW + padX * 2, w - 8);
+    ctx.fillStyle = flashing ? 'rgba(216,90,48,0.95)' : (available ? 'rgba(29,110,90,0.95)' : 'rgba(107,106,101,0.8)');
+    ctx.fillRect(x + 4, pillY, pillW, pillH);
+    ctx.fillStyle = '#ffffff';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(label, x + 4 + padX, pillY + pillH / 2 + 1);
+    ctx.textBaseline = 'alphabetic';
+
+    if (st && st.progress > 0) {
+      const cx = x + w / 2, cy = y + h / 2, r = Math.min(w, h) * 0.26;
+      ctx.strokeStyle = 'rgba(29,110,90,0.25)';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.strokeStyle = '#1d6e5a';
+      ctx.beginPath(); ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + st.progress * Math.PI * 2); ctx.stroke();
+    }
+  });
+}
+
+function computeMetrics(landmarks) {
+  const ls = landmarks[L.leftShoulder], rs = landmarks[L.rightShoulder];
+  const le = landmarks[L.leftElbow], re = landmarks[L.rightElbow];
+  const lw = landmarks[L.leftWrist], rw = landmarks[L.rightWrist];
+  const lh = landmarks[L.leftHip], rh = landmarks[L.rightHip];
+  const lk = landmarks[L.leftKnee], rk = landmarks[L.rightKnee];
+  const la = landmarks[L.leftAnkle], ra = landmarks[L.rightAnkle];
+  if (!ls || !rs || !lh || !rh) return null;
+
+  const avg = (arr) => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+
+  const hipAngle = avg([
+    (ls && lh && lk) ? angleAt(ls, lh, lk) : null,
+    (rs && rh && rk) ? angleAt(rs, rh, rk) : null
+  ].filter(v => v != null));
+
+  const kneeAngle = avg([
+    (lh && lk && la) ? angleAt(lh, lk, la) : null,
+    (rh && rk && ra) ? angleAt(rh, rk, ra) : null
+  ].filter(v => v != null));
+
+  // Elbow angle: shoulder-elbow-wrist — catches curls, extensions, rows.
+  const elbowAngle = avg([
+    (ls && le && lw) ? angleAt(ls, le, lw) : null,
+    (rs && re && rw) ? angleAt(rs, re, rw) : null
+  ].filter(v => v != null));
+
+  // Shoulder angle: hip-shoulder-elbow — catches raises, presses, overhead motion.
+  const shoulderAngle = avg([
+    (lh && ls && le) ? angleAt(lh, ls, le) : null,
+    (rh && rs && re) ? angleAt(rh, rs, re) : null
+  ].filter(v => v != null));
+
+  const shoulderMid = { x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 };
+  const hipMid = { x: (lh.x + rh.x) / 2, y: (lh.y + rh.y) / 2 };
+  const torsoLean = angleFromVertical(hipMid, shoulderMid);
+
+  // Discriminative extras — help the AI tell exercises apart beyond just joint angles.
+  const hipWidth = Math.hypot(rh.x - lh.x, rh.y - lh.y) || 1;
+  const ankleSpacing = (la && ra) ? Math.round((Math.hypot(ra.x - la.x, ra.y - la.y) / hipWidth) * 100) / 100 : null;
+  const legAsymmetry = (lk && rk && la && ra) ? Math.abs(angleAt(lh, lk, la) - angleAt(rh, rk, ra)) : null;
+  const torsoLength = Math.hypot(shoulderMid.x - hipMid.x, shoulderMid.y - hipMid.y) || 1;
+  const wristVerticalPos = (lw && rw) ? Math.round((((lw.y + rw.y) / 2 - shoulderMid.y) / torsoLength) * 100) / 100 : null;
+
+  return { hipAngle, kneeAngle, elbowAngle, shoulderAngle, torsoLean, ankleSpacing, legAsymmetry, wristVerticalPos };
+}
+
+// ---- Self-calibrating rep detector — generalizes across body regions ----
+// Runs the same peak/valley logic independently on hip, elbow, and shoulder angle.
+// Whichever joint first produces a valid completed rep "locks in" as this session's
+// tracked signal — so seated arm movement, gym leg exercises, and gym arm exercises
+// all work without the user picking a mode. Freeform dance will lock onto whatever
+// joint happens to show the clearest repeating swing, which is a reasonable but
+// imperfect fit — dance often isn't organized into discrete identical reps at all.
+const DROP_MARGIN = 15;    // ° below the standing/rest reference that counts as "moving"
+const RETURN_MARGIN = 10;  // ° tolerance for "returned to rest"
+const JOINT_CONFIG = {
+  hip:      { minSwing: 20, label: 'Hip / legs' },
+  elbow:    { minSwing: 30, label: 'Elbow / arms' },
+  shoulder: { minSwing: 30, label: 'Shoulder / arms' }
+};
+const MIN_KNEE_SWING = 15; // ° — extra gate, hip signal only: filters torso/hip wobble
+                            // (e.g. sitting, leaning) from a real leg movement
+
+function createJointTracker(minSwing) {
+  return {
+    minSwing, state: 'top', top: null, bottom: null, startTime: null,
+    update(angle) {
+      if (angle == null) return null;
+      if (this.top === null) this.top = angle;
+      if (this.state === 'top') {
+        this.top = Math.max(this.top, angle);
+        if (angle <= this.top - DROP_MARGIN) {
+          this.state = 'bottom';
+          this.bottom = angle;
+          this.startTime = performance.now();
+        }
+        return null;
+      }
+      this.bottom = Math.min(this.bottom, angle);
+      if (angle >= this.top - RETURN_MARGIN) {
+        const swing = this.top - this.bottom;
+        this.state = 'top';
+        this.top = angle;
+        if (swing >= this.minSwing) {
+          return {
+            depth: Math.round(this.bottom),
+            swing: Math.round(swing),
+            duration_s: ((performance.now() - this.startTime) / 1000).toFixed(1)
+          };
+        }
+      }
+      return null;
+    }
+  };
+}
+
+let trackActive = false;
+let trackers = {};
+let lockedJoint = null;
+let kneeGateTop = null, kneeGateBottom = null; // parallel bookkeeping for the hip tracker's knee-swing gate
+let torsoGateMax = null;   // tracks peak torso lean during a hip rep, for the saved rep record
+let sessionReps = [];
+
+function resetTrackers() {
+  trackers = {
+    hip: createJointTracker(JOINT_CONFIG.hip.minSwing),
+    elbow: createJointTracker(JOINT_CONFIG.elbow.minSwing),
+    shoulder: createJointTracker(JOINT_CONFIG.shoulder.minSwing)
+  };
+  lockedJoint = null;
+  kneeGateTop = kneeGateBottom = null;
+  torsoGateMax = null;
+}
+resetTrackers();
+
+const btnTrackStart = document.getElementById('btnTrackStart');
+const btnTrackStop = document.getElementById('btnTrackStop');
+const btnTrackReset = document.getElementById('btnTrackReset');
+const trackBadge = document.getElementById('trackBadge');
+const repCountEl = document.getElementById('repCount');
+const lockedJointLabel = document.getElementById('lockedJointLabel');
+const sessionSummary = document.getElementById('sessionSummary');
+const btnIdentify = document.getElementById('btnIdentify');
+const identifyModelSelect = document.getElementById('identifyModelSelect');
+const identifyStatus = document.getElementById('identifyStatus');
+const btnSaveSession = document.getElementById('btnSaveSession');
+const saveSessionStatus = document.getElementById('saveSessionStatus');
+const chkGesture = document.getElementById('chkGesture');
+
+let summaryEdited = false; // true once the user (or the AI) has touched the summary — stops auto-overwriting it per rep
+sessionSummary.addEventListener('input', () => { summaryEdited = true; });
+
+let historyCount = 0; // kept in sync by renderHistory() — avoids a localStorage read every frame for zoneAvailable()
+
+// Every button gets a zone except Start webcam / Upload video: both require a
+// fresh, real browser user-gesture (camera permission, file picker) that a
+// canvas-detected air-tap does not count as — that's a browser security
+// limit, not a design choice, so those two stay click-only.
+// Reset and Clear history are destructive, so Reset now confirms itself the
+// same way Clear history already did (see its click handler below) before
+// either was safe to put on a hold-to-confirm zone.
+const ZONE_DEFS = [
+  { id: 'stopCamera',   left: 2,  top: 4,  w: 24, h: 17 },
+  { id: 'toggleTrack',  left: 2,  top: 35, w: 24, h: 17 },
+  { id: 'reset',        left: 2,  top: 66, w: 24, h: 17 },
+  { id: 'enhance',      left: 74, top: 4,  w: 24, h: 17 },
+  { id: 'save',         left: 74, top: 35, w: 24, h: 17 },
+  { id: 'clearHistory', left: 74, top: 66, w: 24, h: 17 },
+];
+
+function zoneAvailable(id) {
+  if (id === 'stopCamera') return !btnStop.disabled;
+  if (id === 'toggleTrack') return !btnTrackStart.disabled || !btnTrackStop.disabled;
+  if (id === 'reset') return sessionReps.length > 0;
+  if (id === 'enhance') return !btnIdentify.disabled;
+  if (id === 'save') return !btnSaveSession.disabled;
+  if (id === 'clearHistory') return historyCount > 0;
+  return false;
+}
+function zoneLabel(id) {
+  if (id === 'stopCamera') return 'Stop camera';
+  if (id === 'toggleTrack') return trackActive ? 'Stop tracking' : 'Start tracking';
+  if (id === 'reset') return 'Reset';
+  if (id === 'enhance') return 'Enhance w/ AI';
+  if (id === 'save') return 'Save session';
+  if (id === 'clearHistory') return 'Clear history';
+  return id;
+}
+
+const smoother = new LandmarkSmoother(1.0, 0.4);
+const gesture = new PoseConfirmGesture({
+  zones: ZONE_DEFS,
+  dwellMs: 700,
+  isAvailable: zoneAvailable,
+  onConfirm: (zoneId) => {
+    flashGestureZone(zoneId);
+    if (zoneId === 'stopCamera') {
+      if (!btnStop.disabled) btnStop.click();
+    } else if (zoneId === 'toggleTrack') {
+      if (!btnTrackStart.disabled) btnTrackStart.click();
+      else if (!btnTrackStop.disabled) btnTrackStop.click();
+    } else if (zoneId === 'reset') {
+      btnTrackReset.click(); // now confirms itself — see its click handler
+    } else if (zoneId === 'enhance') {
+      if (!btnIdentify.disabled) btnIdentify.click();
+    } else if (zoneId === 'save') {
+      if (!btnSaveSession.disabled) btnSaveSession.click();
+    } else if (zoneId === 'clearHistory') {
+      btnClearHistory.click(); // already confirms itself
+    }
   }
 });
-} catch (chartErr) {
-  console.error('Chart init failed', chartErr);
-  setStatus('Chart library failed to load (angle graph disabled): ' + chartErr.message, 'error');
+
+
+function setBadge(label, kind) {
+  const colors = {
+    top: { bg: '#e2e0da', fg: 'var(--text-secondary)' },
+    bottom: { bg: '#fdf0d5', fg: '#a5680a' }
+  };
+  const c = colors[kind] || colors.top;
+  trackBadge.style.background = c.bg;
+  trackBadge.style.color = c.fg;
+  trackBadge.textContent = label;
 }
 
-const MAX_SAMPLES = 300;
-let frameCount = 0;
-
-const SMOOTH_WINDOW = 5;
-const smoothBuffers = {};
-JOINTS.forEach(j => { smoothBuffers[j.key] = []; });
-
-function smooth(key, rawVal) {
-  if (rawVal === null || rawVal === undefined) return rawVal;
-  const buf = smoothBuffers[key];
-  buf.push(rawVal);
-  if (buf.length > SMOOTH_WINDOW) buf.shift();
-  const sum = buf.reduce((a, b) => a + b, 0);
-  return Math.round(sum / buf.length);
+function acceptRep(joint, base, metrics) {
+  const rep = {
+    rep: sessionReps.length + 1,
+    joint,
+    depth: base.depth,
+    swing: base.swing,
+    duration_s: base.duration_s
+  };
+  if (joint === 'hip') {
+    rep.torsoLean = torsoGateMax;
+    rep.legAsymmetry = metrics.legAsymmetry;
+    rep.ankleSpacing = metrics.ankleSpacing;
+  }
+  sessionReps.push(rep);
+  repCountEl.textContent = String(sessionReps.length);
+  lockedJointLabel.textContent = ` (${JOINT_CONFIG[joint].label})`;
+  btnIdentify.disabled = false;
+  btnSaveSession.disabled = false;
+  if (!summaryEdited) sessionSummary.value = buildDeterministicSummary(sessionReps);
+  setBadge(`Tracking ${JOINT_CONFIG[joint].label} — rep counted`, 'top');
 }
 
-let isRecording = false;
-let recordedData = [];
-let recordStartTime = null;
+function handleTrackingFrame(metrics) {
+  if (!trackActive || !metrics) return;
 
-function pushSample(rawAngles) {
-  frameCount++;
-
-  if (isRecording) {
-    const row = { frame: frameCount, t_seconds: ((performance.now() - recordStartTime) / 1000).toFixed(2) };
-    JOINTS.forEach(j => { row[j.key] = rawAngles[j.key] ?? ''; });
-    recordedData.push(row);
-    recordCountEl.textContent = recordedData.length + ' samples recorded';
+  if (lockedJoint === null) {
+    // Still searching for which body region is actually moving in a repeating pattern.
+    // Update the hip tracker only when both hip and knee are visible (legs in frame).
+    if (metrics.hipAngle != null && metrics.kneeAngle != null) {
+      const wasTop = trackers.hip.state === 'top';
+      if (wasTop) {
+        kneeGateTop = kneeGateTop === null ? metrics.kneeAngle : Math.max(kneeGateTop, metrics.kneeAngle);
+      } else {
+        kneeGateBottom = kneeGateBottom === null ? metrics.kneeAngle : Math.min(kneeGateBottom, metrics.kneeAngle);
+        torsoGateMax = torsoGateMax === null ? metrics.torsoLean : Math.max(torsoGateMax, metrics.torsoLean);
+      }
+      const hipResult = trackers.hip.update(metrics.hipAngle);
+      if (hipResult) {
+        const kneeSwing = (kneeGateTop != null && kneeGateBottom != null) ? kneeGateTop - kneeGateBottom : 0;
+        kneeGateTop = kneeGateBottom = null;
+        if (kneeSwing >= MIN_KNEE_SWING) {
+          lockedJoint = 'hip';
+          acceptRep('hip', hipResult, metrics);
+        }
+        torsoGateMax = null;
+      }
+    }
+    if (lockedJoint === null && metrics.elbowAngle != null) {
+      const r = trackers.elbow.update(metrics.elbowAngle);
+      if (r) { lockedJoint = 'elbow'; acceptRep('elbow', r, metrics); }
+    }
+    if (lockedJoint === null && metrics.shoulderAngle != null) {
+      const r = trackers.shoulder.update(metrics.shoulderAngle);
+      if (r) { lockedJoint = 'shoulder'; acceptRep('shoulder', r, metrics); }
+    }
+    if (lockedJoint === null) {
+      setBadge(metrics.hipAngle == null && metrics.elbowAngle == null ? 'Move into frame' : 'Watching for a repeating movement…', 'top');
+    }
+    return;
   }
 
-  if (!chart) return;
-  chart.data.labels.push(frameCount);
-  JOINTS.forEach((j, i) => {
-    const raw = rawAngles[j.key];
-    const val = chkSmooth.checked ? smooth(j.key, raw) : (raw ?? null);
-    chart.data.datasets[i].data.push(val ?? null);
+  // Locked on — only track the chosen joint for the rest of the session.
+  const angle = metrics[lockedJoint + 'Angle'];
+  if (angle == null) return;
+
+  if (lockedJoint === 'hip') {
+    if (trackers.hip.state === 'bottom') {
+      if (metrics.kneeAngle != null) kneeGateBottom = kneeGateBottom === null ? metrics.kneeAngle : Math.min(kneeGateBottom, metrics.kneeAngle);
+      if (metrics.torsoLean != null) torsoGateMax = torsoGateMax === null ? metrics.torsoLean : Math.max(torsoGateMax, metrics.torsoLean);
+    } else if (metrics.kneeAngle != null) {
+      kneeGateTop = kneeGateTop === null ? metrics.kneeAngle : Math.max(kneeGateTop, metrics.kneeAngle);
+    }
+  }
+
+  const wasBottom = trackers[lockedJoint].state === 'bottom';
+  const result = trackers[lockedJoint].update(angle);
+  if (wasBottom && trackers[lockedJoint].state === 'top') {
+    setBadge(`Tracking ${JOINT_CONFIG[lockedJoint].label}`, 'top');
+  } else if (!wasBottom && trackers[lockedJoint].state === 'bottom') {
+    setBadge(`Tracking ${JOINT_CONFIG[lockedJoint].label} — in rep`, 'bottom');
+  }
+  if (result) {
+    if (lockedJoint === 'hip') {
+      const kneeSwing = (kneeGateTop != null && kneeGateBottom != null) ? kneeGateTop - kneeGateBottom : 999;
+      kneeGateTop = kneeGateBottom = null;
+      if (kneeSwing < MIN_KNEE_SWING) { torsoGateMax = null; return; } // reject: hip moved but knees didn't
+    }
+    acceptRep(lockedJoint, result, metrics);
+    torsoGateMax = null;
+  }
+}
+
+btnTrackStart.addEventListener('click', () => {
+  if (!poseLandmarker) { setBadge('Start the webcam first', 'top'); return; }
+  trackActive = true;
+  resetTrackers();
+  btnTrackStart.disabled = true;
+  btnTrackStop.disabled = false;
+  setBadge('Watching for a repeating movement…', 'top');
+  if (chkVision.checked) startVisionLoop();
+});
+
+btnTrackStop.addEventListener('click', () => {
+  trackActive = false;
+  btnTrackStart.disabled = false;
+  btnTrackStop.disabled = true;
+  setBadge('Stopped', 'top');
+  stopVisionLoop();
+});
+
+btnTrackReset.addEventListener('click', () => {
+  if (sessionReps.length > 0 && !confirm('Reset this session? The reps tracked so far will be lost.')) return;
+  sessionReps = [];
+  resetTrackers();
+  repCountEl.textContent = '0';
+  lockedJointLabel.textContent = '';
+  sessionSummary.value = '';
+  summaryEdited = false;
+  btnIdentify.disabled = true;
+  btnSaveSession.disabled = true;
+  saveSessionStatus.textContent = '';
+  identifyStatus.textContent = '';
+  setBadge(trackActive ? 'Watching for a repeating movement…' : 'Not started', 'top');
+});
+
+// Always available immediately, no AI/model download required — this is what
+// "Save session" actually depends on. "Enhance with AI" (below) just offers
+// to rewrite this in nicer prose; it's not a prerequisite for saving.
+function buildDeterministicSummary(reps) {
+  const joint = reps[0]?.joint || 'unknown';
+  const jointLabel = JOINT_CONFIG[joint]?.label || 'Movement';
+  const depths = reps.map(r => r.depth);
+  const swings = reps.map(r => r.swing);
+  const durations = reps.map(r => parseFloat(r.duration_s));
+  const avg = (arr) => arr.length ? Math.round((arr.reduce((a,b)=>a+b,0) / arr.length) * 10) / 10 : null;
+
+  let text = `${jointLabel} session — ${reps.length} rep${reps.length === 1 ? '' : 's'} tracked, ` +
+    `averaging ${avg(swings)}° of range and ${avg(durations)}s per rep, ending around ${avg(depths)}° at the bottom of each rep.`;
+
+  if (joint === 'hip') {
+    const torsos = reps.map(r => r.torsoLean).filter(v => v != null);
+    const asym = reps.map(r => r.legAsymmetry).filter(v => v != null);
+    const ankles = reps.map(r => r.ankleSpacing).filter(v => v != null);
+    if (torsos.length) text += ` Torso lean averaged ${avg(torsos)}° at the bottom.`;
+    if (asym.length) {
+      const a = avg(asym);
+      text += ` Left/right leg asymmetry averaged ${a}°${a > 8 ? ' — notably uneven, possibly single-leg work' : ''}.`;
+    }
+    if (ankles.length) {
+      const a = ankles.reduce((s,v) => s+v, 0) / ankles.length;
+      text += ` Stance width was about ${a.toFixed(2)}x hip width${a > 1.3 ? ' (wide/sumo)' : ''}.`;
+    }
+  }
+  return text;
+}
+
+function buildSummaryPrompt(reps) {
+  const joint = reps[0]?.joint || 'unknown';
+  const depths = reps.map(r => r.depth);
+  const swings = reps.map(r => r.swing);
+  const durations = reps.map(r => parseFloat(r.duration_s));
+  const avg = (arr) => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : null;
+
+  const lines = [
+    `Repeated exercise motion, ${reps.length} reps detected.`,
+    `Primary joint driving the movement: ${joint} (${JOINT_CONFIG[joint]?.label || joint})`,
+    `Average angle at end of rep range: ${avg(depths)}°`,
+    `Average swing per rep: ${avg(swings)}°`,
+    `Average rep duration: ${avg(durations)}s`
+  ];
+
+  if (joint === 'hip') {
+    const torsos = reps.map(r => r.torsoLean).filter(v => v != null);
+    const asym = reps.map(r => r.legAsymmetry).filter(v => v != null);
+    const ankles = reps.map(r => r.ankleSpacing).filter(v => v != null);
+    if (torsos.length) lines.push(`Average torso lean at bottom: ${avg(torsos)}°`);
+    if (asym.length) lines.push(`Average left/right leg asymmetry: ${avg(asym)}° (higher = more single-leg, e.g. lunge; near 0 = symmetric, e.g. squat/deadlift)`);
+    if (ankles.length) lines.push(`Ankle spacing relative to hip width: ${(ankles.reduce((a,b)=>a+b,0)/ankles.length).toFixed(2)}x (>1.3 suggests a wide/sumo stance)`);
+  }
+
+  return lines.join('\n');
+}
+
+const SUMMARY_SYSTEM_PROMPT =
+  "You are given a short summary of joint-angle motion data captured from a repeated " +
+  "physical movement — this could be a leg exercise (squat, deadlift, lunge), an arm " +
+  "exercise (curl, press, raise, row), or a repeating dance/movement pattern. The summary " +
+  "states which joint is driving the movement (hip, elbow, or shoulder) — this is measured " +
+  "directly from the body, not a guess, and your description MUST be consistent with it: if " +
+  "the primary joint is hip, describe a LEG movement; if elbow or shoulder, describe an ARM " +
+  "movement — never contradict the stated joint. Write a natural-language summary, 2-4 " +
+  "sentences, suitable for a kinesiologist's session notes: name the likely exercise if it's " +
+  "recognizable within the correct category, and mention the meaningful numbers (rep count, " +
+  "range/depth, duration, symmetry, torso lean) in plain prose rather than a data dump. If the " +
+  "pattern looks rhythmic/freeform rather than a discrete gym exercise, say so rather than " +
+  "inventing a specific exercise name you're not confident about. You may also be given recent " +
+  "visual observations from a separate vision model watching the same session — treat these as " +
+  "supplementary and noisy, not authoritative; the joint-angle data and the stated primary " +
+  "joint are the reliable signal. Respond with ONLY the summary paragraph — no heading, no " +
+  "preamble, no markdown.";
+
+// ---- SmolVLM: continuous local vision captioning (separate runtime from WebLLM) ----
+// Uses transformers.js, not @mlc-ai/web-llm — SmolVLM isn't an MLC-format model.
+// This is a genuinely different library with an API surface that has shifted across
+// versions; if this breaks, check the current image-text-to-text pipeline signature
+// for whatever transformers.js version jsdelivr resolves to.
+let visionPipeline = null;
+let visionTimer = null;
+let visionCaptions = []; // rolling buffer, most recent last
+const VISION_INTERVAL_MS = 4000;
+const VISION_MAX_LOG = 5;
+
+const captureCanvas = document.createElement('canvas');
+const captureCtx = captureCanvas.getContext('2d');
+
+function captureFrame() {
+  if (!video.videoWidth) return null;
+  captureCanvas.width = 320;
+  captureCanvas.height = Math.round(320 * (video.videoHeight / video.videoWidth));
+  // Draws from the raw <video> element directly — this bypasses the privacy overlay
+  // canvas entirely and reads real pixels, which is exactly why this feature has its
+  // own explicit opt-in and warning rather than being silently enabled by "tracking."
+  captureCtx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+  return captureCanvas;
+}
+
+function logVisionCaption(text) {
+  visionCaptions.push(text);
+  if (visionCaptions.length > VISION_MAX_LOG) visionCaptions.shift();
+  visionLog.innerHTML = visionCaptions.map(c => `<div>• ${c}</div>`).join('');
+  visionLog.scrollTop = visionLog.scrollHeight;
+}
+
+async function ensureVisionPipeline(onProgress) {
+  if (visionPipeline) return visionPipeline;
+  if (!navigator.gpu) throw new Error('WebGPU is not available — SmolVLM needs it.');
+  onProgress('Loading vision runtime…');
+  const { pipeline } = await import("https://cdn.jsdelivr.net/npm/@huggingface/transformers");
+  onProgress('Downloading SmolVLM (first time only)…');
+  // 'image-text-to-text' (chat-style, supports a custom question) isn't available in
+  // every resolved build of transformers.js — 'image-to-text' (plain captioning, no
+  // custom prompt) is the pipeline type actually confirmed supported, so that's what
+  // this uses. Captions will be generic descriptions, not direct answers to a question.
+  visionPipeline = await pipeline(
+    'image-to-text',
+    'HuggingFaceTB/SmolVLM-256M-Instruct',
+    { device: 'webgpu', progress_callback: (p) => { if (p?.status === 'progress') onProgress(`Downloading SmolVLM… ${Math.round(p.progress || 0)}%`); } }
+  );
+  return visionPipeline;
+}
+
+async function runVisionCapture() {
+  if (!chkVision.checked || !trackActive) return;
+  const frame = captureFrame();
+  if (!frame) return;
+  try {
+    const pipe = await ensureVisionPipeline((msg) => { visionNote.textContent = msg; });
+    const result = await pipe(frame, { max_new_tokens: 20 });
+    const text = (result?.[0]?.generated_text || '').toString().trim();
+    if (text) logVisionCaption(text);
+    visionNote.textContent = 'SmolVLM running (plain captioning mode) — sending frames every ' + (VISION_INTERVAL_MS / 1000) + 's.';
+  } catch (err) {
+    console.error('SmolVLM capture failed', err);
+    visionNote.textContent = 'Vision analysis failed: ' + (err?.message || String(err)) + ' — text-only tracking still works.';
+  }
+}
+
+function startVisionLoop() {
+  if (visionTimer) return;
+  visionCaptions = [];
+  visionLog.innerHTML = '';
+  runVisionCapture();
+  visionTimer = setInterval(runVisionCapture, VISION_INTERVAL_MS);
+}
+
+function stopVisionLoop() {
+  if (visionTimer) { clearInterval(visionTimer); visionTimer = null; }
+}
+
+// ---- Local WebLLM engine (100% on-device, no network call for identification) ----
+let webllmEngine = null;
+let webllmLoadedModel = null;
+
+async function ensureEngine(modelId, onProgress) {
+  if (webllmEngine && webllmLoadedModel === modelId) return webllmEngine;
+  if (!navigator.gpu) throw new Error('WebGPU is not available in this browser.');
+
+  const adapter = await navigator.gpu.requestAdapter();
+  if (!adapter) throw new Error('No compatible GPU adapter found — WebGPU is reported present but unusable here.');
+
+  const webllm = await import("https://esm.run/@mlc-ai/web-llm");
+  const engine = new webllm.MLCEngine({
+    initProgressCallback: (report) => onProgress(report.text || 'Loading model…')
   });
-  if (chart.data.labels.length > MAX_SAMPLES) {
-    chart.data.labels.shift();
-    chart.data.datasets.forEach(ds => ds.data.shift());
-  }
-  chart.update('none');
+  await engine.reload(modelId); // explicit reload — the convenience CreateMLCEngine() wrapper
+                                 // has a known silent-failure bug on some WebGPU setups
+
+  webllmEngine = engine;
+  webllmLoadedModel = modelId;
+  return webllmEngine;
 }
 
-// Pose landmarker setup
+btnIdentify.addEventListener('click', async () => {
+  if (sessionReps.length === 0) return;
+  btnIdentify.disabled = true;
+  identifyStatus.textContent = 'Loading local model (first time only)…';
+  identifyStatus.className = 'status';
+
+  // Release camera/pose GPU resources first — cheap insurance against GPU memory
+  // contention, which caused real failures during earlier mobile testing.
+  if (rafId || stream) {
+    stopAll();
+    identifyStatus.textContent = 'Paused tracking to free GPU memory before loading the model…';
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  try {
+    const modelId = identifyModelSelect.value;
+    const engine = await ensureEngine(modelId, (msg) => { identifyStatus.textContent = msg; });
+
+    identifyStatus.textContent = 'Analyzing session data…';
+    let userPrompt = buildSummaryPrompt(sessionReps);
+    if (chkVision.checked && visionCaptions.length > 0) {
+      userPrompt += '\n\nGeneric image captions from a vision model watching the same session (these are plain scene descriptions, not answers to a specific question — may be noisy or vague, weigh alongside the motion data above, don\'t treat as certain):\n' +
+        visionCaptions.map(c => `- ${c}`).join('\n');
+    }
+    const completion = await engine.chat.completions.create({
+      messages: [
+        { role: 'system', content: SUMMARY_SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0.3,
+      max_tokens: 160
+    });
+
+    const paragraph = completion.choices[0].message.content.trim();
+    sessionSummary.value = paragraph;
+    summaryEdited = true; // don't let the next rep silently overwrite the AI's version
+    identifyStatus.textContent = 'AI summary generated — edit if needed before saving.';
+    identifyStatus.className = 'status ok';
+  } catch (err) {
+    console.error('Local identification failed', err);
+    webllmEngine = null;
+    webllmLoadedModel = null;
+    identifyStatus.textContent = 'Enhancement failed: ' + (err?.message || String(err)) + ' — the automatic summary above is still usable as-is.';
+    identifyStatus.className = 'status error';
+  } finally {
+    btnIdentify.disabled = sessionReps.length === 0;
+    btnSaveSession.disabled = sessionReps.length === 0;
+  }
+});
+
+// ---- Pose model ----
 let poseLandmarker;
-let runningMode = 'VIDEO';
-let stream = null;
-let rafId = null;
-let lastVideoTime = -1;
+let stream = null, rafId = null, lastVideoTime = -1;
 
 async function initPoseLandmarker() {
   setStatus('Loading vision runtime (WASM)…');
   let vision;
   try {
-    vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm"
-    );
+    vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.21/wasm");
   } catch (err) {
-    console.error('FilesetResolver failed', err);
-    setStatus('Could not load the vision runtime. Check your connection and try again. (' + err.message + ')', 'error');
+    setStatus('Could not load the vision runtime: ' + err.message, 'error');
     return;
   }
-
-  setStatus('Downloading pose model (a few MB, first load only)…');
+  setStatus('Downloading pose model (first load only)…');
   try {
     poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
       baseOptions: {
         modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
         delegate: "CPU"
       },
-      runningMode: runningMode,
+      runningMode: 'VIDEO',
       numPoses: 1
     });
-  } catch (errGpu) {
-    console.error('CPU delegate failed', errGpu);
-    setStatus('Failed to load pose model: ' + errGpu.message, 'error');
+  } catch (err) {
+    setStatus('Failed to load pose model: ' + err.message, 'error');
     return;
   }
-
   setStatus('Model ready. Start webcam or upload a video.', 'ok');
   btnWebcam.disabled = false;
   btnUploadTrigger.disabled = false;
@@ -440,339 +1190,22 @@ function resizeOverlay() {
   overlay.height = video.videoHeight || video.clientHeight;
 }
 
-// Rough body-outline order for a filled "silhouette" fill (not anatomically
-// exact — just enough to read as a human silhouette rather than a bare stick figure)
-const SILHOUETTE_OUTLINE = [
-  L.leftWrist, L.leftElbow, L.leftShoulder,
-  L.rightShoulder, L.rightElbow, L.rightWrist,
-  L.rightShoulder, L.rightHip, L.rightKnee, L.rightAnkle,
-  L.leftAnkle, L.leftKnee, L.leftHip, L.leftShoulder
-];
-
-function drawSkeleton(landmarks) {
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
-
-  if (chkPrivacy.checked) {
-    // Solid neutral background — blocks any video pixels from showing
-    // through; everything drawn from here on is computed geometry only.
-    ctx.fillStyle = '#12241f';
-    ctx.fillRect(0, 0, overlay.width, overlay.height);
-
-    // Soft filled silhouette so it reads as a body, not just lines
-    ctx.beginPath();
-    let started = false;
-    SILHOUETTE_OUTLINE.forEach(idx => {
-      const p = landmarks[idx];
-      if (!p) return;
-      const x = p.x * overlay.width, y = p.y * overlay.height;
-      if (!started) { ctx.moveTo(x, y); started = true; }
-      else ctx.lineTo(x, y);
-    });
-    ctx.closePath();
-    ctx.fillStyle = 'rgba(29, 110, 90, 0.35)';
-    ctx.fill();
-  }
-
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = '#1d6e5a';
-  CONNECTIONS.forEach(([a, b]) => {
-    const p1 = landmarks[a], p2 = landmarks[b];
-    if (!p1 || !p2) return;
-    ctx.beginPath();
-    ctx.moveTo(p1.x * overlay.width, p1.y * overlay.height);
-    ctx.lineTo(p2.x * overlay.width, p2.y * overlay.height);
-    ctx.stroke();
-  });
-  ctx.fillStyle = '#d85a30';
-  landmarks.forEach(p => {
-    ctx.beginPath();
-    ctx.arc(p.x * overlay.width, p.y * overlay.height, 3.5, 0, 2 * Math.PI);
-    ctx.fill();
-  });
-}
-
-function computeAngles(landmarks) {
-  const angles = {};
-  JOINTS.forEach(j => {
-    const [ai, bi, ci] = j.triplet;
-    const a = landmarks[ai], b = landmarks[bi], c = landmarks[ci];
-    if (a && b && c) {
-      const ang = angleAt(a, b, c);
-      angles[j.key] = ang;
-      const el = document.getElementById('val-' + j.key);
-      if (el) el.textContent = ang !== null ? ang + '°' : '–';
-    }
-  });
-  return angles;
-}
-
-// ---- Posture monitoring (long session) ----
-const POSTURE_THRESHOLDS = {
-  forwardHead: { caution: 15, poor: 25 },
-  shoulderTilt: { caution: 5, poor: 10 },
-  torsoLean: { caution: 10, poor: 20 }
-};
-
-function angleFromVertical(fromPt, toPt) {
-  // Angle between the vertical (straight up) and the vector fromPt -> toPt, in degrees.
-  const dx = toPt.x - fromPt.x;
-  const dy = fromPt.y - toPt.y; // image y grows downward; flip so "up" is positive
-  return Math.round(Math.abs(Math.atan2(dx, dy)) * (180 / Math.PI));
-}
-
-function computePostureMetrics(landmarks) {
-  const ls = landmarks[L.leftShoulder], rs = landmarks[L.rightShoulder];
-  const lh = landmarks[L.leftHip], rh = landmarks[L.rightHip];
-  const le = landmarks[L.leftEar], re = landmarks[L.rightEar];
-  const nose = landmarks[L.nose];
-  if (!ls || !rs || !lh || !rh) return null;
-
-  const shoulderMid = { x: (ls.x + rs.x) / 2, y: (ls.y + rs.y) / 2 };
-  const hipMid = { x: (lh.x + rh.x) / 2, y: (lh.y + rh.y) / 2 };
-
-  // Forward head: angle from vertical between shoulder midpoint and ear midpoint (fallback to nose)
-  let headPt = null;
-  if (le && re) headPt = { x: (le.x + re.x) / 2, y: (le.y + re.y) / 2 };
-  else if (nose) headPt = nose;
-  const forwardHead = headPt ? angleFromVertical(shoulderMid, headPt) : null;
-
-  // Shoulder tilt: angle of the shoulder line from horizontal
-  const dx = rs.x - ls.x, dy = rs.y - ls.y;
-  const shoulderTilt = Math.round(Math.abs(Math.atan2(dy, dx)) * (180 / Math.PI));
-
-  // Torso lean: angle from vertical between hip midpoint and shoulder midpoint
-  const torsoLean = angleFromVertical(hipMid, shoulderMid);
-
-  return { forwardHead, shoulderTilt, torsoLean };
-}
-
-function classify(value, thresholds) {
-  if (value === null || value === undefined) return null;
-  if (value >= thresholds.poor) return 'poor';
-  if (value >= thresholds.caution) return 'caution';
-  return 'good';
-}
-
-function overallStatus(metrics) {
-  const statuses = [
-    classify(metrics.forwardHead, POSTURE_THRESHOLDS.forwardHead),
-    classify(metrics.shoulderTilt, POSTURE_THRESHOLDS.shoulderTilt),
-    classify(metrics.torsoLean, POSTURE_THRESHOLDS.torsoLean)
-  ].filter(Boolean);
-  if (statuses.includes('poor')) return 'poor';
-  if (statuses.includes('caution')) return 'caution';
-  if (statuses.length === 0) return null;
-  return 'good';
-}
-
-const STATUS_COLORS = {
-  good: { bg: '#dff3ea', fg: '#1d6e5a', label: 'Good posture' },
-  caution: { bg: '#fdf0d5', fg: '#a5680a', label: 'Caution' },
-  poor: { bg: '#fbe0dc', fg: '#c0392b', label: 'Poor posture' }
-};
-
-let postureActive = false;
-let postureLog = [];
-let postureIntervalMs = 5000;
-let postureLastSampleAt = 0;
-let postureSessionStart = 0;
-let postureElapsedTimer = null;
-let wakeLockSentinel = null;
-
-const btnPostureStart = document.getElementById('btnPostureStart');
-const btnPostureStop = document.getElementById('btnPostureStop');
-const btnPostureExport = document.getElementById('btnPostureExport');
-const btnPostureAiReport = document.getElementById('btnPostureAiReport');
-const postureIntervalSelect = document.getElementById('postureInterval');
-const postureBadge = document.getElementById('postureBadge');
-const postureElapsedEl = document.getElementById('postureElapsed');
-const postureSampleCountEl = document.getElementById('postureSampleCount');
-const postureSummaryBox = document.getElementById('postureSummaryBox');
-const wakeLockNote = document.getElementById('wakeLockNote');
-
-function formatElapsed(ms) {
-  const totalSec = Math.floor(ms / 1000);
-  const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
-  const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
-  const s = String(totalSec % 60).padStart(2, '0');
-  return `${h}:${m}:${s}`;
-}
-
-function updatePostureBadge(status) {
-  const c = STATUS_COLORS[status] || { bg: '#e2e0da', fg: 'var(--text-secondary)', label: 'No data' };
-  postureBadge.style.background = c.bg;
-  postureBadge.style.color = c.fg;
-  postureBadge.textContent = c.label;
-}
-
-async function requestWakeLock() {
-  try {
-    if ('wakeLock' in navigator) {
-      wakeLockSentinel = await navigator.wakeLock.request('screen');
-      wakeLockNote.textContent = 'Screen wake lock active — this device should stay awake for the session. Still recommended: plug it in and don\u2019t close the laptop lid.';
-      wakeLockSentinel.addEventListener('release', () => {
-        wakeLockNote.textContent = 'Screen wake lock was released (tab backgrounded or system override) — check the device hasn\u2019t gone to sleep.';
-      });
-    } else {
-      wakeLockNote.textContent = 'This browser doesn\u2019t support keeping the screen awake automatically — please disable sleep/screensaver manually for the session.';
-    }
-  } catch (err) {
-    wakeLockNote.textContent = 'Could not lock the screen awake (' + err.message + ') — please disable sleep manually for the session.';
-  }
-}
-
-function releaseWakeLock() {
-  if (wakeLockSentinel) {
-    wakeLockSentinel.release().catch(() => {});
-    wakeLockSentinel = null;
-  }
-}
-
-btnPostureStart.addEventListener('click', async () => {
-  postureActive = true;
-  postureLog = [];
-  postureIntervalMs = parseInt(postureIntervalSelect.value, 10);
-  postureLastSampleAt = 0;
-  postureSessionStart = performance.now();
-  btnPostureStart.disabled = true;
-  btnPostureStop.disabled = false;
-  btnPostureExport.disabled = true;
-  postureIntervalSelect.disabled = true;
-  postureSummaryBox.style.display = 'none';
-  postureSampleCountEl.textContent = '0';
-  updatePostureBadge(null);
-  await requestWakeLock();
-
-  postureElapsedTimer = setInterval(() => {
-    postureElapsedEl.textContent = formatElapsed(performance.now() - postureSessionStart);
-  }, 1000);
-});
-
-btnPostureStop.addEventListener('click', () => {
-  postureActive = false;
-  btnPostureStart.disabled = false;
-  btnPostureStop.disabled = true;
-  btnPostureExport.disabled = postureLog.length === 0;
-  btnPostureAiReport.disabled = postureLog.length === 0;
-  postureIntervalSelect.disabled = false;
-  if (postureElapsedTimer) clearInterval(postureElapsedTimer);
-  releaseWakeLock();
-
-  if (postureLog.length > 0) {
-    postureSummaryBox.style.display = 'block';
-    postureSummaryBox.textContent = buildPostureSummary(postureLog);
-  }
-});
-
-btnPostureAiReport.addEventListener('click', async () => {
-  if (postureLog.length === 0) return;
-  const functionUrl = supabaseUrlInput.value.trim();
-  if (!functionUrl) {
-    postureSummaryBox.style.display = 'block';
-    postureSummaryBox.textContent = 'No Supabase function URL set (see the AI draft panel below) — showing the computed summary instead.\n\n' + buildPostureSummary(postureLog);
-    return;
-  }
-  btnPostureAiReport.disabled = true;
-  postureSummaryBox.style.display = 'block';
-  postureSummaryBox.textContent = 'Generating AI report…';
-  try {
-    const prompt = buildPosturePrompt(postureLog);
-    const text = await callAssessmentBackend(functionUrl, prompt);
-    postureSummaryBox.textContent = text;
-  } catch (err) {
-    console.error('Posture AI report failed, falling back to computed summary', err);
-    postureSummaryBox.textContent = 'AI report failed (' + (err && err.message ? err.message : String(err)) + ') — showing the computed summary instead.\n\n' + buildPostureSummary(postureLog);
-  } finally {
-    btnPostureAiReport.disabled = postureLog.length === 0;
-  }
-});
-
-btnPostureExport.addEventListener('click', () => {
-  if (postureLog.length === 0) return;
-  const headers = ['timestamp', 'elapsed_seconds', 'forwardHead', 'shoulderTilt', 'torsoLean', 'status'];
-  const rows = postureLog.map(r => headers.map(h => r[h] ?? '').join(','));
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'posture-session-' + new Date().toISOString().replace(/[:.]/g, '-') + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-});
-
-function buildPostureSummary(log) {
-  const counts = { good: 0, caution: 0, poor: 0 };
-  log.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
-  const total = log.length || 1;
-  const pct = (n) => Math.round((n / total) * 100);
-
-  const avg = (key) => {
-    const vals = log.map(r => r[key]).filter(v => typeof v === 'number');
-    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-  };
-
-  const lines = [];
-  lines.push('POSTURE SESSION SUMMARY');
-  lines.push(`Duration: ${formatElapsed((log.length ? (log[log.length - 1].elapsed_seconds * 1000) : 0))}  —  ${total} samples`);
-  lines.push('');
-  lines.push(`Good posture:   ${pct(counts.good)}% of session`);
-  lines.push(`Caution:        ${pct(counts.caution)}% of session`);
-  lines.push(`Poor posture:   ${pct(counts.poor)}% of session`);
-  lines.push('');
-  lines.push('Average angles over the session:');
-  lines.push(`  Forward head lean: ${avg('forwardHead')}°`);
-  lines.push(`  Shoulder tilt:     ${avg('shoulderTilt')}°`);
-  lines.push(`  Torso lean:        ${avg('torsoLean')}°`);
-  lines.push('');
-  lines.push('Computed thresholds, not a clinical diagnosis — for practitioner review.');
-  return lines.join('\n');
-}
-
-function handlePostureFrame(landmarks) {
-  const metrics = computePostureMetrics(landmarks);
-  if (!metrics) return;
-
-  ['forwardHead', 'shoulderTilt', 'torsoLean'].forEach(key => {
-    const el = document.getElementById('val-' + key);
-    if (el) el.textContent = metrics[key] !== null ? metrics[key] + '°' : '–';
-  });
-
-  const status = overallStatus(metrics);
-  if (status) updatePostureBadge(status);
-
-  if (!postureActive) return;
-
-  const now = performance.now();
-  if (now - postureLastSampleAt < postureIntervalMs) return;
-  postureLastSampleAt = now;
-
-  postureLog.push({
-    timestamp: new Date().toISOString(),
-    elapsed_seconds: ((now - postureSessionStart) / 1000).toFixed(1),
-    forwardHead: metrics.forwardHead,
-    shoulderTilt: metrics.shoulderTilt,
-    torsoLean: metrics.torsoLean,
-    status: status
-  });
-  postureSampleCountEl.textContent = String(postureLog.length);
-}
-
 function predictLoop() {
   if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
     lastVideoTime = video.currentTime;
     const result = poseLandmarker.detectForVideo(video, performance.now());
     if (result.landmarks && result.landmarks.length > 0) {
-      const landmarks = result.landmarks[0];
+      const rawLandmarks = result.landmarks[0];
+      const landmarks = chkGesture.checked ? smoother.smooth(rawLandmarks, performance.now()) : rawLandmarks;
       drawSkeleton(landmarks);
-      const angles = computeAngles(landmarks);
-      pushSample(angles);
-      handlePostureFrame(landmarks);
+      const metrics = computeMetrics(landmarks);
+      handleTrackingFrame(metrics);
+      if (chkGesture.checked) gesture.update(landmarks, overlay.width, overlay.height);
     } else {
       ctx.clearRect(0, 0, overlay.width, overlay.height);
+      if (chkGesture.checked) gesture.update(null, overlay.width, overlay.height);
     }
+    if (chkGesture.checked) drawGestureZones();
   }
   rafId = requestAnimationFrame(predictLoop);
 }
@@ -780,20 +1213,14 @@ function predictLoop() {
 function stopAll() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
-  if (stream) {
-    stream.getTracks().forEach(t => t.stop());
-    stream = null;
-  }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
   video.pause();
   video.srcObject = null;
   video.removeAttribute('src');
   ctx.clearRect(0, 0, overlay.width, overlay.height);
   btnStop.disabled = true;
   setStatus('Stopped.', null);
-
-  if (postureActive) {
-    btnPostureStop.click();
-  }
+  if (trackActive) btnTrackStop.click();
 }
 
 btnWebcam.addEventListener('click', async () => {
@@ -812,7 +1239,6 @@ btnWebcam.addEventListener('click', async () => {
 });
 
 btnUploadTrigger.addEventListener('click', () => fileInput.click());
-
 fileInput.addEventListener('change', () => {
   const file = fileInput.files[0];
   if (!file) return;
@@ -829,230 +1255,106 @@ fileInput.addEventListener('change', () => {
     if (!rafId) predictLoop();
   };
 });
-
 btnStop.addEventListener('click', stopAll);
-btnReset.addEventListener('click', () => {
-  frameCount = 0;
-  JOINTS.forEach(j => { smoothBuffers[j.key] = []; });
-  if (!chart) return;
-  chart.data.labels = [];
-  chart.data.datasets.forEach(ds => ds.data = []);
-  chart.update();
-});
-
-btnRecord.addEventListener('click', () => {
-  isRecording = !isRecording;
-  if (isRecording) {
-    recordedData = [];
-    recordStartTime = performance.now();
-    btnRecord.textContent = '■ Stop recording';
-    btnExport.disabled = true;
-    recordCountEl.textContent = '0 samples recorded';
-  } else {
-    btnRecord.textContent = '● Record';
-    btnExport.disabled = recordedData.length === 0;
-    btnGenerate.disabled = recordedData.length === 0;
-    recordCountEl.textContent = recordedData.length + ' samples ready to export';
-  }
-});
-
-btnExport.addEventListener('click', () => {
-  if (recordedData.length === 0) return;
-  const headers = ['frame', 't_seconds', ...JOINTS.map(j => j.key)];
-  const rows = recordedData.map(r => headers.map(h => r[h] ?? '').join(','));
-  const csv = [headers.join(','), ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'movement-session-' + new Date().toISOString().replace(/[:.]/g, '-') + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-});
-
 window.addEventListener('resize', resizeOverlay);
-
-document.addEventListener('visibilitychange', async () => {
-  if (postureActive && document.visibilityState === 'visible' && !wakeLockSentinel) {
-    await requestWakeLock();
-  }
-});
-
-// ---- Gemini-powered assessment draft ----
-const STORAGE_KEY = 'sensee_supabase_function_url';
-try {
-  const savedUrl = localStorage.getItem(STORAGE_KEY);
-  if (savedUrl) supabaseUrlInput.value = savedUrl;
-} catch (e) { /* localStorage unavailable — fine, URL just won't persist */ }
-
-function computeMetrics(data) {
-  const stats = {};
-  JOINTS.forEach(j => {
-    const vals = data.map(r => parseFloat(r[j.key])).filter(v => !isNaN(v));
-    if (vals.length === 0) return;
-    const min = Math.min(...vals);
-    const max = Math.max(...vals);
-    const avg = Math.round(vals.reduce((a, b) => a + b, 0) / vals.length);
-    stats[j.key] = { min, max, rom: max - min, avg };
-  });
-  return stats;
-}
-
-function buildPrompt(stats) {
-  const lines = [];
-  const pairs = [['leftElbow', 'rightElbow', 'Elbow'], ['leftKnee', 'rightKnee', 'Knee'], ['leftHip', 'rightHip', 'Hip']];
-  Object.entries(stats).forEach(([key, s]) => {
-    const label = JOINTS.find(j => j.key === key)?.label || key;
-    lines.push(`${label}: range ${s.min}-${s.max} deg (ROM ${s.rom} deg), avg ${s.avg} deg`);
-  });
-  const asym = [];
-  pairs.forEach(([lk, rk, name]) => {
-    if (stats[lk] && stats[rk]) {
-      const diff = Math.abs(stats[lk].rom - stats[rk].rom);
-      asym.push(`${name} ROM difference (L vs R): ${diff} deg`);
-    }
-  });
-  return "Joint angle data from a recorded movement session:\n" + lines.join("\n") +
-    "\n\nLeft/right symmetry:\n" + asym.join("\n");
-}
-
-function buildDeterministicSummary(stats) {
-  const lines = [];
-  lines.push('MOVEMENT SESSION — COMPUTED SUMMARY (no AI narrative)');
-  lines.push('');
-  JOINTS.forEach(j => {
-    const s = stats[j.key];
-    if (!s) return;
-    lines.push(`${j.label}: range of motion ${s.rom}\u00B0  (min ${s.min}\u00B0, max ${s.max}\u00B0, avg ${s.avg}\u00B0)`);
-  });
-  lines.push('');
-  lines.push('Left / right symmetry (range-of-motion difference):');
-  const pairs = [['leftElbow', 'rightElbow', 'Elbow'], ['leftKnee', 'rightKnee', 'Knee'], ['leftHip', 'rightHip', 'Hip']];
-  let anyPair = false;
-  pairs.forEach(([lk, rk, name]) => {
-    if (stats[lk] && stats[rk]) {
-      anyPair = true;
-      const diff = Math.abs(stats[lk].rom - stats[rk].rom);
-      lines.push(`  ${name}: ${diff}\u00B0 difference between sides`);
-    }
-  });
-  if (!anyPair) lines.push('  (not enough tracked joints on both sides to compare)');
-  lines.push('');
-  lines.push('This is a computed summary of recorded joint angles — not an AI-written narrative and not a diagnosis. For practitioner review.');
-  return lines.join('\n');
-}
-
-function buildPosturePrompt(log) {
-  const counts = { good: 0, caution: 0, poor: 0 };
-  log.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
-  const total = log.length || 1;
-  const pct = (n) => Math.round((n / total) * 100);
-  const avg = (key) => {
-    const vals = log.map(r => r[key]).filter(v => typeof v === 'number');
-    return vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : null;
-  };
-  const durationSec = log.length ? parseFloat(log[log.length - 1].elapsed_seconds) : 0;
-
-  return "Posture monitoring session data (office desk setting, webcam-based, sampled periodically over the session):\n" +
-    `Duration: ${formatElapsed(durationSec * 1000)}, ${total} samples\n\n` +
-    `Time in good posture: ${pct(counts.good)}%\n` +
-    `Time in caution range: ${pct(counts.caution)}%\n` +
-    `Time in poor posture: ${pct(counts.poor)}%\n\n` +
-    `Average forward head lean: ${avg('forwardHead')} degrees from vertical\n` +
-    `Average shoulder tilt: ${avg('shoulderTilt')} degrees from horizontal\n` +
-    `Average torso lean: ${avg('torsoLean')} degrees from vertical`;
-}
-
-async function callAssessmentBackend(functionUrl, userPrompt) {
-  const res = await fetch(functionUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ statsPrompt: userPrompt })
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(data.error || `Request failed with status ${res.status}`);
-  }
-  if (!data.text) throw new Error('Backend returned no text.');
-  return data.text;
-}
-
-btnGenerate.addEventListener('click', async () => {
-  if (recordedData.length === 0) return;
-  btnGenerate.disabled = true;
-  draftOutput.value = '';
-  const stats = computeMetrics(recordedData);
-
-  const functionUrl = supabaseUrlInput.value.trim();
-
-  try {
-    if (rememberKeyChk.checked && functionUrl) {
-      localStorage.setItem(STORAGE_KEY, functionUrl);
-    } else if (!rememberKeyChk.checked) {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  } catch (e) { /* ignore storage errors */ }
-
-  if (!functionUrl) {
-    llmStatusEl.textContent = 'No Supabase function URL set — showing a computed summary instead of an AI draft.';
-    llmStatusEl.className = 'status';
-    draftOutput.value = buildDeterministicSummary(stats);
-    btnGenerate.disabled = false;
-    return;
-  }
-
-  try {
-    llmStatusEl.textContent = 'Sending session summary to your backend…';
-    llmStatusEl.className = 'status';
-
-    const dataSummary = buildPrompt(stats);
-    const text = await callAssessmentBackend(functionUrl, dataSummary);
-
-    draftOutput.value = text;
-    llmStatusEl.textContent = 'AI draft generated — review and edit before sharing with the client.';
-    llmStatusEl.className = 'status ok';
-  } catch (err) {
-    console.error('Backend call failed, falling back to computed summary', err);
-    draftOutput.value = buildDeterministicSummary(stats);
-    llmStatusEl.textContent = 'Backend call failed (' + (err && err.message ? err.message : String(err)) + ') — showing a computed summary instead.';
-    llmStatusEl.className = 'status error';
-  } finally {
-    btnGenerate.disabled = recordedData.length === 0;
-  }
-});
 
 btnWebcam.disabled = true;
 btnUploadTrigger.disabled = true;
-
 const initTimeout = setTimeout(() => {
-  if (!poseLandmarker) {
-    setStatus('Still stuck loading after 20s — likely a blocked network request (CDN or model host unreachable from this page). Try opening the downloaded file in a normal browser tab instead of a media viewer, or check your connection.', 'error');
-  }
+  if (!poseLandmarker) setStatus('Still stuck loading after 20s — likely a blocked network request.', 'error');
 }, 20000);
-
-initPoseLandmarker()
-  .catch(err => {
-    console.error('Init failed', err);
-    setStatus('Failed to load pose model: ' + err.message, 'error');
-  })
+initPoseLandmarker().catch(err => setStatus('Failed to load pose model: ' + err.message, 'error'))
   .finally(() => clearTimeout(initTimeout));
-</script>
 
-<div class="panel">
-  <div class="row" style="flex-direction:column; align-items:stretch; gap:6px;">
-    <label style="font-size:12px; color:var(--text-secondary);">Supabase Edge Function URL (your API key stays server-side, never exposed here)</label>
-    <input type="text" id="supabaseUrl" placeholder="https://your-project.supabase.co/functions/v1/generate-assessment" style="padding:8px; border-radius:8px; border:1px solid var(--border); font-size:13px;">
-    <label class="chk"><input type="checkbox" id="rememberKey" checked> Remember this URL in this browser</label>
-  </div>
-  <div class="row" style="margin-top:10px;">
-    <button id="btnGenerate" disabled>Generate assessment draft</button>
-  </div>
-  <div id="llmStatus" class="status">Record a session first, then generate a draft.</div>
-  <textarea id="draftOutput" rows="10" style="width:100%; margin-top:10px; font-size:13px; border:1px solid var(--border); border-radius:8px; padding:8px; font-family:inherit; resize:vertical;" placeholder="Draft will appear here for practitioner review and editing."></textarea>
-  <div class="footer-note">Sends only the computed joint-angle stats (not video) to your Supabase function, which forwards them to Gemini. If no URL is set or the call fails, a computed summary is shown instead. This is a draft for practitioner review, not a diagnosis.</div>
-</div>
+// ---- History (localStorage — this device only, no login) ----
+const statStreak = document.getElementById('statStreak');
+const statBestReps = document.getElementById('statBestReps');
+const statTotalReps = document.getElementById('statTotalReps');
+const statSessionCount = document.getElementById('statSessionCount');
+const historyBody = document.getElementById('historyBody');
+const historyStatus = document.getElementById('historyStatus');
+const btnClearHistory = document.getElementById('btnClearHistory');
+
+const HISTORY_KEY = 'sensee_exercise_history';
+
+function readHistory() {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function writeHistory(sessions) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions));
+  } catch (e) {
+    saveSessionStatus.textContent = 'Could not save — browser storage may be full or disabled.';
+  }
+}
+
+function computeStreak(sessions) {
+  if (sessions.length === 0) return 0;
+  const days = [...new Set(sessions.map(s => s.created_at.slice(0, 10)))].sort().reverse();
+  let streak = 0;
+  let cursor = new Date();
+  for (const day of days) {
+    if (day === cursor.toISOString().slice(0, 10)) { streak++; cursor.setDate(cursor.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
+function renderHistory() {
+  const data = readHistory().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  historyBody.innerHTML = '';
+  data.forEach(s => {
+    const summaryText = s.summary || s.exercise_label || '';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${new Date(s.created_at).toLocaleDateString()}</td><td>${s.rep_count}</td><td>${s.avg_depth ?? '–'}</td>` +
+      `<td class="summary-cell" title="${summaryText.replace(/"/g, '&quot;')}">${summaryText}</td>`;
+    historyBody.appendChild(tr);
+  });
+  historyCount = data.length;
+  statSessionCount.textContent = String(data.length);
+  statTotalReps.textContent = String(data.reduce((sum, s) => sum + (s.rep_count || 0), 0));
+  statBestReps.textContent = data.length ? String(Math.max(...data.map(s => s.rep_count || 0))) : '–';
+  statStreak.textContent = String(computeStreak(data));
+  historyStatus.textContent = data.length === 0 ? 'No sessions saved yet — your first save will show up here.' : '';
+}
+renderHistory();
+
+btnSaveSession.addEventListener('click', () => {
+  if (sessionReps.length === 0) return;
+  const summary = sessionSummary.value.trim();
+  if (!summary) {
+    saveSessionStatus.textContent = 'Summary is empty — type one or complete another rep to regenerate it.';
+    return;
+  }
+  const depths = sessionReps.map(r => r.depth).filter(v => typeof v === 'number');
+  const avgDepth = depths.length ? Math.round(depths.reduce((a,b)=>a+b,0)/depths.length) : null;
+
+  const sessions = readHistory();
+  sessions.push({
+    id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+    created_at: new Date().toISOString(),
+    summary,
+    rep_count: sessionReps.length,
+    avg_depth: avgDepth,
+    reps: sessionReps
+  });
+  writeHistory(sessions);
+  renderHistory();
+  saveSessionStatus.textContent = 'Saved.';
+});
+
+btnClearHistory.addEventListener('click', () => {
+  if (!confirm('Clear all saved sessions on this device? This can\'t be undone.')) return;
+  writeHistory([]);
+  renderHistory();
+});
+</script>
 
 </body>
 </html>
