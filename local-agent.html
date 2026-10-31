@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1A2B">
+<title>Local Agent</title>
+<style>
+:root{
+  --bg:#0B1524; --panel:#13233A; --panel2:#182B46; --line:#26405f;
+  --text:#EAF1FA; --muted:#93A6BF; --accent:#7CCBFF; --ok:#5EE0A0; --warn:#FFC857; --bad:#FF6B81;
+  --r:18px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+main{max-width:640px;margin:0 auto;padding:16px 14px 64px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:1.6rem;margin:0;letter-spacing:-.01em}
+h2{font-size:1.25rem;margin:0 0 6px;letter-spacing:-.01em}
+h3{font-size:1rem;margin:0}
+p{margin:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:12px}
+.lede,.hint{color:var(--muted);font-size:.95rem}
+.hint{font-size:.88rem}
+.top{display:flex;flex-direction:column;gap:10px}
+.brand{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.brand .l{display:flex;align-items:center;gap:12px}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.pill{border:1px solid var(--line);border-radius:999px;padding:5px 14px;font-size:.88rem;color:var(--muted)}
+.pill.ok{border-color:#1f7a57;color:var(--ok)}
+.pill.bad{border-color:#8a2c3c;color:var(--bad)}
+.pill.warn{border-color:#8a6a1f;color:var(--warn)}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.checks li{display:flex;gap:12px;align-items:flex-start}
+.checks i{flex:none;width:14px;height:14px;border-radius:50%;background:var(--muted);margin-top:6px}
+.checks li.ok i{background:var(--ok)} .checks li.bad i{background:var(--bad)} .checks li.warn i{background:var(--warn)}
+label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.92rem}
+select,input[type=text]{width:100%;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:13px 14px;font:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btns{display:flex;flex-wrap:wrap;gap:10px}
+button{font:inherit;font-weight:600;border-radius:14px;padding:13px 20px;border:1px solid var(--line);background:transparent;color:var(--text);cursor:pointer;touch-action:manipulation}
+button.primary{background:var(--accent);color:#06233a;border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar{height:10px;border-radius:99px;background:var(--panel2);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.err{color:var(--bad);font-size:.92rem;overflow-wrap:anywhere;white-space:pre-wrap}
+.stage{position:relative;background:#000;border-radius:14px;overflow:hidden;min-height:190px}
+.stage video,.stage canvas{display:block;width:100%;height:auto}
+.stage canvas{position:absolute;inset:0;height:100%;pointer-events:none}
+.stage .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;color:var(--muted)}
+.mirror{transform:scaleX(-1)}
+.flags{display:flex;flex-wrap:wrap;gap:8px}
+.flags span{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:.85rem;color:var(--muted);transition:all .2s}
+.flags span.on{border-color:var(--accent);color:var(--accent);background:rgba(124,203,255,.1)}
+.flags span.good{border-color:#1f7a57;color:var(--ok);background:rgba(94,224,160,.1)}
+.now{border-left:4px solid var(--accent)}
+.now .head{font-size:1.4rem;font-weight:700;letter-spacing:-.01em;min-height:2.2em}
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;position:relative;margin-top:4px}
+.pipe .n{display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;font-size:.8rem;color:var(--muted)}
+.pipe .n b{width:44px;height:44px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:600;color:var(--muted)}
+.pipe .n.on b{border-color:var(--accent);color:var(--accent);box-shadow:0 0 0 4px rgba(124,203,255,.15)}
+.pipe .n.done b{border-color:#1f7a57;color:var(--ok)}
+.log{display:flex;flex-direction:column;max-height:340px;overflow:auto}
+.log .e{display:grid;grid-template-columns:68px 1fr;gap:12px;padding:10px 0;border-top:1px solid var(--line);font-size:.9rem}
+.log .e:first-child{border-top:0}
+.log .t{color:var(--muted)}
+.log .m{overflow-wrap:anywhere;border-left:3px solid var(--line);padding-left:10px}
+.log .m.bad{color:var(--bad);border-color:var(--bad)} .log .m.ok{border-color:var(--ok)} .log .m.warn{color:var(--warn);border-color:var(--warn)}
+.cardhead{display:flex;justify-content:space-between;align-items:baseline}
+.cardhead span{color:var(--muted);font-size:.92rem}
+.events{display:flex;flex-direction:column;gap:12px}
+.ev{display:grid;grid-template-columns:110px 1fr;gap:12px;background:var(--panel2);border-radius:14px;padding:10px}
+.ev img{width:110px;height:auto;border-radius:10px;display:block}
+.ev .t{color:var(--muted);font-size:.82rem}
+.empty{border:1px dashed var(--line);border-radius:14px;padding:20px;text-align:center;color:var(--muted)}
+.strip{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px}
+.strip figure{margin:0;flex:none;width:120px;font-size:.75rem;color:var(--muted)}
+.strip img{width:120px;border-radius:10px;display:block}
+.perf{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:.92rem}
+.perf dt{color:var(--muted)} .perf dd{margin:0;text-align:right}
+.ask{display:flex;gap:10px}
+.ask input{flex:1}
+.answer{background:var(--panel2);border-radius:14px;padding:14px;font-size:.95rem;white-space:pre-wrap}
+.switch{display:flex;flex-direction:row;align-items:center;gap:12px;color:var(--text)}
+.switch input{width:22px;height:22px;accent-color:var(--accent)}
+details{border:1px solid var(--line);border-radius:var(--r);background:var(--panel)}
+summary{padding:16px 18px;font-weight:700;font-size:1.1rem;cursor:pointer}
+details .in{padding:0 18px 18px;display:flex;flex-direction:column;gap:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+
+<header class="top">
+  <div class="brand">
+    <div class="l">
+      <svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="17" fill="none" stroke="#7CCBFF" stroke-width="4"/><circle cx="20" cy="20" r="7" fill="none" stroke="#EAF1FA" stroke-width="4"/></svg>
+      <h1>Local Agent</h1>
+    </div>
+    <span class="pill ok">Runs in this browser</span>
+  </div>
+  <div class="pills">
+    <span class="pill" id="pGpu">Checking graphics</span>
+    <span class="pill" id="pNet">Checking network</span>
+    <span class="pill" id="pModel">No model</span>
+  </div>
+</header>
+
+<section class="card" id="setup">
+  <h2>Put an AI model on this device</h2>
+  <p class="lede">The model downloads once, then runs here. After that the camera, the AI and every saved event stay on this device.</p>
+  <ul class="checks">
+    <li id="chkSecure"><i></i><span>Checking page…</span></li>
+    <li id="chkGpu"><i></i><span>Checking graphics…</span></li>
+    <li id="chkStore"><i></i><span>Checking storage…</span></li>
+  </ul>
+  <label>Model, smallest to largest
+    <select id="selModel"></select>
+  </label>
+  <p class="hint" id="modelNote"></p>
+  <div class="row">
+    <label>Precision
+      <select id="selPrec">
+        <option value="q4" selected>q4 (recommended)</option>
+        <option value="q8">q8 (bigger, steadier)</option>
+        <option value="q4f16">q4f16 (needs 16-bit GPU)</option>
+      </select>
+    </label>
+    <label>Run on
+      <select id="selRun">
+        <option value="auto" selected>Auto: graphics, then CPU</option>
+        <option value="gpu">Graphics chip only</option>
+        <option value="cpu">CPU only</option>
+      </select>
+    </label>
+  </div>
+  <div class="btns">
+    <button class="primary" id="btnLoad">Load model</button>
+    <button id="btnNoModel">Try without the model</button>
+  </div>
+  <div class="bar"><i id="barFill"></i></div>
+  <p class="hint" id="loadMsg">Not loaded yet.</p>
+  <p class="err" id="loadErr" hidden></p>
+  <div class="btns"><button id="btnSpeed" disabled>Run speed test</button></div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><h2>Camera</h2><span id="camState">Off</span></div>
+  <label>What should the agent watch for?
+    <input type="text" id="goal" value="a person" autocomplete="off">
+  </label>
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="ov"></canvas>
+    <div class="ph" id="ph">The camera starts when you press Start watching.</div>
+  </div>
+  <div class="flags" id="flags">
+    <span data-f="watch">Watching</span>
+    <span data-f="motion">Motion</span>
+    <span data-f="ai">AI reviewing</span>
+    <span data-f="saved">Event saved</span>
+    <span data-f="passed">Passed</span>
+  </div>
+  <div class="btns">
+    <button class="primary" id="btnStart">Start watching</button>
+    <button id="btnFlip">Switch camera</button>
+    <button id="btnSkel">Skeleton view</button>
+  </div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><h2>Body tracking</h2><span id="poseState">Off</span></div>
+  <p class="lede">Tracks 33 body joints many times a second, so a gesture like a wave is measured, not guessed. It uses a small model of a few MB. While it is on, gestures trigger reviews instead of general motion.</p>
+  <div class="row">
+    <label>Gesture to watch for
+      <select id="selGesture">
+        <option value="wave" selected>Wave</option>
+        <option value="raise">Raise a hand</option>
+        <option value="both">Both arms up</option>
+        <option value="any">Any of these</option>
+      </select>
+    </label>
+    <label>Swings needed for a wave
+      <select id="selSwings">
+        <option value="2">2</option><option value="3" selected>3</option><option value="4">4</option><option value="5">5</option>
+      </select>
+    </label>
+  </div>
+  <label>Line smoothing
+    <select id="selSmooth">
+      <option value="0">Off (raw tracker output)</option>
+      <option value="0.5" selected>Light</option>
+      <option value="0.7">Medium</option>
+      <option value="0.85">Strong (calmest, slight lag)</option>
+    </select>
+  </label>
+  <p class="hint">Smoothing only changes how the lines look. Gesture detection always uses the raw measurements.</p>
+  <label class="switch"><input type="checkbox" id="chkConfirm" checked> Ask the AI model to confirm each gesture (off saves instantly)</label>
+  <div class="btns"><button id="btnPose">Turn on body tracking</button></div>
+  <p class="hint">Body tracking uses Google's MediaPipe. Video is processed on this device; MediaPipe may send anonymous usage metrics to Google while online.</p>
+</section>
+
+<section class="card now" id="now">
+  <h2>Right now</h2>
+  <div class="head" id="nowHead">Idle</div>
+  <div class="pipe" id="pipe">
+    <div class="n" data-s="cam"><b>Cam</b>Camera</div>
+    <div class="n" data-s="motion"><b>Move</b>Motion check</div>
+    <div class="n" data-s="ai"><b>AI</b><span id="aiName">AI model</span></div>
+    <div class="n" data-s="tools"><b>Do</b>Tools</div>
+    <div class="n" data-s="saved"><b>Save</b>Saved</div>
+  </div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><h2>Agent log</h2><span id="logCount">0 steps</span></div>
+  <div class="log" id="log"></div>
+</section>
+
+<section class="card">
+  <div class="cardhead"><h2>Saved events</h2><span id="evCount">0</span></div>
+  <div class="events" id="events"><div class="empty">Events that match your goal appear here with the frames the AI used.</div></div>
+  <div class="btns">
+    <button id="btnReport">Download report</button>
+    <button id="btnClear">Clear events</button>
+  </div>
+  <p class="hint">Events stay until you close this tab. Download the report to keep them.</p>
+</section>
+
+<section class="card">
+  <h2>What the AI looked at</h2>
+  <div class="strip" id="strip"><p class="hint">Frames show up here when motion sends them to the AI.</p></div>
+</section>
+
+<section class="card">
+  <h2>Performance</h2>
+  <dl class="perf" id="perf"><dt>Status</dt><dd>Not started</dd></dl>
+</section>
+
+<section class="card">
+  <h2>Ask the agent</h2>
+  <div class="ask"><input type="text" id="askQ" placeholder="What happened so far?" autocomplete="off"><button class="primary" id="btnAsk">Ask</button></div>
+  <p class="hint">Try: What happened so far? When was the last event? What did you pass on, and why?</p>
+  <div class="answer" id="askA" hidden></div>
+</section>
+
+<details>
+  <summary>Settings</summary>
+  <div class="in">
+    <label>Motion sensitivity: trigger at
+      <select id="selSens">
+        <option value="0.08">Low, fastest</option>
+        <option value="0.04" selected>Medium</option>
+        <option value="0.015">High, slowest</option>
+      </select>
+    </label>
+    <label>Pause after each review
+      <select id="selPause">
+        <option value="0">None</option>
+        <option value="5" selected>5 seconds</option>
+        <option value="10">10 seconds</option>
+        <option value="30">30 seconds</option>
+      </select>
+    </label>
+    <label class="switch"><input type="checkbox" id="chkSpeak"> Read events aloud</label>
+    <div class="btns"><button id="btnDelete">Delete downloaded model</button></div>
+  </div>
+</details>
+
+</main>
+
+<script type="module">
+const TF_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.1";
+const MP_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+const POSE_MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+
+const MODELS = {
+  smol256: { id: "HuggingFaceTB/SmolVLM-256M-Instruct", label: "SmolVLM 256M, about 0.3 GB", note: "The smallest option and the safest first choice on phones. Works best with simple visual goals, like a person, a car or a dog." },
+  smol500: { id: "HuggingFaceTB/SmolVLM-500M-Instruct", label: "SmolVLM 500M, about 0.5 GB", note: "A bit more accurate than the 256M model, and slower. Try it once the small one works." }
+};
+
+const $ = (id) => document.getElementById(id);
+const S = {
+  T: null, proc: null, model: null, backend: null, dtype: null, loadMs: null, loading: false,
+  gpu: { ok: false, f16: false, name: "", maxBuf: 0 },
+  watching: false, busy: false, stream: null, facing: "environment",
+  events: [], looked: [], logs: [], passes: [], reviews: 0, last: { ms: 0, tps: 0, tokens: 0 },
+  pausedUntil: 0, prevGray: null, motionRun: 0, loop: null,
+  pose: null, poseOn: false, poseRaf: 0, poseT: 0, hist: { L: [], R: [] }, held: 0, smooth: null, skel: true
+};
+
+/* ---------- small helpers ---------- */
+const pad = (n) => String(n).padStart(2, "0");
+const clock = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; };
+const mb = (b) => (b / 1048576).toFixed(0) + " MB";
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const errText = (e) => String((e && (e.message || e)) || "Unknown error");
+
+function log(msg, kind = "") {
+  S.logs.unshift({ t: clock(), msg, kind });
+  if (S.logs.length > 80) S.logs.pop();
+  const box = $("log"); box.textContent = "";
+  for (const l of S.logs) {
+    const row = el("div", "e");
+    row.append(el("div", "t", l.t), el("div", "m " + l.kind, l.msg));
+    box.append(row);
+  }
+  $("logCount").textContent = S.logs.length + (S.logs.length === 1 ? " step" : " steps");
+}
+
+function setPill(id, text, cls) { const p = $(id); p.textContent = text; p.className = "pill " + (cls || ""); }
+function setCheck(id, cls, text) { const li = $(id); li.className = cls; li.lastElementChild.textContent = text; }
+function setBar(f) { $("barFill").style.width = Math.max(0, Math.min(100, f * 100)) + "%"; }
+function setMsg(t) { $("loadMsg").textContent = t; }
+function showErr(t) { const e = $("loadErr"); e.hidden = !t; e.textContent = t || ""; }
+
+const STEPS = ["cam", "motion", "ai", "tools", "saved"];
+function now(step, head) {
+  $("nowHead").textContent = head;
+  const idx = STEPS.indexOf(step);
+  document.querySelectorAll("#pipe .n").forEach((n) => {
+    const i = STEPS.indexOf(n.dataset.s);
+    n.className = "n" + (i === idx ? " on" : i < idx && idx >= 0 ? " done" : "");
+  });
+}
+function flag(name, cls = "on", ms = 1600) {
+  const f = document.querySelector(`#flags [data-f="${name}"]`);
+  if (!f) return; f.classList.add(cls);
+  if (ms) setTimeout(() => f.classList.remove(cls), ms);
+}
+function flagSet(name, on) { document.querySelector(`#flags [data-f="${name}"]`)?.classList.toggle("on", on); }
+
+/* ---------- device checks ---------- */
+async function runChecks() {
+  setCheck("chkSecure", isSecureContext ? "ok" : "bad", isSecureContext ? "Secure page. The camera can be used." : "Not a secure page. The camera needs https.");
+  try {
+    if (!navigator.gpu) throw new Error("WebGPU is not available in this browser.");
+    const a = await navigator.gpu.requestAdapter();
+    if (!a) throw new Error("No graphics adapter was found.");
+    const info = a.info || (a.requestAdapterInfo ? await a.requestAdapterInfo() : {});
+    S.gpu.name = [info.vendor, info.architecture].filter(Boolean).join(" ") || "graphics chip";
+    S.gpu.f16 = a.features.has("shader-f16");
+    S.gpu.maxBuf = a.limits.maxBufferSize;
+    S.gpu.ok = true;
+    setCheck("chkGpu", "ok", `WebGPU ready. ${S.gpu.name}, ${S.gpu.f16 ? "16-bit support" : "no 16-bit support"}, largest buffer ${mb(S.gpu.maxBuf)}.`);
+    setPill("pGpu", S.gpu.name, "ok");
+  } catch (e) {
+    setCheck("chkGpu", "warn", errText(e) + " The CPU will be used instead.");
+    setPill("pGpu", "No WebGPU", "warn");
+  }
+  try {
+    const est = await navigator.storage.estimate();
+    setCheck("chkStore", "ok", `Storage. ${mb(est.quota - est.usage)} available to this page.`);
+  } catch { setCheck("chkStore", "warn", "Storage size unknown."); }
+  netPill();
+}
+function netPill() { setPill("pNet", navigator.onLine ? "Online" : "Offline", navigator.onLine ? "" : "warn"); }
+addEventListener("online", netPill); addEventListener("offline", netPill);
+
+/* ---------- model ---------- */
+for (const [k, m] of Object.entries(MODELS)) { const o = el("option", "", m.label); o.value = k; $("selModel").append(o); }
+const showNote = () => { $("modelNote").textContent = MODELS[$("selModel").value].note; };
+$("selModel").onchange = showNote; showNote();
+
+async function ask(canvas, prompt, maxTokens = 48) {
+  const image = await S.T.RawImage.fromCanvas(canvas);
+  const messages = [{ role: "user", content: [{ type: "image" }, { type: "text", text: prompt }] }];
+  const text = S.proc.apply_chat_template(messages, { add_generation_prompt: true });
+  const inputs = await S.proc(text, [image], { do_image_splitting: false });
+  const t0 = performance.now();
+  const ids = await S.model.generate({ ...inputs, max_new_tokens: maxTokens, do_sample: false });
+  const fresh = ids.slice(null, [inputs.input_ids.dims.at(-1), null]);
+  const out = S.proc.batch_decode(fresh, { skip_special_tokens: true })[0].trim();
+  const ms = performance.now() - t0;
+  const tokens = fresh.dims.at(-1);
+  S.last = { ms, tokens, tps: tokens / (ms / 1000) };
+  return { text: out, ms, tokens };
+}
+
+async function dispose() {
+  try { await S.model?.dispose?.(); } catch {}
+  S.model = null; S.proc = null; S.backend = null;
+}
+
+async function attempt(plan, id) {
+  const files = {};
+  const cb = (d) => {
+    if (d.status === "progress" && d.file) {
+      files[d.file] = { l: d.loaded, t: d.total };
+      let l = 0, t = 0; for (const k in files) { l += files[k].l; t += files[k].t; }
+      if (t) { setBar(l / t); setMsg(`Downloading ${mb(l)} of ${mb(t)}`); }
+    }
+  };
+  setMsg(`Loading on ${plan.device === "webgpu" ? "the graphics chip" : "the CPU"} at ${plan.dtype}…`);
+  S.proc = await S.T.AutoProcessor.from_pretrained(id, { progress_callback: cb });
+  const dtype = { embed_tokens: plan.dtype, vision_encoder: plan.dtype, decoder_model_merged: plan.dtype };
+  S.model = await S.T.AutoModelForVision2Seq.from_pretrained(id, { dtype, device: plan.device, progress_callback: cb });
+  setBar(1);
+  setMsg(`Downloaded. Warming up ${plan.device === "webgpu" ? "the graphics chip (the first run compiles shaders)" : "the CPU"}…`);
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"); g.fillStyle = "#789"; g.fillRect(0, 0, 64, 64);
+  S.backend = plan.device === "webgpu" ? "GPU" : "CPU";
+  await ask(c, "Describe the image.", 2);   // proves the model really runs before we call it ready
+  S.dtype = plan.dtype;
+}
+
+async function loadModel(forceCpu = false) {
+  if (S.loading) return;
+  S.loading = true; $("btnLoad").disabled = true; showErr("");
+  setPill("pModel", "Loading…", "warn"); setBar(0);
+  const t0 = performance.now();
+  try {
+    if (!S.T) { setMsg("Loading the AI library…"); S.T = await import(TF_URL); }
+    S.T.env.allowLocalModels = false;
+  } catch (e) {
+    S.loading = false; $("btnLoad").disabled = false;
+    setPill("pModel", "Load failed", "bad");
+    showErr("Could not load the AI library. Check your connection and try again.\n" + errText(e));
+    log("AI library failed to load: " + errText(e), "bad");
+    return;
+  }
+  await dispose();
+  const run = forceCpu ? "cpu" : $("selRun").value;
+  const prec = $("selPrec").value;
+  const plans = [];
+  if (run !== "cpu" && S.gpu.ok) plans.push({ device: "webgpu", dtype: prec });
+  if (run !== "gpu" || !plans.length) plans.push({ device: "wasm", dtype: "q8" });
+  const id = MODELS[$("selModel").value].id;
+  let lastErr = null;
+  for (const plan of plans) {
+    try {
+      await attempt(plan, id);
+      S.loadMs = performance.now() - t0;
+      S.loading = false; $("btnLoad").disabled = false; $("btnSpeed").disabled = false;
+      setPill("pModel", `Ready · ${S.backend}`, "ok");
+      setMsg(`Ready on the ${S.backend === "GPU" ? "graphics chip" : "CPU"} (${S.dtype}). Loaded in ${(S.loadMs / 1000).toFixed(0)} s and cached for next time.`);
+      $("aiName").textContent = MODELS[$("selModel").value].label.split(",")[0];
+      log(`${MODELS[$("selModel").value].label.split(",")[0]} ready on ${S.backend} (${S.dtype}), ${(S.loadMs / 1000).toFixed(0)} s.`, "ok");
+      renderPerf();
+      return;
+    } catch (e) {
+      lastErr = e;
+      log(`Load on ${plan.device === "webgpu" ? "GPU" : "CPU"} (${plan.dtype}) failed: ${errText(e)}`, "bad");
+      await dispose();
+      if (plan !== plans[plans.length - 1]) { setMsg("The graphics chip failed. Trying the CPU instead…"); showErr(""); }
+    }
+  }
+  S.loading = false; $("btnLoad").disabled = false;
+  setPill("pModel", "Load failed", "bad");
+  setMsg("Loading failed.");
+  showErr(errText(lastErr) + (navigator.onLine ? "\n\nThe download finished but the model could not run. Try the CPU option under Run on, or a different precision." : "\n\nYou appear to be offline."));
+}
+
+$("btnLoad").onclick = () => loadModel(false);
+$("btnNoModel").onclick = () => {
+  setPill("pModel", "Motion only", "warn");
+  setMsg("Running without an AI model. Motion will save events directly.");
+  log("Running without the AI model. Motion events are saved without review.");
+};
+
+$("btnSpeed").onclick = async () => {
+  if (!S.model) return;
+  $("btnSpeed").disabled = true;
+  now("ai", "Speed test: writing a sentence");
+  try {
+    const c = document.createElement("canvas"); c.width = 384; c.height = 288;
+    const g = c.getContext("2d");
+    g.fillStyle = "#2a5d9f"; g.fillRect(0, 0, 384, 288);
+    g.fillStyle = "#f5c542"; g.beginPath(); g.arc(280, 80, 40, 0, 7); g.fill();
+    g.fillStyle = "#3da35d"; g.fillRect(0, 210, 384, 78);
+    const r = await ask(c, "Describe this image in one sentence.", 32);
+    log(`Speed test: ${r.tokens} tokens in ${(r.ms / 1000).toFixed(1)} s (${(r.tokens / (r.ms / 1000)).toFixed(1)} tokens/s). "${r.text}"`, "ok");
+  } catch (e) {
+    log("Speed test failed: " + errText(e), "bad");
+    await recover(e);
+  }
+  $("btnSpeed").disabled = !S.model;
+  now("cam", S.watching ? "Watching" : "Idle");
+  renderPerf();
+};
+
+async function recover(e) {
+  const msg = errText(e);
+  if (S.backend === "GPU" && /lost|OrtRun|mapAsync|device/i.test(msg)) {
+    log("The graphics chip stopped responding. Switching to the CPU…", "warn");
+    setPill("pModel", "Switching to CPU…", "warn");
+    await loadModel(true);
+  }
+}
+
+$("btnDelete").onclick = async () => {
+  await dispose();
+  try { for (const k of await caches.keys()) if (/transformers/i.test(k)) await caches.delete(k); } catch {}
+  setPill("pModel", "No model", ""); setMsg("Downloaded model deleted."); setBar(0);
+  $("btnSpeed").disabled = true;
+  log("Downloaded model deleted.");
+};
+
+/* ---------- performance ---------- */
+function renderPerf() {
+  const rows = [
+    ["Model", S.model ? MODELS[$("selModel").value].label.split(",")[0] : "None"],
+    ["Runs on", S.backend ? `${S.backend} (${S.dtype})` : "Not loaded"],
+    ["Load time", S.loadMs ? (S.loadMs / 1000).toFixed(0) + " s" : "—"],
+    ["Last review", S.last.ms ? (S.last.ms / 1000).toFixed(1) + " s" : "—"],
+    ["Speed", S.last.tps ? S.last.tps.toFixed(1) + " tokens/s" : "—"],
+    ["Reviews so far", String(S.reviews)]
+  ];
+  const d = $("perf"); d.textContent = "";
+  for (const [k, v] of rows) d.append(el("dt", "", k), el("dd", "", v));
+}
+renderPerf();
+
+/* ---------- camera ---------- */
+const video = $("video"), ov = $("ov");
+const grabC = document.createElement("canvas");
+const motC = document.createElement("canvas"); motC.width = 80; motC.height = 60;
+const motX = motC.getContext("2d", { willReadFrequently: true });
+
+async function startCamera() {
+  stopCamera();
+  S.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: S.facing, width: { ideal: 640 } }, audio: false });
+  video.srcObject = S.stream; await video.play();
+  video.classList.toggle("mirror", S.facing === "user"); ov.classList.toggle("mirror", S.facing === "user");
+  $("ph").hidden = true;
+  ov.width = video.videoWidth || 640; ov.height = video.videoHeight || 480;
+}
+function stopCamera() { S.stream?.getTracks().forEach((t) => t.stop()); S.stream = null; }
+
+$("btnStart").onclick = async () => {
+  if (S.watching) {
+    S.watching = false; clearInterval(S.loop); stopCamera();
+    $("btnStart").textContent = "Start watching"; $("camState").textContent = "Off"; $("ph").hidden = false;
+    flagSet("watch", false); now("cam", "Idle"); log("Stopped watching."); return;
+  }
+  try {
+    await startCamera();
+  } catch (e) {
+    log("Camera failed: " + errText(e) + " Allow camera access for this site and try again.", "bad"); return;
+  }
+  S.watching = true; S.prevGray = null; S.motionRun = 0;
+  $("btnStart").textContent = "Stop watching"; $("camState").textContent = "Live";
+  flagSet("watch", true); now("cam", "Watching");
+  log(`Watching for: ${$("goal").value.trim() || "any motion"}.`, "ok");
+  S.loop = setInterval(motionTick, 300);
+};
+$("btnFlip").onclick = async () => {
+  S.facing = S.facing === "environment" ? "user" : "environment";
+  if (S.stream) { try { await startCamera(); } catch (e) { log("Could not switch camera: " + errText(e), "bad"); } }
+};
+$("btnSkel").onclick = () => { S.skel = !S.skel; ov.style.display = S.skel ? "" : "none"; $("btnSkel").textContent = S.skel ? "Skeleton view" : "Skeleton hidden"; };
+
+function grab(w = 384) {
+  const vw = video.videoWidth || 640, vh = video.videoHeight || 480;
+  grabC.width = w; grabC.height = Math.round(w * vh / vw);
+  const g = grabC.getContext("2d");
+  if (S.facing === "user") { g.translate(w, 0); g.scale(-1, 1); }
+  g.drawImage(video, 0, 0, grabC.width, grabC.height);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const c = document.createElement("canvas"); c.width = grabC.width; c.height = grabC.height;
+  c.getContext("2d").drawImage(grabC, 0, 0);
+  return c;
+}
+
+/* ---------- motion ---------- */
+function motionTick() {
+  if (!S.watching || video.readyState < 2) return;
+  motX.drawImage(video, 0, 0, 80, 60);
+  const d = motX.getImageData(0, 0, 80, 60).data;
+  const gray = new Uint8Array(4800);
+  for (let i = 0, p = 0; i < d.length; i += 4, p++) gray[p] = (d[i] * 3 + d[i + 1] * 6 + d[i + 2]) / 10;
+  const prev = S.prevGray; S.prevGray = gray;
+  if (!prev || S.poseOn) return;
+  let changed = 0;
+  for (let i = 0; i < 4800; i++) if (Math.abs(gray[i] - prev[i]) > 25) changed++;
+  const frac = changed / 4800;
+  if (frac > parseFloat($("selSens").value)) {
+    S.motionRun++; flag("motion", "on", 700);
+    if (S.motionRun >= 2 && !S.busy && Date.now() > S.pausedUntil) { S.motionRun = 0; review("Motion detected", `Does this image show ${$("goal").value.trim() || "a person"}?`); }
+  } else S.motionRun = 0;
+}
+
+/* ---------- review and events ---------- */
+function addLooked(thumb, why) {
+  S.looked.unshift({ thumb, why, t: clock() }); if (S.looked.length > 8) S.looked.pop();
+  const s = $("strip"); s.textContent = "";
+  for (const l of S.looked) { const f = el("figure"); const i = el("img"); i.src = l.thumb; i.alt = ""; f.append(i, el("figcaption", "", `${l.t} ${l.why}`)); s.append(f); }
+}
+
+function saveEvent(thumb, text) {
+  now("tools", "Saving the event");
+  S.events.unshift({ time: new Date().toLocaleString(), text, thumb });
+  renderEvents(); flag("saved", "good", 2500); now("saved", "Event saved");
+  log("Event saved: " + text, "ok");
+  if ($("chkSpeak").checked && "speechSynthesis" in window) speechSynthesis.speak(new SpeechSynthesisUtterance(text));
+}
+function renderEvents() {
+  const box = $("events"); box.textContent = "";
+  $("evCount").textContent = S.events.length;
+  if (!S.events.length) { box.append(el("div", "empty", "Events that match your goal appear here with the frames the AI used.")); return; }
+  for (const e of S.events) {
+    const row = el("div", "ev"); const img = el("img"); img.src = e.thumb; img.alt = "Frame from the event";
+    const side = el("div"); side.append(el("div", "t", e.time), el("div", "", e.text));
+    row.append(img, side); box.append(row);
+  }
+}
+
+async function review(reason, prompt) {
+  if (S.busy) return;
+  S.busy = true;
+  const c = grab(384); const thumb = c.toDataURL("image/jpeg", 0.7);
+  addLooked(thumb, reason);
+  try {
+    if (!S.model) { saveEvent(thumb, reason + " (saved without AI review)"); return; }
+    now("ai", "AI reviewing the frame"); flag("ai", "on", 0);
+    const r = await ask(c, prompt + " Start your answer with YES or NO, then one short sentence about what you see.");
+    S.reviews++; renderPerf();
+    if (/^\s*yes/i.test(r.text)) saveEvent(thumb, r.text.replace(/^\s*yes[.,:!\s-]*/i, "").trim() || reason);
+    else {
+      S.passes.unshift({ t: clock(), why: r.text }); flag("passed", "on", 2500);
+      log("Passed: " + r.text);
+    }
+  } catch (e) {
+    log("Review failed: " + errText(e), "bad");
+    await recover(e);
+  } finally {
+    flagSet("ai", false);
+    const secs = parseInt($("selPause").value, 10);
+    S.pausedUntil = Date.now() + secs * 1000;
+    S.busy = false;
+    setTimeout(() => now("cam", S.watching ? "Watching" : "Idle"), 1800);
+  }
+}
+
+$("btnClear").onclick = () => { S.events = []; renderEvents(); log("Events cleared."); };
+$("btnReport").onclick = () => {
+  const rows = S.events.map((e) => `<article style="margin:0 0 24px"><img src="${e.thumb}" width="320"><h3>${esc(e.time)}</h3><p>${esc(e.text)}</p></article>`).join("");
+  const html = `<!doctype html><meta charset="utf-8"><title>Local Agent report</title><body style="font-family:system-ui,sans-serif;max-width:720px;margin:2rem auto;padding:0 1rem"><h1>Local Agent report</h1><p>Goal: ${esc($("goal").value)}</p>${rows || "<p>No events saved.</p>"}</body>`;
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+  a.download = "local-agent-report.html"; a.click();
+};
+
+/* ---------- ask the agent ---------- */
+$("btnAsk").onclick = () => {
+  const q = $("askQ").value.toLowerCase(); const n = S.events.length; let a;
+  if (/last|when|latest/.test(q)) a = n ? `The last event was saved at ${S.events[0].time}: ${S.events[0].text}` : "No events have been saved yet.";
+  else if (/pass|why|skip|ignor|reject/.test(q)) a = S.passes.length ? "Recent passes:\n" + S.passes.slice(0, 4).map((p) => `${p.t}  ${p.why}`).join("\n") : "I haven't passed on anything yet.";
+  else a = `${S.watching ? "Watching now" : "Not watching right now"}. ${S.reviews} AI review${S.reviews === 1 ? "" : "s"}, ${n} event${n === 1 ? "" : "s"} saved, ${S.passes.length} passed.` + (n ? `\nLast event: ${S.events[0].text}` : "");
+  const box = $("askA"); box.hidden = false; box.textContent = a;
+};
+
+/* ---------- body tracking ---------- */
+const BODY = { ls: 11, rs: 12, le: 13, re: 14, lw: 15, rw: 16 };
+let POSE_LINES = null;
+
+$("btnPose").onclick = async () => {
+  if (S.poseOn) { S.poseOn = false; cancelAnimationFrame(S.poseRaf); ov.getContext("2d").clearRect(0, 0, ov.width, ov.height); $("poseState").textContent = "Off"; $("btnPose").textContent = "Turn on body tracking"; log("Body tracking off."); return; }
+  $("btnPose").disabled = true; $("poseState").textContent = "Loading…";
+  try {
+    if (!S.pose) {
+      const V = await import(MP_URL);
+      const files = await V.FilesetResolver.forVisionTasks(MP_URL + "/wasm");
+      S.pose = await V.PoseLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: POSE_MODEL, delegate: "CPU" }, runningMode: "VIDEO", numPoses: 1 });
+      POSE_LINES = V.PoseLandmarker.POSE_CONNECTIONS;
+    }
+    S.poseOn = true; $("poseState").textContent = "On"; $("btnPose").textContent = "Turn off body tracking";
+    log("Body tracking on. Gestures now trigger reviews.", "ok");
+    poseLoop();
+  } catch (e) { $("poseState").textContent = "Off"; log("Body tracking failed: " + errText(e), "bad"); }
+  $("btnPose").disabled = false;
+};
+
+function poseLoop() {
+  if (!S.poseOn) return;
+  S.poseRaf = requestAnimationFrame(poseLoop);
+  const t = performance.now();
+  if (!S.watching || video.readyState < 2 || t - S.poseT < 66) return;
+  S.poseT = t;
+  let lm;
+  try { lm = S.pose.detectForVideo(video, t).landmarks?.[0]; } catch { return; }
+  drawSkeleton(lm);
+  if (lm) checkGesture(lm, t);
+}
+
+function drawSkeleton(lm) {
+  if (ov.width !== video.videoWidth && video.videoWidth) { ov.width = video.videoWidth; ov.height = video.videoHeight; }
+  const g = ov.getContext("2d"); g.clearRect(0, 0, ov.width, ov.height);
+  if (!lm || !S.skel) return;
+  const a = parseFloat($("selSmooth").value);
+  if (!S.smooth || S.smooth.length !== lm.length) S.smooth = lm.map((p) => ({ x: p.x, y: p.y }));
+  else lm.forEach((p, i) => { S.smooth[i].x = a * S.smooth[i].x + (1 - a) * p.x; S.smooth[i].y = a * S.smooth[i].y + (1 - a) * p.y; });
+  const P = S.smooth, W = ov.width, H = ov.height;
+  g.lineWidth = Math.max(2, W / 200); g.strokeStyle = "#7CCBFF"; g.fillStyle = "#5EE0A0";
+  for (const c of POSE_LINES || []) { g.beginPath(); g.moveTo(P[c.start].x * W, P[c.start].y * H); g.lineTo(P[c.end].x * W, P[c.end].y * H); g.stroke(); }
+  for (let i = 11; i < P.length; i++) { g.beginPath(); g.arc(P[i].x * W, P[i].y * H, g.lineWidth * 1.4, 0, 7); g.fill(); }
+}
+
+function reversals(h) {
+  let dir = 0, ext = h.length ? h[0].x : 0, n = 0;
+  for (const p of h) {
+    const d = p.x - ext;
+    if (dir >= 0 && d < -0.035) { if (dir === 1) n++; dir = -1; ext = p.x; }
+    else if (dir <= 0 && d > 0.035) { if (dir === -1) n++; dir = 1; ext = p.x; }
+    else if ((dir === 1 && p.x > ext) || (dir === -1 && p.x < ext)) ext = p.x;
+  }
+  return n;
+}
+
+function checkGesture(lm, t) {
+  const vis = (i) => (lm[i].visibility ?? 1) > 0.5;
+  const up = (w, s) => vis(w) && vis(s) && lm[w].y < lm[s].y - 0.05;
+  const raiseL = up(BODY.lw, BODY.ls), raiseR = up(BODY.rw, BODY.rs);
+  const mode = $("selGesture").value, need = parseInt($("selSwings").value, 10);
+  let waved = false;
+  for (const [side, w, e] of [["L", BODY.lw, BODY.le], ["R", BODY.rw, BODY.re]]) {
+    const h = S.hist[side];
+    if (vis(w) && vis(e) && lm[w].y < lm[e].y) h.push({ t, x: lm[w].x }); else h.length = 0;
+    while (h.length && t - h[0].t > 1500) h.shift();
+    if (reversals(h) >= need) waved = true;
+  }
+  let hit = null;
+  if ((mode === "wave" || mode === "any") && waved) hit = "waving";
+  else if ((mode === "both" || mode === "any") && raiseL && raiseR) hit = "raising both arms";
+  else if ((mode === "raise" || mode === "any") && (raiseL || raiseR)) hit = "raising a hand";
+  S.held = hit ? S.held + 1 : 0;
+  if (hit && S.held >= 4 && !S.busy && Date.now() > S.pausedUntil) {
+    S.held = 0; S.hist.L.length = 0; S.hist.R.length = 0;
+    flag("motion", "on", 900);
+    if ($("chkConfirm").checked && S.model) review(`Gesture measured: ${hit}`, `Is the person in this image ${hit}?`);
+    else {
+      const c = grab(384); const thumb = c.toDataURL("image/jpeg", 0.7); addLooked(thumb, `Gesture: ${hit}`);
+      saveEvent(thumb, `Body tracking measured: ${hit}.`);
+      S.pausedUntil = Date.now() + parseInt($("selPause").value, 10) * 1000;
+    }
+  }
+}
+
+/* ---------- start ---------- */
+now("cam", "Idle"); now("none", "Idle");
+document.querySelectorAll("#pipe .n").forEach((n) => (n.className = "n"));
+runChecks();
+</script>
+</body>
+</html>
