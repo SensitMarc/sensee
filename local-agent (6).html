@@ -1,0 +1,1485 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1A2B">
+<title>Local Agent</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👁️</text></svg>">
+<style>
+:root{
+  --ink:#0E1A2B; --panel:#16243A; --panel2:#1C2D47; --line:#26395A; --paper:#E8EEF6; --dim:#93A4BC;
+  --sodium:#FF9F1C; --signal:#FF4D6D; --glass:#7FD1FF; --leaf:#56D6A0; --violet:#B79CFF;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
+  --r:12px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ink);color:var(--paper);font:15px/1.45 var(--sans);
+  padding-top:env(safe-area-inset-top,0);padding-bottom:env(safe-area-inset-bottom,0)}
+button,input,select{font:inherit;color:inherit}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;cursor:pointer;min-height:44px}
+button:hover{border-color:var(--glass)}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--glass);color:var(--ink);border-color:var(--glass);font-weight:650}
+button.go{background:var(--leaf);color:var(--ink);border-color:var(--leaf);font-weight:650}
+button.stop{background:transparent;border-color:var(--signal);color:var(--signal);font-weight:650}
+button.quiet{background:transparent}
+:focus-visible{outline:2px solid var(--glass);outline-offset:2px}
+input[type=text],select{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+input[type=range]{width:100%;accent-color:var(--sodium)}
+h1,h2,h3{margin:0;letter-spacing:-.01em}
+h2{font-size:16px;font-weight:650}
+p{margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding:12px}
+header.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 0 12px}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand h1{font-size:20px;font-weight:700}
+.eye{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 50% 50%,var(--ink) 0 28%,var(--glass) 30% 52%,transparent 54%);border:2px solid var(--glass)}
+.eye.live{border-color:var(--signal);background:radial-gradient(circle at 50% 50%,var(--ink) 0 28%,var(--signal) 30% 52%,transparent 54%)}
+.pill{font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.pill.ok{color:var(--leaf);border-color:rgba(86,214,160,.5)}
+.pill.warn{color:var(--sodium);border-color:rgba(255,159,28,.5)}
+.pill.bad{color:var(--signal);border-color:rgba(255,77,109,.5)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media (min-width:960px){.grid{grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);align-items:start}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;min-width:0}
+.head{display:flex;align-items:baseline;gap:8px;margin-bottom:10px}
+.head .aside{margin-left:auto;color:var(--dim);font-size:13px}
+.muted{color:var(--dim)}
+.small{font-size:13px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row > *{flex:0 0 auto}
+.row .grow{flex:1 1 200px}
+
+/* setup */
+.setup h2{font-size:20px;margin-bottom:6px}
+.checks{display:grid;gap:8px;margin:12px 0}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px}
+.check b{font-weight:650}
+.dot{flex:none;width:10px;height:10px;border-radius:50%;margin-top:6px;background:var(--dim)}
+.dot.ok{background:var(--leaf)} .dot.warn{background:var(--sodium)} .dot.bad{background:var(--signal)}
+.bar{height:10px;background:var(--panel2);border-radius:999px;overflow:hidden;margin:12px 0 6px}
+.bar i{display:block;height:100%;width:0;background:var(--glass);transition:width .3s}
+.fields{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:12px 0}
+@media (min-width:560px){.fields{grid-template-columns:minmax(0,2fr) minmax(0,1fr)}}
+label.f{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--dim)}
+details summary{cursor:pointer;color:var(--dim);font-size:14px;padding:6px 0;min-height:32px}
+.slim{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+/* camera */
+.stage{position:relative;background:#000;border-radius:var(--r);overflow:hidden;aspect-ratio:4/3;display:flex;align-items:center;justify-content:center}
+.stage video{width:100%;height:100%;object-fit:cover;display:block}
+.stage .empty{position:absolute;inset:0;display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;text-align:center;padding:20px;color:var(--dim)}
+.tag{position:absolute;top:10px;padding:4px 8px;border-radius:8px;background:rgba(14,26,43,.75);font-size:12px;display:flex;gap:6px;align-items:center}
+.tag i{width:8px;height:8px;border-radius:50%;background:var(--signal);animation:blink 1.2s infinite}
+.meter{position:absolute;left:10px;right:10px;bottom:10px;height:6px;border-radius:999px;background:rgba(14,26,43,.7);overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:var(--sodium);transition:width .15s}
+.meter b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--paper)}
+.seis{display:block;width:100%;height:96px;margin-top:10px;border-radius:10px;background:var(--panel2)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--dim);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+.goal{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin-top:12px}
+@media (min-width:560px){.goal{grid-template-columns:minmax(0,1fr) auto}}
+
+/* now + pipeline */
+.now{border-left:3px solid var(--glass)}
+.now .state{font-size:18px;font-weight:650}
+.stream{font-family:var(--mono);font-size:12.5px;color:#CFE3F5;white-space:pre-wrap;word-break:break-word;margin-top:8px;min-height:20px;max-height:140px;overflow:auto}
+.pipe{position:relative;display:flex;justify-content:space-between;gap:4px;margin-top:14px}
+.pipe::before{content:"";position:absolute;left:10%;right:10%;top:22px;border-top:1px dashed var(--line)}
+.node{position:relative;z-index:1;flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0;text-align:center}
+.node .ic{width:44px;height:44px;border-radius:12px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;transition:border-color .2s,box-shadow .2s}
+.node .ic svg{width:22px;height:22px;stroke:var(--dim);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.node span{font-size:11.5px;color:var(--dim);line-height:1.2}
+.node.on .ic{border-color:var(--c);box-shadow:0 0 18px -4px var(--c)}
+.node.on .ic svg{stroke:var(--c)}
+.node.on span{color:var(--paper)}
+.packet{position:absolute;top:0;left:0;z-index:2;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:650;white-space:nowrap;background:var(--c);color:var(--ink);pointer-events:none}
+
+/* log */
+.log{list-style:none;margin:0;padding:0;max-height:300px;overflow:auto;font-size:13px}
+.log li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;padding:6px 0;border-bottom:1px solid rgba(38,57,90,.6)}
+.log li time{color:var(--dim);font-variant-numeric:tabular-nums}
+.log li p{border-left:3px solid var(--c);padding-left:8px;word-break:break-word}
+.log li.faint{opacity:.55}
+.log code{font-family:var(--mono);font-size:12px}
+
+/* events */
+.events{display:flex;flex-direction:column;gap:12px}
+.ev{border:1px solid rgba(255,77,109,.45);border-radius:var(--r);padding:12px;background:rgba(255,77,109,.06)}
+.ev h3{font-size:16px}
+.ev .when{color:var(--dim);font-size:13px;margin-top:2px}
+.thumbs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:10px 0}
+.thumbs img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px;display:block}
+.ev .saw{color:var(--dim);font-size:13px;margin-top:6px}
+.ev .row{margin-top:10px}
+.blank{border:1px dashed var(--line);border-radius:var(--r);padding:16px;color:var(--dim);font-size:14px;text-align:center}
+.looked{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.lk{position:relative;border-radius:8px;overflow:hidden;border:2px solid var(--line)}
+.lk img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.lk span{position:absolute;left:0;bottom:0;right:0;font-size:11px;padding:2px 6px;background:rgba(14,26,43,.78)}
+.lk.kept{border-color:var(--signal)}
+.lk.passed{opacity:.45}
+
+/* stats */
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.stat{background:var(--panel2);border-radius:10px;padding:10px 12px}
+.stat .l{font-size:12px;color:var(--dim)}
+.stat .v{font-size:20px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:2px}
+
+/* ask */
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.chips button{font-size:13px;padding:6px 12px;min-height:36px;border-radius:999px}
+.qa{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.qa .q{color:var(--dim);font-size:13px}
+.qa .a{background:var(--panel2);border-radius:10px;padding:10px 12px;margin-top:4px}
+.qa .a small{display:block;color:var(--dim);margin-top:6px}
+
+.hint{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(255,159,28,.1);border:1px solid rgba(255,159,28,.4)}
+.hint p{flex:1 1 220px;font-size:13px}
+.overlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.stage.skeleton{background-color:var(--ink);background-image:linear-gradient(rgba(127,209,255,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(127,209,255,.07) 1px,transparent 1px);background-size:32px 32px}
+.stage.skeleton video{opacity:0}
+button.on{border-color:var(--glass);color:var(--glass)}
+.gesture{left:50%;transform:translateX(-50%);top:44px;background:var(--sodium);color:var(--ink);font-weight:700;font-size:15px;padding:7px 14px;border-radius:999px;animation:pop .35s ease}
+@keyframes pop{from{transform:translateX(-50%) scale(.7);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+.pose-fields{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;margin:12px 0}
+@media (min-width:560px){.pose-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0));transform:translateX(-50%);background:var(--signal);color:var(--ink);font-weight:700;padding:12px 18px;border-radius:999px;z-index:20;display:none;max-width:90vw;text-align:center}
+.hide{display:none!important}
+@keyframes blink{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><div class="eye" id="eye" aria-hidden="true"></div><h1>Local Agent</h1></div>
+    <span class="pill ok">Runs in this browser</span>
+    <span class="pill" id="p-gpu">Checking graphics</span>
+    <span class="pill" id="p-net">Checking network</span>
+    <span class="pill" id="p-model">No model</span>
+  </header>
+
+  <!-- setup: big until the model is ready, then a slim bar -->
+  <section class="panel setup" id="setup">
+    <h2>Put an AI model on this device</h2>
+    <p class="muted">The model downloads once, then runs here on your graphics chip. After that the camera, the AI and every saved event stay on this device.</p>
+    <div class="checks" id="checks"></div>
+    <div class="fields">
+      <label class="f">Model, smallest to largest<select id="model-pick"></select><span class="small muted" id="model-note"></span></label>
+      <label class="f" id="dtype-wrap">Precision<select id="dtype"><option value="auto">Automatic</option><option value="q4f16">q4f16 (needs 16-bit GPU support)</option><option value="q4">q4</option></select></label>
+    </div>
+    <div class="row">
+      <button class="primary" id="load">Load model</button>
+      <button class="quiet" id="practice">Try without the model</button>
+    </div>
+    <div id="progress" class="hide">
+      <div class="bar"><i id="bar"></i></div>
+      <p class="small muted" id="progress-text">Starting</p>
+    </div>
+    <p class="small" id="setup-msg" role="status"></p>
+  </section>
+
+  <section class="panel slim hide" id="ready">
+    <span class="dot ok"></span>
+    <p class="grow" id="ready-text"></p>
+    <button class="quiet" id="speed-text">Text speed test</button>
+    <button class="quiet" id="speed-vision">Vision speed test</button>
+  </section>
+
+  <div class="grid" style="margin-top:14px">
+    <div class="col">
+      <section class="panel">
+        <div class="stage" id="stage">
+          <video id="video" playsinline muted autoplay></video>
+          <div class="empty" id="stage-empty">
+            <p>The camera starts when you press Start watching.</p>
+          </div>
+          <div class="tag hide" id="rec" style="left:10px"><i></i><span id="rec-text">Watching</span></div>
+          <div class="tag hide" id="clock" style="right:10px"></div>
+          <canvas class="overlay hide" id="pose-canvas" aria-hidden="true"></canvas>
+          <div class="tag gesture hide" id="gesture-tag"></div>
+          <div class="meter hide" id="meter"><i id="meter-fill"></i><b id="meter-thr"></b></div>
+        </div>
+        <canvas class="seis" id="seis" aria-label="Motion over the last minute"></canvas>
+        <div class="legend">
+          <span style="--c:var(--sodium)">motion</span><span style="--c:var(--glass)">AI reviewing</span>
+          <span style="--c:var(--signal)">event saved</span><span style="--c:#4A5D7C">passed</span>
+        </div>
+        <div class="hint hide" id="pose-hint"><p><b>This goal is about a gesture.</b> Without body tracking the AI only guesses from stills, so a head turn can look like a wave. Body tracking measures the hands, and head movements can't set it off.</p><button class="primary" id="pose-hint-btn">Turn on body tracking</button></div>
+        <div class="goal">
+          <input type="text" id="goal" value="Tell me when someone waves at the camera" aria-label="Goal">
+          <div class="row">
+            <button class="go" id="start">Start watching</button>
+            <button class="quiet" id="flip" title="Switch between front and back camera">Switch camera</button>
+            <button class="quiet" id="skeleton" aria-pressed="false" title="Hide the camera image and show only joints and lines">Skeleton view</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="pose-panel">
+        <div class="head"><h2>Body tracking</h2><span class="aside" id="pose-status">Off</span></div>
+        <p class="small muted">Tracks 33 body joints many times a second, so a gesture like a wave is measured, not guessed. It uses a tiny model of a few MB that runs alongside the AI, and even without one. While it is on, gestures, not general motion, trigger reviews.</p>
+        <div class="pose-fields">
+          <label class="f">Gesture to watch for
+            <select id="pose-gesture"><option value="wave">Wave</option><option value="raise">Raise a hand</option><option value="both">Both arms up</option><option value="any">Any of these</option></select></label>
+          <label class="f">Swings needed for a wave: <span id="swing-val"></span>
+            <input type="range" id="swings" min="2" max="6" value="3"></label>
+          <label class="f">Line smoothing
+            <select id="smooth"><option value="off">Off (raw tracker output)</option><option value="light">Light</option><option value="medium" selected>Medium</option><option value="strong">Strong (calmest, slight lag)</option></select></label>
+        </div>
+        <p class="small muted" style="margin:-4px 0 10px">Smoothing only changes how the lines look. Gesture detection always uses the raw measurements.</p>
+        <label class="row small"><input type="checkbox" id="pose-confirm" checked> Ask the AI model to confirm each gesture (off saves instantly)</label>
+        <div class="row" style="margin-top:10px"><button class="primary" id="pose-toggle">Turn on body tracking</button></div>
+        <p class="small muted" style="margin-top:8px">Body tracking uses Google's MediaPipe. Video is processed on this device; MediaPipe may send anonymous usage metrics to Google while online.</p>
+      </section>
+
+      <section class="panel now">
+        <div class="head"><h2>Right now</h2><span class="aside" id="now-aside"></span></div>
+        <p class="state" id="now-state">Idle</p>
+        <div class="stream" id="now-stream"></div>
+        <div class="pipe" id="pipe">
+          <div class="node" id="n-cam" style="--c:var(--signal)"><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 7h4l2-3h6l2 3h4v13H3z"/><circle cx="12" cy="13" r="4"/></svg></div><span>Camera</span></div>
+          <div class="node" id="n-motion" style="--c:var(--sodium)"><div class="ic"><svg viewBox="0 0 24 24"><path d="M2 12h4l3-7 4 14 3-7h6"/></svg></div><span>Motion check</span></div>
+          <div class="node" id="n-gemma" style="--c:var(--glass)"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l2.2 6.8L21 12l-6.8 2.2L12 21l-2.2-6.8L3 12l6.8-2.2z"/></svg></div><span>AI model</span></div>
+          <div class="node" id="n-tools" style="--c:var(--violet)"><div class="ic"><svg viewBox="0 0 24 24"><path d="M14 6l4 4M4 20l8-8M15 3l6 6-3 3-6-6z"/></svg></div><span>Tools</span></div>
+          <div class="node" id="n-saved" style="--c:var(--leaf)"><div class="ic"><svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3M8 14h8M8 17h5"/></svg></div><span>Saved</span></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="head"><h2>Agent log</h2><span class="aside" id="log-count"></span></div>
+        <ol class="log" id="log"></ol>
+      </section>
+    </div>
+
+    <div class="col">
+      <section class="panel">
+        <div class="head"><h2>Saved events</h2><span class="aside" id="ev-count">0</span></div>
+        <div class="events" id="events"><div class="blank">Events that match your goal appear here with the frames the AI used.</div></div>
+        <div class="row" style="margin-top:10px">
+          <button class="quiet" id="export" disabled>Download report</button>
+          <button class="quiet" id="clear" disabled>Clear events</button>
+        </div>
+        <p class="small muted" style="margin-top:8px">Events stay until you close this tab. Download the report to keep them.</p>
+      </section>
+
+      <section class="panel">
+        <div class="head"><h2>What the AI looked at</h2></div>
+        <div class="looked" id="looked"><div class="blank" style="grid-column:1/-1">Frames show up here when motion sends them to the AI.</div></div>
+      </section>
+
+      <section class="panel">
+        <div class="head"><h2>Performance</h2><span class="aside"><span class="pill" id="health">Not started</span></span></div>
+        <div class="stats" id="stats"></div>
+      </section>
+
+      <section class="panel">
+        <div class="head"><h2>Ask the agent</h2></div>
+        <div class="row"><input class="grow" type="text" id="question" placeholder="What has happened so far?" aria-label="Question"><button id="ask">Ask</button></div>
+        <div class="chips"><button>What happened so far?</button><button>When was the last event?</button><button>What did you pass on, and why?</button></div>
+        <div class="qa" id="qa"></div>
+      </section>
+
+      <section class="panel">
+        <details>
+          <summary>Settings</summary>
+          <div class="fields" style="grid-template-columns:minmax(0,1fr)">
+            <label class="f">Motion sensitivity: trigger at <span id="thr-val"></span>
+              <input type="range" id="thr" min="4" max="60" value="18"></label>
+            <label class="f">Image detail (Gemma only)
+              <select id="detail" title="Applies to Gemma only"><option value="70">Low, fastest</option><option value="140" selected>Medium</option><option value="280">High, slowest</option></select></label>
+            <label class="f">Pause after each review
+              <select id="cooldown"><option value="0">None</option><option value="5" selected>5 seconds</option><option value="10">10 seconds</option><option value="30">30 seconds</option></select></label>
+            <label class="row small"><input type="checkbox" id="closer" checked> Let the AI ask for two more frames when unsure</label>
+            <label class="row small"><input type="checkbox" id="voice"> Read events aloud</label>
+            <div class="row"><button class="quiet" id="remove-model">Delete downloaded model</button></div>
+            <p class="small muted" id="storage"></p>
+          </div>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script type="module">
+"use strict";
+const TJS_URL = "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1/dist/transformers.min.js";
+// Sizes are approximate download sizes. dtype(f16) picks file precisions based on 16-bit GPU support.
+const MODELS = {
+  "smol-256": {id: "HuggingFaceTB/SmolVLM-256M-Instruct", family: "smol", name: "SmolVLM 256M", gb: 0.3,
+    note: "Fastest and smallest. Rough answers, so keep goals very simple.",
+    dtype: () => ({embed_tokens: "fp32", vision_encoder: "q4", decoder_model_merged: "q4"})},
+  "lfm-450": {id: "onnx-community/LFM2-VL-450M-ONNX", family: "lfm", name: "LFM2-VL 450M", gb: 0.5,
+    note: "Liquid AI's small vision model, built for phones and other on-device use.",
+    dtype: (f16) => f16 ? {vision_encoder: "fp16", embed_tokens: "fp16", decoder_model_merged: "q4f16"}
+                        : {vision_encoder: "fp32", embed_tokens: "fp32", decoder_model_merged: "q4"}},
+  "smol-500": {id: "HuggingFaceTB/SmolVLM-500M-Instruct", family: "smol", name: "SmolVLM 500M", gb: 0.5,
+    note: "A safe first choice on phones.",
+    dtype: () => ({embed_tokens: "fp32", vision_encoder: "q4", decoder_model_merged: "q4"})},
+  "smol-2b": {id: "HuggingFaceTB/SmolVLM-Instruct", family: "smol", name: "SmolVLM 2.2B", gb: 1.5,
+    note: "Clearly smarter than the small SmolVLMs. Best on a computer or a high-end phone.",
+    dtype: (f16) => ({embed_tokens: f16 ? "fp16" : "fp32", vision_encoder: "q4", decoder_model_merged: "q4"})},
+  "lfm-1.6": {id: "LiquidAI/LFM2.5-VL-1.6B-ONNX", family: "lfm", name: "LFM2.5-VL 1.6B", gb: 1.7,
+    note: "A strong all-rounder for its size, and the best middle choice on a computer.",
+    dtype: (f16) => f16 ? {embed_tokens: "fp16", decoder_model_merged: "q4", vision_encoder: "fp16"}
+                        : {embed_tokens: "fp32", decoder_model_merged: "q4", vision_encoder: "fp32"}},
+  "lfm-3": {id: "LiquidAI/LFM2.5-VL-3B-ONNX", family: "lfm", name: "LFM2.5-VL 3B", gb: 2.6,
+    note: "Near Gemma in size. For computers with a good graphics chip.",
+    dtype: (f16) => f16 ? {embed_tokens: "fp16", decoder_model_merged: "q4", vision_encoder: "fp16"}
+                        : {embed_tokens: "fp32", decoder_model_merged: "q4", vision_encoder: "fp32"}},
+  "gemma": {id: "onnx-community/gemma-4-E2B-it-ONNX", family: "gemma", name: "Gemma 4 E2B", gb: 3,
+    note: "The smartest option and best at detailed goals.", dtype: null},
+};
+
+// ------------------------------------------------------------------ helpers
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const clock = (t) => new Date(t).toLocaleTimeString([], {hour12: false});
+const mb = (b) => (b / 1048576).toFixed(b > 1e9 ? 0 : 1);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const S = {
+  T: null, processor: null, model: null, mode: "none", // none | real | practice
+  family: "gemma", modelName: "Gemma", gpu: null, f16: false, maxBuf: 0, phone: /Android|iPhone|iPad/i.test(navigator.userAgent),
+  stream: null, facing: "environment", running: false, timer: null, wakeLock: null,
+  small: null, sctx: null, cap: null, cctx: null, prev: null,
+  level: 0, samples: [], buffer: [], lastCapture: 0, frames: 0, startedAt: 0,
+  ep: null, pending: null, busy: false, cooldownUntil: 0,
+  marks: [], events: [], looked: [], logN: 0,
+  perf: {episodes: 0, reviews: 0, shed: 0, reviewMs: [], tokS: [], ttft: [], delay: []},
+  chain: Promise.resolve(),
+  pose: {on: false, loading: false, landmarker: null, connections: [], raf: 0, last: 0, fps: 0, n: 0, fpsT: 0, people: 0,
+         hist: [], lastFire: 0, live: [], tagTimer: 0, skeleton: false, lastPeople: [], warned: false, filters: []},
+};
+const VISION_URL = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.1.0";
+const POSE_MODEL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task";
+const GESTURES = {wave: "Wave at the camera", raise: "Hand raised", both: "Both arms up"};
+
+// ------------------------------------------------------------------ UI bits
+function toast(text) {
+  const t = $("#toast"); t.textContent = text; t.style.display = "block";
+  clearTimeout(toast.h); toast.h = setTimeout(() => (t.style.display = "none"), 3500);
+}
+function pill(id, text, cls) { const p = $(id); p.textContent = text; p.className = "pill" + (cls ? " " + cls : ""); }
+function setNow(state, aside) { $("#now-state").textContent = state; if (aside !== undefined) $("#now-aside").textContent = aside; }
+function setStream(text) { const s = $("#now-stream"); s.textContent = text; s.scrollTop = s.scrollHeight; }
+
+const KIND = {camera: "var(--signal)", motion: "var(--sodium)", gemma: "var(--glass)", tool: "var(--violet)", saved: "var(--leaf)", system: "var(--dim)"};
+function log(kind, html, faint) {
+  const li = document.createElement("li");
+  if (faint) li.className = "faint";
+  li.innerHTML = `<time>${clock(Date.now())}</time><p style="--c:${KIND[kind] || KIND.system}">${html}</p>`;
+  const box = $("#log");
+  box.prepend(li);
+  while (box.children.length > 150) box.lastChild.remove();
+  S.logN++; $("#log-count").textContent = `${S.logN} steps`;
+}
+
+function nodeOn(id, on) { $("#n-" + id).classList.toggle("on", on); }
+function flash(id) { nodeOn(id, true); setTimeout(() => nodeOn(id, false), 800); }
+function packet(from, to, label, color) {
+  if (reduceMotion || document.hidden) return;
+  const pipe = $("#pipe"), a = $("#n-" + from + " .ic").getBoundingClientRect(), b = $("#n-" + to + " .ic").getBoundingClientRect(), p = pipe.getBoundingClientRect();
+  const el = document.createElement("div");
+  el.className = "packet"; el.style.setProperty("--c", color); el.textContent = label; pipe.appendChild(el);
+  const w = el.offsetWidth, h = el.offsetHeight, y = a.top + a.height / 2 - p.top - h / 2;
+  const x1 = a.left + a.width / 2 - p.left - w / 2, x2 = b.left + b.width / 2 - p.left - w / 2;
+  const anim = el.animate([{transform: `translate(${x1}px,${y}px)`, opacity: 0}, {opacity: 1, offset: .15}, {opacity: 1, offset: .85},
+    {transform: `translate(${x2}px,${y}px)`, opacity: 0}], {duration: 1000, easing: "ease-in-out"});
+  anim.onfinish = () => el.remove();
+}
+
+// ------------------------------------------------------------------ environment checks
+async function checkEnvironment() {
+  const rows = [];
+  const add = (cls, title, text) => rows.push(`<div class="check"><span class="dot ${cls}"></span><p><b>${title}</b> ${text}</p></div>`);
+  if (!window.isSecureContext) add("bad", "Camera blocked.", "Open this page over https (for example GitHub Pages) or from localhost. Browsers only allow the camera on secure pages.");
+  else add("ok", "Secure page.", "The camera can be used.");
+  if (!navigator.gpu) {
+    add("bad", "No WebGPU.", "Use Chrome 121 or newer on Android, or Chrome or Edge on a computer. Practice mode still works.");
+    pill("#p-gpu", "No WebGPU", "bad");
+  } else {
+    try {
+      const adapter = await navigator.gpu.requestAdapter({powerPreference: "high-performance"});
+      if (!adapter) throw new Error("no adapter");
+      const info = adapter.info || {};
+      S.gpu = [info.vendor, info.architecture || info.description].filter(Boolean).join(" ") || "GPU found";
+      S.f16 = adapter.features.has("shader-f16");
+      const maxBuf = adapter.limits?.maxBufferSize || 0;
+      S.maxBuf = maxBuf;
+      add("ok", "WebGPU ready.", `${esc(S.gpu)}${S.f16 ? ", 16-bit support" : ", no 16-bit support (q4 will be used)"}${maxBuf ? `, largest buffer ${mb(maxBuf)} MB` : ""}.`);
+      pill("#p-gpu", S.gpu.length > 26 ? "WebGPU ready" : S.gpu, "ok");
+    } catch (e) {
+      add("bad", "WebGPU found but no graphics adapter.", "Check chrome://gpu, or update Chrome.");
+      pill("#p-gpu", "No GPU adapter", "bad");
+    }
+  }
+  try {
+    const est = await navigator.storage?.estimate?.();
+    if (est?.quota) {
+      const free = (est.quota - (est.usage || 0));
+      add(free > 3e9 ? "ok" : "warn", "Storage.", `${mb(free)} MB available to this page${free > 3e9 ? "" : ". The model needs about 2 GB; free up space if loading fails"}.`);
+      $("#storage").textContent = `This page uses ${mb(est.usage || 0)} MB of storage, including any downloaded model.`;
+    }
+  } catch (_) { /* optional */ }
+  $("#checks").innerHTML = rows.join("");
+  pickDefaultModel();
+  updateNet();
+}
+
+function pickDefaultModel() {
+  if (pickDefaultModel.done) return;
+  pickDefaultModel.done = true;
+  const small = S.phone || (S.maxBuf && S.maxBuf <= 2 ** 31);
+  $("#model-pick").value = small ? "smol-500" : "gemma";
+  modelChanged();
+}
+
+function modelChanged() {
+  const m = MODELS[$("#model-pick").value];
+  $("#dtype-wrap").classList.toggle("hide", m.family !== "gemma");
+  const tooBig = (S.phone && m.gb > 1.6) || (S.maxBuf && S.maxBuf <= 2 ** 31 && m.gb > 2);
+  const simple = m.family !== "gemma" && m.gb < 1 ? " Works best with simple visual goals, like a person, a car or a dog." : "";
+  $("#model-note").textContent = m.note + simple + (tooBig ? " It may be too large for this device's browser." : "");
+}
+function updateNet() {
+  if (navigator.onLine) pill("#p-net", S.mode === "real" ? "Online, not needed now" : "Online", "");
+  else pill("#p-net", "Offline", "ok");
+}
+window.addEventListener("online", updateNet);
+window.addEventListener("offline", updateNet);
+
+// ------------------------------------------------------------------ model loading
+async function loadModel() {
+  const pick = MODELS[$("#model-pick").value];
+  const id = pick.id;
+  let dtype = $("#dtype").value;
+  if (dtype === "auto") dtype = S.f16 ? "q4f16" : "q4";
+  if (pick.family !== "gemma") dtype = pick.dtype(S.f16);
+  $("#model-pick").disabled = true;
+  $("#load").disabled = true; $("#practice").disabled = true;
+  $("#progress").classList.remove("hide");
+  $("#setup-msg").textContent = "";
+  const files = new Map();
+  const t0 = performance.now();
+  const onProgress = (p) => {
+    if (!p || !p.file) return;
+    if (p.status === "initiate" && !files.has(p.file)) files.set(p.file, {loaded: 0, total: 0});
+    if (p.status === "progress") files.set(p.file, {loaded: p.loaded || 0, total: p.total || 0});
+    if (p.status === "done") { const f = files.get(p.file); if (f) f.loaded = f.total || f.loaded; }
+    let loaded = 0, total = 0;
+    files.forEach((f) => { loaded += f.loaded; total += f.total; });
+    const secs = (performance.now() - t0) / 1000;
+    $("#bar").style.width = total ? `${Math.min(100, (100 * loaded) / total).toFixed(1)}%` : "3%";
+    $("#progress-text").textContent = total
+      ? `${mb(loaded)} of ${mb(total)} MB, ${(loaded / 1048576 / Math.max(secs, 0.1)).toFixed(1)} MB/s. Current file: ${p.file.split("/").pop()}`
+      : `Preparing ${p.file.split("/").pop()}`;
+  };
+  try {
+    $("#progress-text").textContent = "Loading the AI library";
+    S.T = S.T || await import(TJS_URL);
+    S.T.env.allowLocalModels = false;
+    S.processor = await S.T.AutoProcessor.from_pretrained(id, {progress_callback: onProgress});
+    const Cls = {gemma: S.T.Gemma4ForConditionalGeneration, smol: S.T.AutoModelForVision2Seq, lfm: S.T.AutoModelForImageTextToText}[pick.family];
+    S.model = await Cls.from_pretrained(id, {dtype, device: "webgpu", progress_callback: onProgress});
+    S.family = pick.family;
+    S.modelName = pick.name;
+    document.querySelectorAll(".node#n-gemma span").forEach((n) => (n.textContent = pick.name.split(" ")[0]));
+    $("#bar").style.width = "100%";
+    $("#progress-text").textContent = "Downloaded. Warming up the graphics chip (the first run compiles shaders)";
+    S.mode = "real";
+    applyDetail();
+    const w0 = performance.now();
+    await generate({text: "Reply with OK.", maxTokens: 2});
+    const loadSecs = ((performance.now() - t0) / 1000).toFixed(0);
+    const warmSecs = ((performance.now() - w0) / 1000).toFixed(1);
+    try { await navigator.storage?.persist?.(); } catch (_) { /* optional */ }
+    const dtypeText = typeof dtype === "string" ? dtype : (dtype.decoder_model_merged || "q4");
+    showReady(`${pick.name} ready (${dtypeText}). Loaded in ${loadSecs} s, first reply in ${warmSecs} s.`);
+    log("system", `${esc(pick.name)} loaded in ${loadSecs} s. It is cached, so next time it loads from this device.`);
+  } catch (e) {
+    console.error(e);
+    S.mode = "none";
+    const msg = String(e?.message || e);
+    let hint = "Check your connection and try again.";
+    if (/memory|OOM|allocat/i.test(msg)) hint = "The device ran out of graphics memory. Close other tabs and apps, choose Low image detail, and try again.";
+    else if (/q4f16|shader-f16|f16/i.test(msg)) hint = "Your GPU may not support q4f16. Set Precision to q4 and try again.";
+    else if (/404|not found|Could not locate/i.test(msg)) hint = "That model or precision isn't available. Check the model name, or try the other precision.";
+    $("#setup-msg").innerHTML = `<span style="color:var(--signal)">Loading failed: ${esc(msg.slice(0, 160))}</span><br>${hint}`;
+    $("#load").disabled = false; $("#practice").disabled = false; $("#model-pick").disabled = false;
+    pill("#p-model", "Load failed", "bad");
+  }
+}
+
+function applyDetail() {
+  if (S.family === "gemma" && S.processor?.image_processor) S.processor.image_processor.max_soft_tokens = Number($("#detail").value);
+}
+
+function showReady(text) {
+  $("#setup").classList.add("hide");
+  $("#ready").classList.remove("hide");
+  $("#ready-text").textContent = text;
+  pill("#p-model", S.mode === "real" ? `${S.modelName} ready` : "Practice mode", S.mode === "real" ? "ok" : "warn");
+  $("#speed-text").disabled = false; $("#speed-vision").disabled = false;
+  updateNet();
+}
+
+function startPractice() {
+  S.mode = "practice";
+  S.family = "gemma";
+  S.modelName = "Simulated AI";
+  showReady("Practice mode: the camera and motion check are real, but the AI's replies are simulated. Load the model to use real AI.");
+  log("system", "Practice mode on. Replies marked <b>simulated</b> do not come from a model.");
+}
+
+async function removeModel() {
+  try {
+    const ok = await caches.delete("transformers-cache");
+    toast(ok ? "Downloaded model deleted from this device" : "No downloaded model found");
+    checkEnvironment();
+  } catch (e) { toast("Could not delete the model: " + e.message); }
+}
+
+// ------------------------------------------------------------------ generation (one at a time)
+function withModel(fn) {
+  const run = S.chain.then(fn, fn);
+  S.chain = run.catch(() => {});
+  return run;
+}
+
+async function generate({images = [], text, maxTokens = 160, onText}) {
+  if (S.mode === "practice") return simulate({images, text, onText});
+  const {processor, model, T} = S;
+  const content = [...images.map(() => ({type: "image"})), {type: "text", text}];
+  const t0 = performance.now();
+  let inputs;
+  if (S.family === "gemma") {
+    const prompt = processor.apply_chat_template([{role: "user", content}], {enable_thinking: false, add_generation_prompt: true});
+    inputs = await processor(prompt, images.length ? images : null, null, {add_special_tokens: false});
+  } else if (S.family === "lfm") {
+    const prompt = processor.apply_chat_template([{role: "user", content}], {add_generation_prompt: true});
+    // LFM2-VL's processor takes images first and needs at least one image, so text-only prompts go to the tokenizer.
+    inputs = images.length ? await processor(images, prompt, {add_special_tokens: false}) : processor.tokenizer(prompt, {add_special_tokens: false});
+  } else {
+    const prompt = processor.apply_chat_template([{role: "user", content}], {add_generation_prompt: true});
+    // SmolVLM's processor crashes on prompts without an image, so text-only prompts go straight to the tokenizer.
+    inputs = images.length ? await processor(prompt, images, {do_image_splitting: false}) : processor.tokenizer(prompt);
+  }
+  let first = null, out = "";
+  const streamer = new T.TextStreamer(processor.tokenizer, {
+    skip_prompt: true, skip_special_tokens: true,
+    callback_function: (piece) => { if (first === null) first = performance.now(); out += piece; onText && onText(out); },
+  });
+  const extra = S.family === "lfm" ? {repetition_penalty: 1.08} : {};
+  const res = await model.generate({...inputs, ...extra, max_new_tokens: maxTokens, do_sample: false, streamer});
+  const t1 = performance.now();
+  const seq = res.sequences || res;
+  const newTok = Math.max(0, seq.dims.at(-1) - inputs.input_ids.dims.at(-1));
+  const ttft = ((first ?? t1) - t0) / 1000;
+  const tokS = first && newTok > 1 ? (newTok - 1) / ((t1 - first) / 1000) : 0;
+  return {text: out.trim(), newTok, ttft, tokS, seconds: (t1 - t0) / 1000, simulated: false};
+}
+
+async function simulate({images, text, onText}) {
+  const t0 = performance.now();
+  await sleep(500 + images.length * 350);
+  let reply;
+  if (text.startsWith("You watch a live camera")) {
+    const strong = /strength (\d+)/.exec(text) || (text.includes("body tracker") ? [0, "100"] : null);
+    const s = strong ? Number(strong[1]) : 0;
+    const second = text.includes("image C");
+    if (!second && s < 30 && $("#closer").checked && Math.random() < 0.5) reply = '{"see":"Something moved but it is blurry.","action":"look_closer","reason":"unsure"}';
+    else if (s >= 30 || (second && Math.random() < 0.5)) reply = '{"see":"A person moves in front of the camera.","action":"save_event","title":"Movement in front of the camera","summary":"Simulated reply: a person appears to move across the view.","frames":["A","B"],"reason":"simulated"}';
+    else reply = '{"see":"The scene looks unchanged apart from light flicker.","action":"dismiss","reason":"no match (simulated)"}';
+  } else if (text.startsWith("Reply with OK") || text.startsWith("Count")) {
+    reply = "OK";
+  } else {
+    reply = `Simulated answer: I saved ${S.events.length} event(s) so far. Load the model for real answers.`;
+  }
+  let out = "";
+  const first = performance.now();
+  for (const word of reply.split(/(?<=\s)/)) { out += word; onText && onText(out); await sleep(35); }
+  const t1 = performance.now();
+  return {text: reply, newTok: reply.length / 4, ttft: (first - t0) / 1000, tokS: 0, seconds: (t1 - t0) / 1000, simulated: true};
+}
+
+async function speedTest(kind) {
+  if (S.mode === "none") return;
+  if (kind === "vision" && !S.running) { toast("Start the camera first, then run the vision test"); return; }
+  const btn = kind === "vision" ? $("#speed-vision") : $("#speed-text");
+  btn.disabled = true;
+  setNow(kind === "vision" ? "Speed test: describing one camera frame" : "Speed test: writing a sentence", "");
+  try {
+    let images = [];
+    if (kind === "vision") {
+      const blob = await captureBlob();
+      images = [await S.T.RawImage.fromBlob(blob)];
+    }
+    const r = await withModel(() => generate({images, maxTokens: 48, onText: setStream,
+      text: kind === "vision" ? "Describe this image in one sentence." : "Count from one to fifteen in words, separated by commas."}));
+    const msg = r.simulated ? "Simulated, no real speed measured." :
+      `First word after ${r.ttft.toFixed(1)} s, then ${r.tokS.toFixed(1)} tokens per second, ${r.seconds.toFixed(1)} s total.`;
+    setNow(`${kind === "vision" ? "Vision" : "Text"} speed test done`, "");
+    log("gemma", `${kind === "vision" ? "Vision" : "Text"} speed test: ${msg}`);
+    toast(msg);
+    if (!r.simulated) { S.perf.ttft.push(r.ttft); if (r.tokS) S.perf.tokS.push(r.tokS); renderStats(); }
+  } catch (e) {
+    log("system", `<span style="color:var(--signal)">Speed test failed: ${esc(e.message)}</span>`);
+  }
+  btn.disabled = false;
+}
+
+// ------------------------------------------------------------------ camera and motion check
+async function startCamera() {
+  if (!window.isSecureContext) { toast("Open this page over https to use the camera"); return; }
+  if (S.mode === "none" && !S.pose.on) { toast("Load a model, turn on body tracking, or choose Try without the model, first"); return; }
+  try {
+    S.stream = await navigator.mediaDevices.getUserMedia({video: {facingMode: {ideal: S.facing}, width: {ideal: 1280}, height: {ideal: 720}}, audio: false});
+  } catch (e) {
+    toast("Camera not available: " + (e.name === "NotAllowedError" ? "permission was denied" : e.message));
+    return;
+  }
+  const v = $("#video");
+  v.srcObject = S.stream;
+  await v.play().catch(() => {});
+  await new Promise((r) => (v.videoWidth ? r() : v.addEventListener("loadedmetadata", r, {once: true})));
+  const ar = v.videoHeight / v.videoWidth || 0.75;
+  $("#stage").style.aspectRatio = `${v.videoWidth} / ${v.videoHeight}`;
+  S.small = Object.assign(document.createElement("canvas"), {width: 64, height: Math.max(16, Math.round(64 * ar))});
+  S.sctx = S.small.getContext("2d", {willReadFrequently: true});
+  S.cap = Object.assign(document.createElement("canvas"), {width: 512, height: Math.round(512 * ar)});
+  S.cctx = S.cap.getContext("2d");
+  S.prev = null; S.samples = []; S.buffer = []; S.frames = 0; S.startedAt = Date.now();
+  S.running = true;
+  S.timer = setInterval(tick, 200);
+  try { S.wakeLock = await navigator.wakeLock?.request("screen"); } catch (_) { /* optional */ }
+  $("#stage-empty").classList.add("hide");
+  ["#rec", "#clock", "#meter"].forEach((s) => $(s).classList.remove("hide"));
+  $("#eye").classList.add("live");
+  $("#start").textContent = "Stop watching"; $("#start").className = "stop";
+  nodeOn("cam", true);
+  setNow("Watching", "");
+  if (S.pose.on) startPoseLoop();
+  log("camera", `Camera on (${v.videoWidth}×${v.videoHeight}). Goal: <b>${esc($("#goal").value)}</b>`);
+}
+
+function stopCamera() {
+  clearInterval(S.timer);
+  S.running = false;
+  stopPoseLoop();
+  S.stream?.getTracks().forEach((t) => t.stop());
+  S.stream = null;
+  try { S.wakeLock?.release(); } catch (_) { /* optional */ }
+  $("#stage-empty").classList.remove("hide");
+  ["#rec", "#clock", "#meter"].forEach((s) => $(s).classList.add("hide"));
+  $("#eye").classList.remove("live");
+  $("#start").textContent = "Start watching"; $("#start").className = "go";
+  nodeOn("cam", false);
+  setNow(S.busy ? "Finishing the last review" : "Idle", "");
+  log("camera", "Camera off.");
+}
+
+document.addEventListener("visibilitychange", async () => {
+  if (!document.hidden && S.running) { try { S.wakeLock = await navigator.wakeLock?.request("screen"); } catch (_) { /* optional */ } }
+  if (document.hidden && S.running) log("system", "This tab went to the background. Browsers pause pages they can't see, so keep it in front while watching.", true);
+});
+
+function captureBlob() {
+  const v = $("#video");
+  S.cctx.drawImage(v, 0, 0, S.cap.width, S.cap.height);
+  return new Promise((r) => S.cap.toBlob(r, "image/jpeg", 0.82));
+}
+
+function tick() {
+  const v = $("#video");
+  if (!S.running || v.readyState < 2) return;
+  const now = Date.now();
+  const {small, sctx} = S;
+  sctx.drawImage(v, 0, 0, small.width, small.height);
+  const d = sctx.getImageData(0, 0, small.width, small.height).data;
+  const n = small.width * small.height;
+  const gray = new Uint8ClampedArray(n);
+  for (let i = 0, j = 0; i < n; i++, j += 4) gray[i] = (d[j] * 77 + d[j + 1] * 150 + d[j + 2] * 29) >> 8;
+  let level = 0;
+  if (S.prev) {
+    let sum = 0;
+    for (let i = 0; i < n; i++) sum += Math.abs(gray[i] - S.prev[i]);
+    level = Math.min(100, (sum / n) * 4);
+  }
+  S.prev = gray;
+  S.level = S.level * 0.4 + level * 0.6;
+  S.frames++;
+  S.samples.push({t: now, v: S.level});
+  while (S.samples.length && now - S.samples[0].t > 62000) S.samples.shift();
+  if (now - S.lastCapture >= 500) {
+    S.lastCapture = now;
+    const people = S.pose.on ? S.pose.lastPeople : null;
+    captureBlob().then((blob) => { if (blob) { S.buffer.push({t: now, blob, people}); while (S.buffer.length > 50) S.buffer.shift(); } });
+  }
+  motion(now);
+  const thr = Number($("#thr").value);
+  $("#meter-fill").style.width = `${S.level}%`;
+  $("#meter-thr").style.left = `${thr}%`;
+  $("#clock").textContent = clock(now);
+  $("#rec-text").textContent = (S.busy ? `${S.modelName} reviewing` : "Watching") + (S.pose.skeleton ? ", skeleton view" : "");
+  drawSeis(now);
+  if (S.frames % 5 === 0) renderStats();
+}
+
+function nearest(t) {
+  let best = null;
+  for (const f of S.buffer) if (!best || Math.abs(f.t - t) < Math.abs(best.t - t)) best = f;
+  return best;
+}
+
+function motion(now) {
+  if (S.pose.on) return;
+  const thr = Number($("#thr").value);
+  if (!S.ep) {
+    if (S.level >= thr && now >= S.cooldownUntil) {
+      S.ep = {start: now, peak: S.level, peakT: now, lastAbove: now};
+      S.marks.push({start: now, end: now, status: "motion", ep: S.ep});
+      nodeOn("motion", true);
+    }
+    return;
+  }
+  const ep = S.ep;
+  if (S.level > ep.peak) { ep.peak = S.level; ep.peakT = now; }
+  if (S.level >= thr) ep.lastAbove = now;
+  const mark = S.marks.find((m) => m.ep === ep);
+  if (mark) mark.end = now;
+  if (now - ep.lastAbove > 1200 || now - ep.start > 6000) {
+    S.ep = null;
+    nodeOn("motion", false);
+    if (now - ep.peakT < 1400) { setTimeout(() => closeEpisode(ep, mark), 1500 - (now - ep.peakT)); }
+    else closeEpisode(ep, mark);
+  }
+}
+
+function closeEpisode(ep, mark) {
+  const pick = (t) => nearest(t);
+  const A = pick(ep.peakT), B = pick(ep.peakT + 1500), C = pick(ep.peakT - 800), D = pick(ep.lastAbove);
+  if (!A || !B) return;
+  ep.frames = {A, B, C: C || A, D: D || B};
+  ep.closed = Date.now();
+  ep.mark = mark;
+  ep.id = ++S.perf.episodes;
+  packet("cam", "motion", "frames", "var(--signal)");
+  flash("motion");
+  if (S.busy) {
+    if (S.pending) {
+      const loser = S.pending.peak >= ep.peak ? ep : S.pending;
+      S.pending = loser === ep ? S.pending : ep;
+      loser.mark && (loser.mark.status = "passed");
+      S.perf.shed++;
+      log("motion", `Motion #${loser.id} skipped: ${S.modelName} is busy and another clip moved more.`, true);
+    } else {
+      S.pending = ep;
+    }
+    if (mark && S.pending === ep) mark.status = "queued";
+    log("motion", `Motion #${ep.id} at ${clock(ep.peakT)}, strength ${Math.round(ep.peak)}. Waiting for ${S.modelName}.`);
+    return;
+  }
+  review(ep);
+}
+
+// ------------------------------------------------------------------ the agent: the model reviews a motion clip
+function decisionPrompt(goal, ep, second, saw) {
+  const format = '{"see":"one short sentence about what the images show","action":"save_event or look_closer or dismiss","title":"3 to 6 words, only for save_event","summary":"1 or 2 factual sentences, only for save_event","frames":["A","B"],"reason":"a few words"}';
+  if (!second) {
+    return `You watch a live camera for this goal: "${goal}".\n` +
+      (ep.pose ? `At ${clock(ep.peakT)} a body tracker measured: ${ep.pose.detail} (strength 100). Image A was taken during that gesture and image B 1.5 seconds later.\n`
+               : `Motion was detected at ${clock(ep.peakT)} (strength ${Math.round(ep.peak)}). Image A was taken at the moment of strongest motion and image B 1.5 seconds later.\n`) +
+      `Reply with only a JSON object, no other text:\n${format}\n` +
+      `Rules: use save_event only if the images clearly show something that matches the goal. Use look_closer if it might match but you are unsure. Use dismiss if it does not match. Describe only what you can see.${isGestureGoal(goal) ? " " + LOOKALIKES : ""}`;
+  }
+  return `You watch a live camera for this goal: "${goal}".\n` +
+    `Earlier you looked at images A and B of this motion and said: "${saw}". Now you see image C, taken just before the strongest motion, and image D, taken as the motion ended.\n` +
+    `Decide now: save_event or dismiss. Reply with only a JSON object, no other text:\n${format}\n` +
+    `The frames list may include A, B, C or D. Use save_event only if the images clearly match the goal.`;
+}
+
+const GESTURE_RULES = [
+  {re: /\bwav(e|es|ed|ing)\b|\bhello\b|\bgreet/i, words: ["wav", "hand", "arm", "palm", "finger", "greet", "hello", "raised", "raising", "lift"]},
+  {re: /\b(rais\w*|lift\w*)\b.*\b(hand|arm)|\b(hand|arm)s?\b.*\b(rais|lift|up)\b/i, words: ["hand", "arm", "rais", "lift", "palm", "finger"]},
+  {re: /\bthumb/i, words: ["thumb"]},
+  {re: /\bclap/i, words: ["clap", "hands"]},
+  {re: /\bpoint(s|ing)?\b/i, words: ["point", "finger"]},
+];
+function gestureWords(goal) {
+  const set = new Set();
+  GESTURE_RULES.forEach((r) => { if (r.re.test(goal)) r.words.forEach((x) => set.add(x)); });
+  return [...set];
+}
+const isGestureGoal = (goal) => gestureWords(goal).length > 0;
+// A real "yes" about a hand gesture has to mention the hands or arms somewhere in its own description.
+function grounded(goal, see) {
+  const words = gestureWords(goal);
+  if (!words.length) return true;
+  const t = String(see).toLowerCase();
+  return words.some((w) => t.includes(w));
+}
+const LOOKALIKES = "Head movements, nodding, turning the head, scratching, touching the face and fixing hair are NOT gestures.";
+
+function updatePoseHint() {
+  $("#pose-hint").classList.toggle("hide", S.pose.on || !isGestureGoal($("#goal").value));
+}
+
+function smolPrompt(goal, ep, second, saw) {
+  const gesture = isGestureGoal(goal);
+  const label = gesture ? "HANDS" : "SEE";
+  const ask = gesture ? "First describe what the person's hands and arms are doing." : "First describe what you see.";
+  const form = `Reply in exactly this form:\n${label}: <one short sentence>\nANSWER: YES or NO or MAYBE`;
+  const rule = gesture ? `${LOOKALIKES} Answer YES only if you can clearly see it. If unsure, answer NO.\n` : "Answer YES only if you can clearly see it. If unsure, answer NO.\n";
+  if (second) {
+    return `Goal: ${goal}\nEarlier you said: "${saw}". These are two more images of the same moment.\n${rule}${ask}\n${form.replace(" or MAYBE", "")}`;
+  }
+  if (ep.pose) {
+    return `These two images come from a camera at ${clock(ep.peakT)}, taken 1.5 seconds apart. A body tracker measured: ${ep.pose.detail}.\nGoal: ${goal}\n${rule}${ask}\n${form}`;
+  }
+  return `These two images come from a camera, taken 1.5 seconds apart at ${clock(ep.peakT)}.\nGoal: ${goal}\n${rule}${ask}\n${form}`;
+}
+
+function parseSmol(text, goal) {
+  const t = String(text).trim();
+  const ans = t.match(/answer\s*[:\-]\s*\**\s*(yes|no|maybe)\b/i);
+  const m = ans || t.match(/\b(yes|no|maybe)\b/i);
+  const word = m ? m[1].toLowerCase() : "no";
+  const lab = t.match(/(?:hands|see|what)\s*:\s*([\s\S]*?)(?=\s*\banswer\b|$)/i);
+  const body = ans && lab ? lab[1] : t.replace(/^[^a-z]*\b(yes|no|maybe)\b[\s.,:;!-]*/i, "");
+  const see = body.replace(/\s+/g, " ").trim().slice(0, 240) || t.slice(0, 240);
+  const g = goal.replace(/^(tell me|let me know|alert me|report|notify me)\s+(when|if)\s+/i, "");
+  return {
+    see: see.charAt(0).toUpperCase() + see.slice(1), reason: m ? `answered ${word}` : "no clear yes or no",
+    action: word === "yes" ? "save_event" : word === "maybe" ? "look_closer" : "dismiss",
+    title: (g.charAt(0).toUpperCase() + g.slice(1)).slice(0, 60) || "Matching event",
+    summary: see, frames: [], unparsed: !m,
+  };
+}
+
+function parseDecision(text) {
+  const m = String(text).match(/\{[\s\S]*\}/);
+  let o = null;
+  if (m) {
+    for (const cand of [m[0], m[0].replace(/,\s*([}\]])/g, "$1"), m[0].replace(/'/g, '"')]) {
+      try { o = JSON.parse(cand); break; } catch (_) { /* try next */ }
+    }
+  }
+  if (!o) {
+    const low = String(text).toLowerCase();
+    o = {see: String(text).replace(/\s+/g, " ").slice(0, 160),
+      action: low.includes("save_event") ? "save_event" : low.includes("look_closer") ? "look_closer" : "dismiss",
+      reason: "reply was not valid JSON", unparsed: true};
+  }
+  const act = String(o.action || "").toLowerCase();
+  o.action = act.includes("save") ? "save_event" : act.includes("closer") || act.includes("look") ? "look_closer" : "dismiss";
+  o.see = String(o.see || "").slice(0, 240);
+  o.title = String(o.title || "").trim().slice(0, 80) || "Matching event";
+  o.summary = String(o.summary || "").trim().slice(0, 400) || o.see;
+  o.frames = (Array.isArray(o.frames) ? o.frames : String(o.frames || "").split(/[^A-D]+/i))
+    .map((f) => String(f).trim().toUpperCase()).filter((f) => ["A", "B", "C", "D"].includes(f));
+  return o;
+}
+
+function showLooked(ep, letters) {
+  for (const L of letters) {
+    const f = ep.frames[L];
+    if (!f.url) f.url = URL.createObjectURL(f.blob);
+    S.looked.unshift({ep: ep.id, letter: L, url: ep.skeleton && f.skelUrl ? f.skelUrl : f.url, t: f.t, state: ""});
+  }
+  S.looked = S.looked.slice(0, 8);
+  renderLooked();
+}
+function markLooked(epId, kept) {
+  S.looked.forEach((l) => { if (l.ep === epId && !l.state) l.state = kept.includes(l.letter) ? "kept" : "passed"; });
+  renderLooked();
+}
+function renderLooked() {
+  $("#looked").innerHTML = S.looked.length ? S.looked.map((l) =>
+    `<div class="lk ${l.state}"><img src="${l.url}" alt="Frame ${l.letter} of motion ${l.ep}"><span>#${l.ep} ${l.letter}, ${clock(l.t)}</span></div>`).join("")
+    : '<div class="blank" style="grid-column:1/-1">Frames show up here when motion sends them to the AI.</div>';
+}
+
+async function review(ep) {
+  S.busy = true;
+  if (ep.mark) ep.mark.status = "reviewing";
+  const goal = $("#goal").value.trim() || "Report anything unusual";
+  const started = Date.now();
+  let decision = null, turns = 0;
+  if (S.pose.skeleton) await prepareSkeletons(ep);
+  try {
+    if (ep.pose && (S.mode === "none" || !$("#pose-confirm").checked)) {
+      ep.instant = true;
+      showLooked(ep, ["A", "B"]);
+      decision = {action: "save_event", title: ep.pose.title, summary: `${ep.pose.detail} at ${clock(ep.peakT)}.`,
+        see: "Measured by body tracking only, no AI check.", frames: ["A", "B"], reason: ""};
+      log("motion", `Body tracker: <b>${esc(ep.pose.title)}</b>. Saving without an AI check.`);
+    } else {
+    packet("motion", "gemma", ep.pose ? ep.pose.short : `motion #${ep.id}`, "var(--sodium)");
+    nodeOn("gemma", true);
+    log("motion", ep.pose ? `${esc(ep.pose.title)} at ${clock(ep.peakT)}: ${esc(ep.pose.detail)}. Asking ${S.modelName} to confirm.`
+      : `Motion #${ep.id} at ${clock(ep.peakT)}, strength ${Math.round(ep.peak)}. Sending frames A and B to ${S.modelName}.`);
+    setNow(`${S.modelName} is looking at motion #${ep.id}`, `strength ${Math.round(ep.peak)}`);
+    showLooked(ep, ["A", "B"]);
+    let images = await Promise.all(["A", "B"].map((L) => S.mode === "real" ? S.T.RawImage.fromBlob(ep.frames[L].blob) : null));
+    const smol = S.mode === "real" && S.family !== "gemma";
+    const promptFor = (second, saw) => (smol ? smolPrompt : decisionPrompt)(goal, ep, second, saw);
+    const decide = (text) => (smol ? parseSmol(text, goal) : parseDecision(text));
+    let r = await withModel(() => generate({images: S.mode === "real" ? images : [1, 2], text: promptFor(false), onText: setStream}));
+    turns++;
+    recordPerf(r);
+    const vet = (d) => {
+      if (S.mode === "real" && !ep.pose && d.action === "save_event" && !grounded(goal, d.see)) {
+        log("gemma", `Rechecked: the answer was yes, but the description “${esc(d.see)}” never mentions a hand or arm, so it was treated as no.`, true);
+        d.action = "dismiss"; d.reason = "description did not mention a hand or arm";
+      }
+      return d;
+    };
+    decision = decide(r.text);
+    log("gemma", `Replied in ${r.seconds.toFixed(1)} s${r.simulated ? " (simulated)" : `, ${r.tokS.toFixed(1)} tok/s`}: “${esc(decision.see)}” → <b>${decision.action}</b>${decision.unparsed ? " (no clear answer, read as text)" : ""}`);
+    vet(decision);
+
+    if (decision.action === "look_closer") {
+      if ($("#closer").checked) {
+        nodeOn("gemma", false); nodeOn("tools", true);
+        packet("gemma", "tools", "look_closer", "var(--glass)");
+        log("tool", `${S.modelName} called <code>look_closer()</code>: fetching frames C and D from the camera buffer.`);
+        showLooked(ep, ["C", "D"]);
+        await sleep(300);
+        nodeOn("tools", false); nodeOn("gemma", true);
+        packet("tools", "gemma", "2 frames", "var(--violet)");
+        setNow(`${S.modelName} is taking a closer look at motion #${ep.id}`);
+        images = await Promise.all(["C", "D"].map((L) => S.mode === "real" ? S.T.RawImage.fromBlob(ep.frames[L].blob) : null));
+        r = await withModel(() => generate({images: S.mode === "real" ? images : [1, 2], text: promptFor(true, decision.see), onText: setStream}));
+        turns++;
+        recordPerf(r);
+        decision = decide(r.text);
+        if (decision.action === "look_closer") decision.action = "dismiss";
+        log("gemma", `Second look in ${r.seconds.toFixed(1)} s: “${esc(decision.see)}” → <b>${decision.action}</b>`);
+        vet(decision);
+      } else {
+        decision.action = "dismiss";
+      }
+    }
+    nodeOn("gemma", false);
+    }
+
+    const kept = decision.action === "save_event" ? (decision.frames.length ? decision.frames : ["A", "B"]) : [];
+    markLooked(ep.id, kept);
+    if (decision.action === "save_event") {
+      nodeOn("tools", true);
+      packet("gemma", "tools", "save_event", "var(--glass)");
+      log("tool", `${ep.instant ? "Body tracker" : S.modelName} called <code>save_event(title="${esc(decision.title)}", frames=[${kept.join(", ")}])</code>`);
+      await sleep(250);
+      saveEvent(ep, decision, kept, Date.now() - started);
+      nodeOn("tools", false);
+      packet("tools", "saved", "event", "var(--violet)");
+      flash("saved");
+      if (ep.mark) ep.mark.status = "event";
+      setNow(`Saved: ${decision.title}`, "");
+    } else {
+      if (ep.mark) ep.mark.status = "passed";
+      log("gemma", `Passed on motion #${ep.id}: ${esc(decision.reason || "no match")}.`, true);
+      setNow(S.running ? "Watching" : "Idle", "");
+    }
+  } catch (e) {
+    console.error(e);
+    if (ep.mark) ep.mark.status = "passed";
+    log("system", `<span style="color:var(--signal)">Review failed: ${esc(e.message)}</span>`);
+    setNow("Review failed, still watching", "");
+  }
+  const ms = Date.now() - started;
+  S.perf.reviews++;
+  S.perf.reviewMs.push(ms);
+  S.perf.delay.push(Date.now() - ep.lastAbove);
+  S.busy = false;
+  S.cooldownUntil = Date.now() + Number($("#cooldown").value) * 1000;
+  renderStats();
+  if (S.pending) { const next = S.pending; S.pending = null; review(next); }
+}
+
+function recordPerf(r) {
+  if (r.simulated) return;
+  S.perf.ttft.push(r.ttft);
+  if (r.tokS) S.perf.tokS.push(r.tokS);
+}
+
+// ------------------------------------------------------------------ events
+function saveEvent(ep, d, kept, reviewMs) {
+  const ev = {id: S.events.length + 1, at: ep.peakT, title: d.title, summary: d.summary, see: d.see, goal: $("#goal").value.trim(),
+    frames: kept.map((L) => {
+      const f = ep.frames[L];
+      if (ep.skeleton && f.skelBlob) return {letter: L, t: f.t, blob: f.skelBlob, url: f.skelUrl};
+      return {letter: L, t: f.t, blob: f.blob, url: f.url || URL.createObjectURL(f.blob)};
+    }), skeleton: !!ep.skeleton,
+    reviewMs, simulated: !ep.instant && S.mode !== "real", model: ep.instant ? "Body tracker" : S.mode === "real" ? S.modelName : "Simulated AI"};
+  S.events.unshift(ev);
+  renderEvents();
+  toast(`Event saved: ${d.title}`);
+  if ($("#voice").checked && "speechSynthesis" in window) {
+    speechSynthesis.cancel();
+    speechSynthesis.speak(new SpeechSynthesisUtterance(`${d.title}. ${d.summary}`));
+  }
+  log("saved", `Saved “${esc(d.title)}” with ${ev.frames.length} frame(s).${ev.simulated ? " (simulated)" : ""}`);
+}
+
+function renderEvents() {
+  $("#ev-count").textContent = S.events.length;
+  $("#export").disabled = $("#clear").disabled = !S.events.length;
+  $("#events").innerHTML = S.events.length ? S.events.map((ev) => `
+    <article class="ev">
+      <h3>${esc(ev.title)}</h3>
+      <p class="when">${clock(ev.at)}, reviewed in ${(ev.reviewMs / 1000).toFixed(1)} s${ev.simulated ? ", simulated" : ""}${ev.skeleton ? ", skeleton only" : ""}</p>
+      <div class="thumbs">${ev.frames.map((f) => `<img src="${f.url}" alt="Frame ${f.letter} at ${clock(f.t)}">`).join("")}</div>
+      <p>${esc(ev.summary)}</p>
+      <p class="saw">${esc(ev.model)} saw: ${esc(ev.see)}</p>
+      <div class="row"><button class="quiet" data-say="${ev.id}">Read aloud</button></div>
+    </article>`).join("") : '<div class="blank">Events that match your goal appear here with the frames the AI used.</div>';
+}
+
+$("#events").addEventListener("click", (e) => {
+  const id = e.target?.dataset?.say;
+  if (!id || !("speechSynthesis" in window)) return;
+  const ev = S.events.find((x) => String(x.id) === id);
+  speechSynthesis.cancel();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(`${ev.title}. ${ev.summary}`));
+});
+
+const toDataURL = (blob) => new Promise((r) => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsDataURL(blob); });
+async function exportReport() {
+  const parts = [];
+  for (const ev of [...S.events].reverse()) {
+    const imgs = await Promise.all(ev.frames.map(async (f) => `<figure><img src="${await toDataURL(f.blob)}" alt="Frame ${f.letter}"><figcaption>${clock(f.t)}</figcaption></figure>`));
+    parts.push(`<section><h2>${esc(ev.title)}</h2><p class="m">${new Date(ev.at).toLocaleString()}${ev.simulated ? " (simulated reply)" : ""}</p><div class="f">${imgs.join("")}</div><p>${esc(ev.summary)}</p><p class="m">${esc(ev.model)} saw: ${esc(ev.see)}</p><p class="m">Goal: ${esc(ev.goal)}</p></section>`);
+  }
+  const html = `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Local Agent report</title>
+<style>body{font:16px/1.5 system-ui,sans-serif;max-width:760px;margin:24px auto;padding:0 16px;color:#14213a}section{border-top:1px solid #ccd;padding:16px 0}.f{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px}img{width:100%;border-radius:8px}figure{margin:0}figcaption,.m{color:#5a6b85;font-size:14px}</style>
+<h1>Local Agent report</h1><p class="m">${S.events.length} event(s), exported ${new Date().toLocaleString()}. Everything was processed on the device.</p>${parts.join("")}`;
+  const a = Object.assign(document.createElement("a"), {href: URL.createObjectURL(new Blob([html], {type: "text/html"})),
+    download: `local-agent-report-${new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-")}.html`});
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+// ------------------------------------------------------------------ seismograph and stats
+const MARK = {motion: "rgba(255,159,28,.28)", queued: "rgba(255,159,28,.28)", reviewing: "rgba(127,209,255,.35)", event: "rgba(255,77,109,.45)", passed: "rgba(74,93,124,.45)"};
+function drawSeis(now) {
+  const cv = $("#seis"), dpr = window.devicePixelRatio || 1, W = cv.clientWidth, H = cv.clientHeight;
+  if (!W) return;
+  if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const c = cv.getContext("2d");
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, W, H);
+  const span = 60000, x = (t) => W - ((now - t) / span) * W, y = (v) => H - 6 - (v / 100) * (H - 14);
+  S.marks = S.marks.filter((m) => now - m.end < span + 2000);
+  for (const m of S.marks) {
+    c.fillStyle = MARK[m.status] || MARK.motion;
+    c.fillRect(x(m.start), 0, Math.max(3, x(m.end) - x(m.start)), H);
+  }
+  if (S.samples.length > 1) {
+    c.beginPath();
+    c.moveTo(x(S.samples[0].t), H);
+    for (const s of S.samples) c.lineTo(x(s.t), y(s.v));
+    c.lineTo(x(S.samples[S.samples.length - 1].t), H);
+    c.closePath();
+    c.fillStyle = "rgba(255,159,28,.25)"; c.fill();
+    c.beginPath();
+    S.samples.forEach((s, i) => (i ? c.lineTo(x(s.t), y(s.v)) : c.moveTo(x(s.t), y(s.v))));
+    c.strokeStyle = "#FF9F1C"; c.lineWidth = 1.5; c.stroke();
+  }
+  const ty = y(Number($("#thr").value));
+  c.setLineDash([4, 4]); c.strokeStyle = "rgba(232,238,246,.55)"; c.lineWidth = 1;
+  c.beginPath(); c.moveTo(0, ty); c.lineTo(W, ty); c.stroke(); c.setLineDash([]);
+  c.fillStyle = "#93A4BC"; c.font = "11px system-ui, sans-serif";
+  c.fillText("trigger", 4, ty - 4);
+  c.fillText("1 min ago", 4, H - 4);
+  c.textAlign = "right"; c.fillText("now", W - 4, H - 4); c.textAlign = "left";
+}
+
+const avg = (a) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+function renderStats() {
+  const p = S.perf, up = S.running ? (Date.now() - S.startedAt) / 1000 : 0;
+  const items = [
+    S.pose.on ? ["Body tracking", S.pose.fps ? `${S.pose.fps.toFixed(0)} fps` : "–"] : ["Motion checks per second", up > 1 ? (S.frames / up).toFixed(1) : "–"],
+    ["Motion clips", p.episodes + (p.shed ? `, ${p.shed} skipped` : "")],
+    ["AI reviews", p.reviews],
+    ["Events saved", S.events.length],
+    ["Time per review", p.reviewMs.length ? `${(avg(p.reviewMs) / 1000).toFixed(1)} s` : "–"],
+    ["Reading speed", p.tokS.length ? `${avg(p.tokS.slice(-10)).toFixed(1)} tok/s` : "–"],
+    ["First word after", p.ttft.length ? `${avg(p.ttft.slice(-10)).toFixed(1)} s` : "–"],
+    ["Alert delay", p.delay.length ? `${(avg(p.delay.slice(-10)) / 1000).toFixed(1)} s` : "–"],
+  ];
+  $("#stats").innerHTML = items.map(([l, v]) => `<div class="stat"><div class="l">${l}</div><div class="v">${esc(v)}</div></div>`).join("");
+  const h = $("#health");
+  if (!S.running && !S.busy) { h.textContent = "Not watching"; h.className = "pill"; }
+  else if (S.pending && S.perf.shed) { h.textContent = "Falling behind"; h.className = "pill bad"; }
+  else if (S.busy) { h.textContent = "Busy"; h.className = "pill warn"; }
+  else { h.textContent = "Keeping up"; h.className = "pill ok"; }
+}
+
+// ------------------------------------------------------------------ body tracking (MediaPipe pose)
+async function togglePose() {
+  if (S.pose.on) {
+    if (S.pose.skeleton) await toggleSkeleton();
+    S.pose.on = false; stopPoseLoop();
+    $("#pose-toggle").textContent = "Turn on body tracking"; $("#pose-status").textContent = "Off";
+    updatePoseHint();
+    $("#n-motion span").textContent = "Motion check";
+    log("system", "Body tracking off. Motion triggers reviews again.");
+    return;
+  }
+  if (!S.pose.landmarker) {
+    $("#pose-toggle").disabled = true; $("#pose-status").textContent = "Loading the body tracker";
+    try {
+      const mp = await import(`${VISION_URL}/vision_bundle.mjs`);
+      const files = await mp.FilesetResolver.forVisionTasks(`${VISION_URL}/wasm`);
+      const opts = (delegate) => ({baseOptions: {modelAssetPath: POSE_MODEL, delegate}, runningMode: "VIDEO", numPoses: 2,
+        minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5});
+      try { S.pose.landmarker = await mp.PoseLandmarker.createFromOptions(files, opts("GPU")); }
+      catch (_) { S.pose.landmarker = await mp.PoseLandmarker.createFromOptions(files, opts("CPU")); }
+      S.pose.connections = mp.PoseLandmarker.POSE_CONNECTIONS || [];
+    } catch (e) {
+      $("#pose-toggle").disabled = false; $("#pose-status").textContent = "Failed to load";
+      toast("Body tracking could not load: " + e.message);
+      return;
+    }
+    $("#pose-toggle").disabled = false;
+  }
+  S.pose.on = true; S.pose.hist = []; S.pose.lastFire = 0;
+  $("#pose-toggle").textContent = "Turn off body tracking"; $("#pose-status").textContent = "On";
+  updatePoseHint();
+  $("#n-motion span").textContent = "Pose";
+  log("system", `Body tracking on, watching for: <b>${esc($("#pose-gesture").selectedOptions[0].textContent)}</b>.`);
+  if (S.running) startPoseLoop();
+}
+
+function startPoseLoop() {
+  if (!S.pose.landmarker || S.pose.raf) return;
+  $("#pose-canvas").classList.remove("hide");
+  S.pose.fpsT = performance.now(); S.pose.n = 0;
+  const loop = () => {
+    S.pose.raf = requestAnimationFrame(loop);
+    const v = $("#video"), t = performance.now();
+    if (!S.running || v.readyState < 2 || t - S.pose.last < 45) return;
+    S.pose.last = t;
+    let res;
+    try { res = S.pose.landmarker.detectForVideo(v, t); } catch (_) { return; }
+    S.pose.n++;
+    if (t - S.pose.fpsT > 1000) {
+      S.pose.fps = (S.pose.n * 1000) / (t - S.pose.fpsT); S.pose.n = 0; S.pose.fpsT = t;
+      $("#pose-status").textContent = `On, ${S.pose.fps.toFixed(0)} fps, ${S.pose.people} ${S.pose.people === 1 ? "person" : "people"}`;
+    }
+    const raw = res?.landmarks || [];
+    const smooth = smoothPeople(raw, t / 1000);
+    S.pose.lastPeople = smooth;
+    const live = analyzePose(raw, Date.now(), smooth);
+    drawPose(smooth, live);
+  };
+  S.pose.raf = requestAnimationFrame(loop);
+}
+
+function stopPoseLoop() {
+  cancelAnimationFrame(S.pose.raf); S.pose.raf = 0;
+  const cv = $("#pose-canvas");
+  cv.getContext("2d")?.clearRect(0, 0, cv.width, cv.height);
+  cv.classList.add("hide");
+}
+
+const vis = (p) => p && (p.visibility ?? 1) > 0.5;
+
+// One Euro filter (Casiez et al.): strong smoothing when a point is slow, little when it moves fast.
+// Coordinates are 0..1 of the image, so beta is larger than the pixel-based defaults.
+const SMOOTH = {light: {min: 3.0, beta: 6}, medium: {min: 1.4, beta: 4}, strong: {min: 0.6, beta: 2.5}};
+class OneEuro {
+  constructor(min, beta) { this.min = min; this.beta = beta; this.x = null; this.dx = 0; this.t = 0; }
+  static alpha(cutoff, dt) { const tau = 1 / (2 * Math.PI * cutoff); return 1 / (1 + tau / dt); }
+  filter(x, t) {
+    if (this.x === null) { this.x = x; this.t = t; return x; }
+    const dt = Math.max(1e-3, t - this.t);
+    this.t = t;
+    const dx = (x - this.x) / dt;
+    this.dx += OneEuro.alpha(1.0, dt) * (dx - this.dx);
+    const cutoff = this.min + this.beta * Math.abs(this.dx);
+    this.x += OneEuro.alpha(cutoff, dt) * (x - this.x);
+    return this.x;
+  }
+}
+
+function smoothPeople(people, tSec) {
+  const mode = $("#smooth").value;
+  if (mode === "off") { S.pose.filters = []; return people; }
+  const cfg = SMOOTH[mode];
+  return people.map((L, i) => {
+    const mid = vis(L[11]) && vis(L[12]) ? {x: (L[11].x + L[12].x) / 2, y: (L[11].y + L[12].y) / 2} : null;
+    let st = S.pose.filters[i];
+    // start fresh if the settings changed, the number of people changed, or this "person" jumped (likely someone else)
+    const jumped = st && mid && st.mid && Math.hypot(mid.x - st.mid.x, mid.y - st.mid.y) > 0.25;
+    if (!st || st.mode !== mode || st.count !== people.length || jumped) {
+      st = S.pose.filters[i] = {mode, count: people.length, mid, pts: L.map(() => ({x: new OneEuro(cfg.min, cfg.beta), y: new OneEuro(cfg.min, cfg.beta), shown: false}))};
+    }
+    if (mid) st.mid = mid;
+    return L.map((p, k) => {
+      const f = st.pts[k], v = p.visibility ?? 1;
+      // hysteresis: a joint appears above 0.55 confidence and only disappears below 0.35, so it doesn't flicker
+      f.shown = f.shown ? v > 0.35 : v > 0.55;
+      return {x: f.x.filter(p.x, tSec), y: f.y.filter(p.y, tSec), z: p.z, visibility: f.shown ? 1 : 0};
+    });
+  });
+}
+
+function countSwings(pts, now) {
+  const recent = pts.filter((s) => now - s.t < 1800);
+  if (recent.length < 6) return 0;
+  if (recent.filter((s) => s.up).length / recent.length < 0.7) return 0;
+  const AMP = 0.3;
+  let dir = 0, ext = null, n = 0;
+  for (const s of recent) {
+    if (!s.up) continue;
+    if (ext === null) { ext = s.x; continue; }
+    const d = s.x - ext;
+    if (dir === 0) { if (Math.abs(d) > AMP) { dir = Math.sign(d); ext = s.x; } }
+    else if (dir * d > 0) ext = s.x;
+    else if (-dir * d > AMP) { n++; dir = -dir; ext = s.x; }
+  }
+  return n;
+}
+
+function analyzePose(people, now, smooth = null) {
+  S.pose.people = people.length;
+  const want = $("#pose-gesture").value, need = Number($("#swings").value);
+  const live = [];
+  people.forEach((L, i) => {
+    const h = (S.pose.hist[i] ||= {L: [], R: [], raiseSince: null, bothSince: null});
+    const ls = L[11], rs = L[12], nose = L[0];
+    if (!vis(ls) || !vis(rs)) { live.push({}); return; }
+    const sw = Math.max(0.04, Math.abs(ls.x - rs.x)), midX = (ls.x + rs.x) / 2, shY = (ls.y + rs.y) / 2;
+    const hips = vis(L[23]) && vis(L[24]) ? (L[23].y + L[24].y) / 2 : shY + sw * 1.5;
+    const torso = Math.max(0.05, hips - shY);
+    const info = {swings: {}, raised: null, both: false};
+    for (const [side, w, e, sh] of [["L", 15, 13, 11], ["R", 16, 14, 12]]) {
+      const W = L[w], E = L[e], SH = L[sh];
+      const up = vis(W) && vis(E) && W.y < E.y - 0.02;
+      const SW = smooth?.[i]?.[w] || W;
+      h[side].push({t: now, x: vis(W) ? (W.x - midX) / sw : 0, up, px: SW?.x, py: SW?.y});
+      while (h[side].length && now - h[side][0].t > 2000) h[side].shift();
+      info.swings[side] = countSwings(h[side], now);
+      if (vis(W) && vis(SH) && W.y < SH.y - 0.25 * torso) info.raised = info.raised || side;
+    }
+    info.both = vis(L[15]) && vis(L[16]) && vis(nose) && L[15].y < nose.y && L[16].y < nose.y;
+    h.raiseSince = info.raised ? (h.raiseSince ?? now) : null;
+    h.bothSince = info.both ? (h.bothSince ?? now) : null;
+    live.push(info);
+
+    if (now - S.pose.lastFire < Math.max(4000, Number($("#cooldown").value) * 1000) || S.ep) return;
+    const side = info.swings.L >= info.swings.R ? "L" : "R", sideName = (x) => (x === "L" ? "Left" : "Right");
+    let fire = null;
+    if ((want === "wave" || want === "any") && info.swings[side] >= need)
+      fire = {g: "wave", detail: `${sideName(side)} hand swung side to side ${info.swings[side]} times above the elbow`, short: `wave ×${info.swings[side]}`};
+    else if ((want === "both" || want === "any") && h.bothSince && now - h.bothSince > 700)
+      fire = {g: "both", detail: `Both hands held above the head for ${((now - h.bothSince) / 1000).toFixed(1)} s`, short: "arms up"};
+    else if ((want === "raise" || want === "any") && h.raiseSince && now - h.raiseSince > 700)
+      fire = {g: "raise", detail: `${sideName(info.raised)} hand held above the shoulder for ${((now - h.raiseSince) / 1000).toFixed(1)} s`, short: "hand up"};
+    if (fire) firePose(fire, i, now);
+  });
+  S.pose.live = live;
+  return live;
+}
+
+function firePose(f, person, now) {
+  S.pose.lastFire = now;
+  S.pose.hist[person] = {L: [], R: [], raiseSince: null, bothSince: null};
+  const title = GESTURES[f.g];
+  const ep = {start: now - 1500, peak: 100, peakT: now - 700, lastAbove: now, pose: {gesture: f.g, title, detail: f.detail, short: f.short}};
+  const mark = {start: now - 1500, end: now, status: "motion", ep};
+  S.marks.push(mark);
+  S.ep = ep;
+  const tag = $("#gesture-tag");
+  tag.textContent = `${title} detected`; tag.classList.remove("hide");
+  clearTimeout(S.pose.tagTimer); S.pose.tagTimer = setTimeout(() => tag.classList.add("hide"), 2600);
+  packet("cam", "motion", f.short, "var(--signal)");
+  flash("motion");
+  log("motion", `Body tracker: <b>${esc(title)}</b>. ${esc(f.detail)}.`);
+  setTimeout(() => { S.ep = null; closeEpisode(ep, mark); }, 900);
+}
+
+function drawPose(people, live) {
+  const cv = $("#pose-canvas"), st = $("#stage"), dpr = window.devicePixelRatio || 1;
+  const W = st.clientWidth, H = st.clientHeight;
+  if (!W) return;
+  if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+  const c = cv.getContext("2d");
+  if (!c) return;
+  c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  c.clearRect(0, 0, W, H);
+  drawSkeleton(c, W, H, people, live, {face: S.pose.skeleton, trails: true, labels: true});
+  if (S.pose.skeleton && !people.length) {
+    c.fillStyle = "rgba(232,238,246,.7)"; c.font = "600 15px system-ui, sans-serif"; c.textAlign = "center";
+    c.fillText("Step into view", W / 2, H / 2); c.textAlign = "left";
+  }
+}
+
+function drawSkeleton(c, W, H, people, live, {face = false, trails = true, labels = true} = {}) {
+  const need = Number($("#swings").value), now = Date.now();
+  people.forEach((L, i) => {
+    const info = live[i] || {};
+    c.lineCap = "round"; c.lineJoin = "round";
+    c.shadowColor = "#7FD1FF"; c.shadowBlur = 14; c.lineWidth = face ? 5 : 4; c.strokeStyle = "rgba(127,209,255,.95)";
+    for (const {start, end} of S.pose.connections) {
+      if (!face && (start < 11 || end < 11)) continue;
+      const a = L[start], b = L[end];
+      if (!vis(a) || !vis(b)) continue;
+      c.lineWidth = start < 11 ? 2 : face ? 5 : 4;
+      c.beginPath(); c.moveTo(a.x * W, a.y * H); c.lineTo(b.x * W, b.y * H); c.stroke();
+    }
+    c.shadowBlur = 0;
+    const h = S.pose.hist[i];
+    if (trails) {
+      for (const side of ["L", "R"]) {
+        const pts = (h?.[side] || []).filter((s) => s.up && s.px != null && now - s.t < 1500);
+        for (let k = 1; k < pts.length; k++) {
+          c.strokeStyle = `rgba(255,159,28,${(0.15 + 0.85 * (k / pts.length)).toFixed(2)})`; c.lineWidth = 3 + 4 * (k / pts.length);
+          c.beginPath(); c.moveTo(pts[k - 1].px * W, pts[k - 1].py * H); c.lineTo(pts[k].px * W, pts[k].py * H); c.stroke();
+        }
+      }
+    }
+    for (let k = face ? 0 : 11; k < L.length; k++) {
+      const p = L[k];
+      if (!vis(p) || (k > 16 && k < 23)) continue;
+      const wrist = k === 15 || k === 16, active = wrist && (info.swings?.[k === 15 ? "L" : "R"] || 0) > 0;
+      c.fillStyle = active ? "#FF9F1C" : "#E8EEF6";
+      c.beginPath(); c.arc(p.x * W, p.y * H, active ? 8 : wrist ? 5 : k < 11 ? 2.5 : 3.5, 0, Math.PI * 2); c.fill();
+      if (active && labels) {
+        const n = info.swings[k === 15 ? "L" : "R"];
+        const label = `wave ${Math.min(n, need)}/${need}`;
+        c.font = "600 13px system-ui, sans-serif";
+        const tw = c.measureText(label).width;
+        c.fillStyle = "rgba(14,26,43,.8)"; c.fillRect(p.x * W + 12, p.y * H - 22, tw + 12, 20);
+        c.fillStyle = "#FF9F1C"; c.fillText(label, p.x * W + 18, p.y * H - 7);
+      }
+    }
+    const nose = L[0];
+    if (labels && vis(nose)) {
+      const label = info.both ? "arms up" : info.raised ? "hand up" : `person ${i + 1}`;
+      c.font = "600 12px system-ui, sans-serif";
+      const tw = c.measureText(label).width;
+      c.fillStyle = "rgba(14,26,43,.75)"; c.fillRect(nose.x * W - tw / 2 - 6, nose.y * H - 44, tw + 12, 20);
+      c.fillStyle = "#7FD1FF"; c.fillText(label, nose.x * W - tw / 2, nose.y * H - 29);
+    }
+  });
+}
+
+// A saved skeleton image: the pose from that moment on the grid background, no camera pixels.
+function renderSkeletonBlob(people) {
+  const w = S.cap?.width || 512, h = S.cap?.height || 384;
+  const cv = Object.assign(document.createElement("canvas"), {width: w, height: h});
+  const c = cv.getContext("2d");
+  if (!c) return Promise.resolve(null);
+  c.fillStyle = "#0E1A2B"; c.fillRect(0, 0, w, h);
+  c.strokeStyle = "rgba(127,209,255,.08)"; c.lineWidth = 1;
+  for (let x = 0; x < w; x += 32) { c.beginPath(); c.moveTo(x + .5, 0); c.lineTo(x + .5, h); c.stroke(); }
+  for (let y = 0; y < h; y += 32) { c.beginPath(); c.moveTo(0, y + .5); c.lineTo(w, y + .5); c.stroke(); }
+  if (people && people.length) drawSkeleton(c, w, h, people, [], {face: true, trails: false, labels: false});
+  else { c.fillStyle = "rgba(232,238,246,.6)"; c.font = "600 16px system-ui, sans-serif"; c.textAlign = "center"; c.fillText("No person tracked", w / 2, h / 2); }
+  return new Promise((r) => cv.toBlob(r, "image/jpeg", 0.9));
+}
+
+async function prepareSkeletons(ep) {
+  ep.skeleton = true;
+  for (const L of ["A", "B", "C", "D"]) {
+    const f = ep.frames[L];
+    if (f.skelUrl) continue;
+    f.skelBlob = await renderSkeletonBlob(f.people);
+    f.skelUrl = f.skelBlob ? URL.createObjectURL(f.skelBlob) : "";
+  }
+}
+
+async function toggleSkeleton() {
+  if (!S.pose.skeleton && !S.pose.on) {
+    await togglePose();
+    if (!S.pose.on) return;
+  }
+  S.pose.skeleton = !S.pose.skeleton;
+  $("#stage").classList.toggle("skeleton", S.pose.skeleton);
+  const b = $("#skeleton");
+  b.textContent = S.pose.skeleton ? "Show camera" : "Skeleton view";
+  b.classList.toggle("on", S.pose.skeleton); b.setAttribute("aria-pressed", String(S.pose.skeleton));
+  if (S.pose.skeleton) {
+    log("system", "Skeleton view on: the screen shows only joints and lines, and new events save skeleton drawings instead of photos.");
+    if (S.mode !== "none" && $("#pose-confirm").checked && !S.pose.warned) {
+      S.pose.warned = true;
+      log("system", "The AI model still receives camera frames to confirm gestures. Those frames stay in memory and are not shown or saved. Turn off AI confirmation for no photos at all.", true);
+    }
+  } else {
+    log("system", "Skeleton view off: camera image back on.");
+  }
+}
+
+// ------------------------------------------------------------------ ask the agent
+async function ask(q) {
+  q = q.trim();
+  if (!q) return;
+  if (S.mode === "none") { toast("Load the model first"); return; }
+  $("#question").value = "";
+  const wrap = document.createElement("div");
+  wrap.innerHTML = `<p class="q">You: ${esc(q)}</p><div class="a">Thinking on this device…</div>`;
+  $("#qa").prepend(wrap);
+  const ans = wrap.querySelector(".a");
+  const saved = S.events.map((e) => `- ${clock(e.at)}: ${e.title}. ${e.summary}`).join("\n") || "- none yet";
+  const passed = S.looked.filter((l) => l.state === "passed").length;
+  const text = `You are a monitoring agent answering questions about what you have seen on a live camera. Answer in one to three short sentences using only this log. If the log does not say, say you have not seen that.\n\n` +
+    `Goal: ${$("#goal").value.trim()}\nCurrent time: ${clock(Date.now())}\nMotion clips: ${S.perf.episodes}. Reviews: ${S.perf.reviews}. Frames passed on: ${passed}.\nSaved events:\n${saved}\n\nQuestion: ${q}`;
+  try {
+    const r = await withModel(() => generate({text, maxTokens: 120, onText: (t) => (ans.textContent = t)}));
+    ans.innerHTML = `${esc(r.text)}<small>${r.simulated ? "Simulated answer" : `Answered on this device in ${r.seconds.toFixed(1)} s, ${r.tokS.toFixed(1)} tok/s`}</small>`;
+    if ($("#voice").checked && "speechSynthesis" in window) speechSynthesis.speak(new SpeechSynthesisUtterance(r.text));
+  } catch (e) {
+    ans.textContent = "Could not answer: " + e.message;
+  }
+}
+
+// ------------------------------------------------------------------ wiring
+$("#load").onclick = loadModel;
+$("#practice").onclick = startPractice;
+$("#remove-model").onclick = removeModel;
+$("#speed-text").onclick = () => speedTest("text");
+$("#speed-vision").onclick = () => speedTest("vision");
+$("#start").onclick = () => (S.running ? stopCamera() : startCamera());
+$("#flip").onclick = async () => { S.facing = S.facing === "environment" ? "user" : "environment"; if (S.running) { stopCamera(); await startCamera(); } else toast(`Will use the ${S.facing === "user" ? "front" : "back"} camera`); };
+$("#export").onclick = exportReport;
+$("#clear").onclick = () => { S.events.forEach((e) => e.frames.forEach((f) => URL.revokeObjectURL(f.url))); S.events = []; renderEvents(); renderStats(); };
+$("#ask").onclick = () => ask($("#question").value);
+$("#question").addEventListener("keydown", (e) => { if (e.key === "Enter") ask($("#question").value); });
+document.querySelectorAll(".chips button").forEach((b) => (b.onclick = () => ask(b.textContent)));
+$("#detail").onchange = applyDetail;
+$("#model-pick").onchange = modelChanged;
+$("#pose-toggle").onclick = togglePose;
+$("#skeleton").onclick = toggleSkeleton;
+const swingLabel = () => ($("#swing-val").textContent = $("#swings").value);
+$("#swings").oninput = swingLabel;
+$("#smooth").onchange = () => { S.pose.filters = []; log("system", `Line smoothing: ${esc($("#smooth").selectedOptions[0].textContent)}.`); };
+$("#pose-gesture").onchange = () => S.pose.on && log("system", `Body tracking now watching for: <b>${esc($("#pose-gesture").selectedOptions[0].textContent)}</b>.`);
+swingLabel();
+const thrLabel = () => ($("#thr-val").textContent = `${$("#thr").value} of 100`);
+$("#thr").oninput = thrLabel;
+$("#goal").addEventListener("input", updatePoseHint);
+$("#pose-hint-btn").onclick = () => togglePose();
+$("#goal").addEventListener("change", () => log("system", `Goal changed: <b>${esc($("#goal").value)}</b>. It applies to the next motion.`));
+window.addEventListener("resize", () => drawSeis(Date.now()));
+
+$("#model-pick").innerHTML = Object.entries(MODELS).map(([k, m]) => `<option value="${k}">${m.name}, about ${m.gb} GB</option>`).join("");
+thrLabel();
+updatePoseHint();
+renderStats();
+renderLooked();
+checkEnvironment();
+drawSeis(Date.now());
+window.LocalAgent = {S, parseDecision, parseSmol, smolPrompt, review, closeEpisode, startPractice, analyzePose, countSwings, drawPose, toggleSkeleton, renderSkeletonBlob, smoothPeople, togglePose, grounded, isGestureGoal, gestureWords};
+</script>
+</body>
+</html>
