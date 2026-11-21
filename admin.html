@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Sensee admin</title>
+<style>
+  :root { --bg:#f3faf7; --surface:#fff; --ink:#12312b; --muted:#4b6b63; --line:#b4d9cd; --accent:#ff6b4a; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0f2622; --surface:#19372f; --ink:#e6f6f1; --muted:#9cc2b8; --line:#2b5148; --accent:#ff8a6b; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:24px 16px 48px; display:flex; flex-direction:column; gap:16px; }
+  h1 { margin:0; font-size:1.6rem; } h2 { margin:0; font-size:1.1rem; }
+  section { background:var(--surface); border:1.5px solid var(--line); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  input { flex:1 1 200px; font:inherit; padding:8px 10px; border:2px solid var(--line); border-radius:8px; background:transparent; color:inherit; }
+  button { font:inherit; font-weight:600; padding:8px 14px; border:2px solid var(--ink); border-radius:10px; background:var(--accent); color:#2a0e07; cursor:pointer; }
+  button.ghost { background:transparent; color:var(--ink); }
+  button:focus-visible, input:focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
+  ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+  li { border:1.5px solid var(--line); border-radius:10px; padding:8px 12px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
+  li small { color:var(--muted); display:block; }
+  .code { font-family:ui-monospace,Menlo,Consolas,monospace; background:color-mix(in srgb,var(--ink) 8%,transparent); padding:8px 10px; border-radius:8px; word-break:break-all; user-select:all; }
+  #msg { margin:0; min-height:1.5em; color:var(--muted); font-weight:600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Sensee admin</h1>
+  <section>
+    <label for="token"><b>Admin token</b></label>
+    <div class="row"><input id="token" type="password" autocomplete="off" placeholder="Admin token"><button id="load" class="ghost" type="button">Load accounts</button></div>
+    <p id="msg" aria-live="polite"></p>
+  </section>
+  <section>
+    <h2>New practitioner</h2>
+    <div class="row"><input id="name" type="text" maxlength="60" placeholder="Practitioner name (shown to clients)"><button id="create" type="button">Create account</button></div>
+    <div id="reveal" hidden>
+      <p><b>Access code, shown once.</b> Send it to the practitioner privately. It can't be shown again.</p>
+      <div class="code" id="codeOut"></div>
+    </div>
+  </section>
+  <section><h2>Practitioners</h2><ul id="list"></ul></section>
+  <p><a href="./">Back to the cards</a></p>
+</main>
+<script src="api-config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const API = (window.SENSEE_API || "").replace(/\/$/, "");
+$("token").value = sessionStorage.getItem("sgt-admin") || "";
+const hdr = () => ({ "Authorization": "Bearer " + $("token").value.trim(), "Content-Type": "application/json" });
+async function call(method, path, body) {
+  if (!API) throw new Error("The message service isn't set up yet (api-config.js is empty).");
+  const r = await fetch(API + path, { method, headers: hdr(), body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 401) throw new Error("Wrong or missing admin token.");
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || "Request failed.");
+  return data;
+}
+async function load() {
+  try {
+    sessionStorage.setItem("sgt-admin", $("token").value.trim());
+    const rows = await call("GET", "/admin/practitioners");
+    const ul = $("list"); ul.textContent = "";
+    rows.forEach(p => {
+      const li = document.createElement("li");
+      const d = document.createElement("div"); d.textContent = p.name;
+      const sm = document.createElement("small"); sm.textContent = (p.active ? "Active" : "Disabled") + " · created " + p.created; d.appendChild(sm);
+      const box = document.createElement("div"); box.className = "row";
+      const t = document.createElement("button"); t.className = "ghost"; t.type = "button"; t.textContent = p.active ? "Disable" : "Enable";
+      t.addEventListener("click", async () => { try { await call("POST", "/admin/practitioners/" + p.pid, { active: !p.active }); load(); } catch (e) { $("msg").textContent = e.message; } });
+      const x = document.createElement("button"); x.className = "ghost"; x.type = "button"; x.textContent = "Delete";
+      x.addEventListener("click", async () => { if (!confirm("Delete " + p.name + "? Their code stops working.")) return; try { await call("DELETE", "/admin/practitioners/" + p.pid); load(); } catch (e) { $("msg").textContent = e.message; } });
+      box.append(t, x); li.append(d, box); ul.appendChild(li);
+    });
+    $("msg").textContent = rows.length ? "" : "No practitioners yet.";
+  } catch (e) { $("msg").textContent = e.message; }
+}
+$("load").addEventListener("click", load);
+$("create").addEventListener("click", async () => {
+  const name = $("name").value.trim();
+  if (!name) { $("msg").textContent = "Enter a name first."; return; }
+  try {
+    const r = await call("POST", "/admin/practitioners", { name });
+    $("codeOut").textContent = r.code; $("reveal").hidden = false; $("name").value = ""; $("msg").textContent = "Account created."; load();
+  } catch (e) { $("msg").textContent = e.message; }
+});
+</script>
+</body>
+</html>

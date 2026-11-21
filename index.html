@@ -147,6 +147,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   <p class="tally" id="tally"></p>
   <footer class="foot"><span>Prototype in testing.</span> <a href="share.html">For practitioners: send a personal message</a> <span aria-hidden="true">·</span> <a href="mailto:sensitlabs@gmail.com">Send feedback</a></footer>
 </main>
+<script src="api-config.js"></script>
 <script>
 const EVERYDAY = [
   ["Do", "Text someone one specific thing you remember fondly about them. No question attached."],
@@ -269,6 +270,8 @@ const plan = () => (deckId === "kine" && KINE && planId && KINE.plans && KINE.pl
 const cardsOf = () => plan() ? plan().cards : deck().cards;
 function parseHash() {
   const raw = location.hash.slice(1), qi = raw.indexOf("?");
+  const sm = /^m=([a-z0-9]{6,16})$/i.exec(raw);
+  if (sm) return { d: "", p: "", q: null, mid: sm[1].toLowerCase() };
   const h = (qi >= 0 ? raw.slice(0, qi) : raw).split("/");
   let q = null; try { q = qi >= 0 ? new URLSearchParams(raw.slice(qi + 1)) : null; } catch (e) {}
   return { d: h[0] || "", p: h[1] || "", q };
@@ -390,9 +393,32 @@ $("copy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(current[0] + ": " + current[1] + "\n" + link); $("msg").textContent = "Copied. Send it to someone who could use it."; }
   catch (e) { $("msg").textContent = "Couldn't copy here. Select the card text and copy it by hand."; }
 });
-window.addEventListener("hashchange", () => { const h = parseHash(); readMsg(h.q); openDeck(h.d, false, h.p); });
+/* Short link: sensee.ca/#m=ID. The message is stored by the Sensee Worker and fetched here. */
+async function loadStored(id) {
+  const api = (window.SENSEE_API || "").replace(/\/$/, "");
+  if (!api) { LINK_MSG = { text: "This message link needs the Sensee message service, which isn't switched on yet.", from: "", to: "", notice: true }; return "everyday"; }
+  try {
+    const r = await fetch(api + "/m/" + encodeURIComponent(id));
+    if (r.status === 404) { LINK_MSG = { text: "This message has expired or was removed.", from: "", to: "", notice: true }; return "everyday"; }
+    if (!r.ok) throw new Error("bad status");
+    const m = await r.json();
+    const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
+    LINK_MSG = { text: clean(m.text, 400), from: clean(m.from, 60), to: clean(m.to, 40) };
+    return ["everyday", "movement", "calm"].indexOf(m.deck) >= 0 ? m.deck : "everyday";
+  } catch (e) {
+    LINK_MSG = { text: "Couldn't load the message. Check your connection and open the link again.", from: "", to: "", notice: true };
+    return "everyday";
+  }
+}
+async function route(first) {
+  const h = parseHash();
+  if (LINK_MSG && LINK_MSG.notice && !h.mid) LINK_MSG = null;   // error notices don't follow the client to other decks
+  if (h.mid) { const deckFromMsg = await loadStored(h.mid); openDeck(deckFromMsg, first, ""); return; }
+  readMsg(h.q); openDeck(h.d, first, h.p);
+}
+window.addEventListener("hashchange", () => { route(false); });
 showTally(getCount());
-{ const h = parseHash(); readMsg(h.q); openDeck(h.d, true, h.p); }
+route(true);
 
 /* "My kine" deck: the kinesiologist's own message and cards, from kine.json. Shown only when enabled.
    kine.json is public (this repo is public): keep it free of names and health details. */
