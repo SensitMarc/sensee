@@ -14,6 +14,7 @@ const ORIGINS = ["https://sensee.ca", "https://www.sensee.ca"];
 const TTL_SECONDS = 60 * 60 * 24 * 30;      // messages expire after 30 days
 const DAILY_LIMIT = 50;                      // messages per practitioner per day
 const MAX_INDEX = 200;
+const MAX_AGE_MS = TTL_SECONDS * 1000;
 const DECKS = ["everyday", "movement", "calm"];
 const ID_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
@@ -38,8 +39,10 @@ export default {
 
       // ---- public: read one message
       if (request.method === "GET" && parts[0] === "m" && parts[1]) {
-        const m = await getJson(env, "m:" + parts[1].toLowerCase());
+        const key = "m:" + parts[1].toLowerCase();
+        const m = await getJson(env, key);
         if (!m) return out({ error: "not_found" }, 404);
+        if (Date.now() - m.created > MAX_AGE_MS) { await env.SENSEE.delete(key); return out({ error: "not_found" }, 404); }
         return out({ text: m.text, from: m.from, to: m.to, deck: m.deck });
       }
 
@@ -88,15 +91,18 @@ export default {
           const id = randomId(8);
           const created = Date.now();
           await env.SENSEE.put("m:" + id, JSON.stringify({ pid: who.pid, from: who.name, to, text, deck, created }), { expirationTtl: TTL_SECONDS });
-          const idx = (await getJson(env, "idx:" + who.pid)) || [];
-          idx.push({ id, to, deck, created, expires: created + TTL_SECONDS * 1000 });
-          await env.SENSEE.put("idx:" + who.pid, JSON.stringify(idx.slice(-MAX_INDEX)));
+          const idx = liveIndex((await getJson(env, "idx:" + who.pid)) || []);
+          idx.push({ id, to, deck, created, expires: created + MAX_AGE_MS });
+          // The index key expires on its own too, so client first names never outlive the newest message.
+          await env.SENSEE.put("idx:" + who.pid, JSON.stringify(idx.slice(-MAX_INDEX)), { expirationTtl: TTL_SECONDS });
           return out({ id, expires: created + TTL_SECONDS * 1000 });
         }
         if (request.method === "GET" && !parts[1]) {
           if (!who) return out([]);
-          const idx = ((await getJson(env, "idx:" + who.pid)) || []).filter((r) => r.expires > Date.now());
-          return out(idx.reverse());
+          const all = (await getJson(env, "idx:" + who.pid)) || [];
+          const idx = liveIndex(all);
+          if (idx.length !== all.length) await saveIndex(env, who.pid, idx);
+          return out(idx.slice().reverse());
         }
         if (request.method === "DELETE" && parts[1]) {
           const id = parts[1].toLowerCase();
@@ -104,8 +110,8 @@ export default {
           if (!m) return out({ error: "not_found" }, 404);
           if (!isAdm && m.pid !== who.pid) return out({ error: "forbidden" }, 403);
           await env.SENSEE.delete("m:" + id);
-          const idx = ((await getJson(env, "idx:" + m.pid)) || []).filter((r) => r.id !== id);
-          await env.SENSEE.put("idx:" + m.pid, JSON.stringify(idx));
+          const idx = liveIndex((await getJson(env, "idx:" + m.pid)) || []).filter((r) => r.id !== id);
+          await saveIndex(env, m.pid, idx);
           return out({ ok: true });
         }
       }
@@ -116,6 +122,11 @@ export default {
   },
 };
 
+const liveIndex = (list) => list.filter((r) => r.expires > Date.now());
+async function saveIndex(env, pid, idx) {
+  if (!idx.length) await env.SENSEE.delete("idx:" + pid);
+  else await env.SENSEE.put("idx:" + pid, JSON.stringify(idx), { expirationTtl: TTL_SECONDS });
+}
 async function getJson(env, key) { const raw = await env.SENSEE.get(key); try { return raw ? JSON.parse(raw) : null; } catch { return null; } }
 async function readJson(request) { try { return await request.json(); } catch { return {}; } }
 const clean = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
