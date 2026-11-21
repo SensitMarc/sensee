@@ -145,7 +145,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   <p class="status" id="msg" aria-live="polite"></p>
   <p class="note" id="note" hidden></p>
   <p class="tally" id="tally"></p>
-  <footer class="foot"><span>Prototype in testing. Practitioners can share any deck with clients using Copy to send.</span> <a href="mailto:sensitlabs@gmail.com">Send feedback</a></footer>
+  <footer class="foot"><span>Prototype in testing.</span> <a href="share.html">For practitioners: send a personal message</a> <span aria-hidden="true">·</span> <a href="mailto:sensitlabs@gmail.com">Send feedback</a></footer>
 </main>
 <script>
 const EVERYDAY = [
@@ -267,7 +267,20 @@ let KINE = null;   // loaded from kine.json when enabled
 const deck = () => DECKS.find(d => d.id === deckId) || DECKS[0];
 const plan = () => (deckId === "kine" && KINE && planId && KINE.plans && KINE.plans[planId]) || null;
 const cardsOf = () => plan() ? plan().cards : deck().cards;
-function parseHash() { const h = location.hash.slice(1).split("/"); return { d: h[0] || "", p: h[1] || "" }; }
+function parseHash() {
+  const raw = location.hash.slice(1), qi = raw.indexOf("?");
+  const h = (qi >= 0 ? raw.slice(0, qi) : raw).split("/");
+  let q = null; try { q = qi >= 0 ? new URLSearchParams(raw.slice(qi + 1)) : null; } catch (e) {}
+  return { d: h[0] || "", p: h[1] || "", q };
+}
+/* A practitioner's personal message travels inside the link (#deck?m=...&f=...&t=...). It is shown as plain text only. */
+let LINK_MSG = null;
+function readMsg(q) {
+  if (!q) return;
+  const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
+  const m = clean(q.get("m"), 400);
+  if (m) LINK_MSG = { text: m, from: clean(q.get("f"), 40), to: clean(q.get("t"), 40) };
+}
 
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function refill() {
@@ -361,8 +374,13 @@ function openDeck(id, first, pid) {
   $("blurb").textContent = pl ? (pl.note || pl.label || "") : deck().blurb;
   const note = $("note"); note.textContent = deck().note || ""; note.hidden = !deck().note;
   const bn = $("banner"), msg = KINE && KINE.message;
-  bn.hidden = !(deckId === "kine" && msg && msg.text);
-  if (!bn.hidden) { $("bannerTitle").textContent = msg.title || ("From " + KINE.name); $("bannerText").textContent = msg.text; }
+  if (deckId === "kine" && msg && msg.text) {
+    $("bannerTitle").textContent = msg.title || ("From " + KINE.name); $("bannerText").textContent = msg.text; bn.hidden = false;
+  } else if (LINK_MSG) {
+    $("bannerTitle").textContent = LINK_MSG.from ? "Message from " + LINK_MSG.from : "A personal message";
+    $("bannerText").textContent = (LINK_MSG.to ? "Hi " + LINK_MSG.to + ". " : "") + LINK_MSG.text;
+    bn.hidden = false;
+  } else { bn.hidden = true; }
   renderDecks(); renderChips(); draw(first);
 }
 $("next").addEventListener("click", () => draw(false));
@@ -372,9 +390,9 @@ $("copy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText(current[0] + ": " + current[1] + "\n" + link); $("msg").textContent = "Copied. Send it to someone who could use it."; }
   catch (e) { $("msg").textContent = "Couldn't copy here. Select the card text and copy it by hand."; }
 });
-window.addEventListener("hashchange", () => { const h = parseHash(); openDeck(h.d, false, h.p); });
+window.addEventListener("hashchange", () => { const h = parseHash(); readMsg(h.q); openDeck(h.d, false, h.p); });
 showTally(getCount());
-{ const h = parseHash(); openDeck(h.d, true, h.p); }
+{ const h = parseHash(); readMsg(h.q); openDeck(h.d, true, h.p); }
 
 /* "My kine" deck: the kinesiologist's own message and cards, from kine.json. Shown only when enabled.
    kine.json is public (this repo is public): keep it free of names and health details. */
