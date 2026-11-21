@@ -1,28 +1,44 @@
 {
-  "enabled": false,
-  "name": "Your kinesiologist",
+  "enabled": true,
+  "name": "your kinesiologist (sample)",
   "message": {
-    "title": "This week",
-    "text": "Short note from your kinesiologist for everyone. Replace this text."
+    "title": "Sample message",
+    "text": "This is where your kinesiologist's note for the week will appear."
   },
   "cards": [
     [
       "Move",
-      "Example card from your kinesiologist. Replace with your own."
+      "Sample card: take a gentle two-minute walk."
+    ],
+    [
+      "Mindset",
+      "Sample card: a short session still counts."
+    ],
+    [
+      "Habit",
+      "Sample card: lay out your shoes tonight."
+    ],
+    [
+      "Reflect",
+      "Sample card: what felt a little easier than last week?"
     ]
   ],
   "plans": {
     "week-1": {
-      "label": "Week 1",
-      "note": "Gentle start. Pick one card a day.",
+      "label": "Week 1 (sample)",
+      "note": "Sample plan. Pick one card a day.",
       "cards": [
         [
           "Move",
-          "Example plan card. Replace with your own."
+          "Sample plan card: walk for five minutes after one meal."
         ],
         [
           "Habit",
-          "Another example plan card."
+          "Sample plan card: stretch while the kettle boils."
+        ],
+        [
+          "Reflect",
+          "Sample plan card: how did your body feel after moving?"
         ]
       ]
     }
