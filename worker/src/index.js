@@ -15,6 +15,7 @@ const TTL_SECONDS = 60 * 60 * 24 * 30;      // messages expire after 30 days
 const DAILY_LIMIT = 50;                      // messages per practitioner per day
 const MAX_INDEX = 200;
 const MAX_AGE_MS = TTL_SECONDS * 1000;
+const REACTIONS = ["helpful", "tried", "help"];   // fixed set: no free text is ever accepted from clients
 const DECKS = ["everyday", "movement", "calm"];
 const ID_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
@@ -43,7 +44,26 @@ export default {
         const m = await getJson(env, key);
         if (!m) return out({ error: "not_found" }, 404);
         if (Date.now() - m.created > MAX_AGE_MS) { await env.SENSEE.delete(key); return out({ error: "not_found" }, 404); }
-        return out({ text: m.text, from: m.from, to: m.to, deck: m.deck });
+        return out({ text: m.text, from: m.from, to: m.to, deck: m.deck, react: m.react || [] });
+      }
+
+      // ---- public: client taps a one-tap reaction (no account, no free text)
+      if (request.method === "POST" && parts[0] === "m" && parts[1] && parts[2] === "react") {
+        const id = parts[1].toLowerCase(), key = "m:" + id;
+        const body = await readJson(request);
+        if (!REACTIONS.includes(body.r)) return out({ error: "bad_reaction" }, 400);
+        const m = await getJson(env, key);
+        if (!m || Date.now() - m.created > MAX_AGE_MS) return out({ error: "not_found" }, 404);
+        const have = m.react || [];
+        if (!have.includes(body.r)) {
+          m.react = have.concat(body.r);
+          const left = Math.max(60, Math.ceil((m.created + MAX_AGE_MS - Date.now()) / 1000));   // keep the original expiry
+          await env.SENSEE.put(key, JSON.stringify(m), { expirationTtl: left });
+          const idx = liveIndex((await getJson(env, "idx:" + m.pid)) || []);
+          const row = idx.find((r) => r.id === id);
+          if (row) { row.react = m.react; await env.SENSEE.put("idx:" + m.pid, JSON.stringify(idx), { expirationTtl: left }); }
+        }
+        return out({ ok: true, react: m.react || have });
       }
 
       // ---- admin
