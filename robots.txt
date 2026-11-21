@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://sensee.ca/sitemap.xml
