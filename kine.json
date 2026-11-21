@@ -1,0 +1,30 @@
+{
+  "enabled": false,
+  "name": "Your kinesiologist",
+  "message": {
+    "title": "This week",
+    "text": "Short note from your kinesiologist for everyone. Replace this text."
+  },
+  "cards": [
+    [
+      "Move",
+      "Example card from your kinesiologist. Replace with your own."
+    ]
+  ],
+  "plans": {
+    "week-1": {
+      "label": "Week 1",
+      "note": "Gentle start. Pick one card a day.",
+      "cards": [
+        [
+          "Move",
+          "Example plan card. Replace with your own."
+        ],
+        [
+          "Habit",
+          "Another example plan card."
+        ]
+      ]
+    }
+  }
+}
