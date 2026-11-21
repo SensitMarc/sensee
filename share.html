@@ -23,9 +23,11 @@ h1 { margin: 0; font: 800 clamp(2rem, 8vw, 2.8rem)/1.05 var(--display); letter-s
 form { background: var(--surface); border-radius: 24px; box-shadow: var(--shadow); padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 label, legend { font: 700 .95rem var(--display); }
 .hint { font: 400 .85rem var(--body); color: var(--muted); }
-input[type=text], textarea { width: 100%; font: inherit; color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+input[type=text], input[type=password], textarea { width: 100%; font: inherit; color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
 textarea { min-height: 110px; resize: vertical; }
 input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+#codeBox { display: flex; flex-direction: column; gap: 6px; }
+.row2.one { grid-template-columns: 1fr; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; align-items: end; }
 fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .decks { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -46,6 +48,13 @@ fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: colu
 .out[hidden] { display: none; }
 .link { word-break: break-all; font-size: .9rem; background: color-mix(in srgb, var(--ink) 7%, transparent); border-radius: 10px; padding: 10px 12px; user-select: all; }
 .status { min-height: 1.4em; margin: 0; color: var(--muted); font-weight: 600; }
+h2 { margin: 0; font: 800 1.2rem var(--display); }
+.mine { background: var(--surface); border-radius: 24px; box-shadow: var(--shadow); padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.mine[hidden], #codeBox[hidden], .care[hidden] { display: none; }
+.mine ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.mine li { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: .92rem; }
+.mine li small { color: var(--muted); display: block; }
+.mini { font: 700 .85rem var(--body); color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
 .care { background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 14px; padding: 12px 14px; font-size: .92rem; margin: 0; }
 </style>
 </head>
@@ -58,7 +67,11 @@ fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: colu
   </header>
 
   <form id="f" novalidate>
-    <div class="row2">
+    <div id="codeBox" hidden>
+      <label for="code">Your access code</label>
+      <input type="password" id="code" autocomplete="off" placeholder="Given to you by Sensee">
+    </div>
+    <div class="row2" id="nameRow">
       <div><label for="from">Your name</label><input type="text" id="from" maxlength="40" autocomplete="off" placeholder="Alex"></div>
       <div><label for="to">Client's first name <span class="hint">(optional)</span></label><input type="text" id="to" maxlength="40" autocomplete="off" placeholder="Sam"></div>
     </div>
@@ -75,7 +88,8 @@ fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: colu
         <label><input type="radio" name="deck" value="calm"><span>Calm</span></label>
       </div>
     </fieldset>
-    <p class="care"><b>Keep it light.</b> The message is carried inside the link. It isn't stored on sensee.ca, but it can stay in chat and browser history. Use a first name only, and leave out health details and anything private.</p>
+    <p class="care" id="careApi" hidden><b>Keep it light.</b> Your message is stored by Sensee for 30 days, not placed in the link, and you can delete it below at any time. Use a first name only, and leave out health details and anything private.</p>
+    <p class="care" id="careLink"><b>Keep it light.</b> The message is carried inside the link. It isn't stored on sensee.ca, but it can stay in chat and browser history. Use a first name only, and leave out health details and anything private.</p>
     <div class="banner" aria-live="polite"><b id="pt">Preview</b><p id="pm">Your message will appear here.</p></div>
     <div class="actions"><button type="submit" class="btn" id="make" disabled>Make my link</button></div>
   </form>
@@ -89,8 +103,15 @@ fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: colu
     <p class="status" id="status" aria-live="polite"></p>
   </section>
 
+  <section class="mine" id="mine" hidden>
+    <h2>My messages</h2>
+    <ul id="mineList"></ul>
+    <p class="status" id="mineMsg" aria-live="polite"></p>
+  </section>
+
   <p class="hint"><a href="./">Back to the cards</a></p>
 </main>
+<script src="api-config.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
@@ -111,19 +132,71 @@ function buildLink() {
   const base = location.href.split("#")[0].replace(/share\.html.*$/, "");
   return base + "#" + s.d + "?" + q.toString();
 }
+$("code").addEventListener("change", () => { try { sessionStorage.setItem("sgt-code", $("code").value.trim()); } catch (e) {} loadMine(); });
 ["from", "to", "msg"].forEach(id => $(id).addEventListener("input", preview));
 document.querySelectorAll("input[name=deck]").forEach(r => r.addEventListener("change", () => { $("out").hidden = true; }));
-$("f").addEventListener("submit", e => {
+const API = (window.SENSEE_API || "").replace(/\/$/, "");
+const siteBase = location.href.split("#")[0].replace(/share\.html.*$/, "");
+if (API) {
+  $("codeBox").hidden = false; $("nameRow").querySelector("div").hidden = true; $("nameRow").classList.add("one");
+  $("careApi").hidden = false; $("careLink").hidden = true;
+  try { $("code").value = sessionStorage.getItem("sgt-code") || ""; } catch (e) {}
+}
+const authHeaders = () => ({ "Authorization": "Bearer " + $("code").value.trim(), "Content-Type": "application/json" });
+const daysLeft = ms => Math.max(1, Math.ceil((ms - Date.now()) / 86400000)) + " days left";
+async function loadMine() {
+  if (!API || !$("code").value.trim()) { $("mine").hidden = true; return; }
+  try {
+    const r = await fetch(API + "/messages", { headers: authHeaders() });
+    if (r.status === 401) { $("mine").hidden = true; $("status").textContent = "That access code wasn't recognised."; return; }
+    const rows = await r.json();
+    const ul = $("mineList"); ul.textContent = "";
+    rows.forEach(m => {
+      const li = document.createElement("li");
+      const d = document.createElement("div"); d.textContent = (m.to ? "To " + m.to : "Message") + " \u00b7 " + m.deck;
+      const sm = document.createElement("small"); sm.textContent = daysLeft(m.expires) + " \u00b7 sensee.ca/#m=" + m.id; d.appendChild(sm);
+      const b = document.createElement("button"); b.type = "button"; b.className = "mini"; b.textContent = "Delete";
+      b.addEventListener("click", async () => {
+        try { await fetch(API + "/messages/" + m.id, { method: "DELETE", headers: authHeaders() }); $("mineMsg").textContent = "Deleted. That link no longer works."; loadMine(); }
+        catch (e) { $("mineMsg").textContent = "Couldn't delete just now. Try again."; }
+      });
+      li.append(d, b); ul.appendChild(li);
+    });
+    $("mine").hidden = false;
+    if (!rows.length) $("mineMsg").textContent = "No active messages.";
+  } catch (e) { $("mineMsg").textContent = "Couldn't load your messages."; }
+}
+$("f").addEventListener("submit", async e => {
   e.preventDefault();
-  if (!state().m) return;
-  const url = buildLink();
-  $("link").textContent = url; $("open").href = url; $("out").hidden = false; $("status").textContent = "";
+  const s = state();
+  if (!s.m) return;
+  if (!API) {
+    const url = buildLink();
+    $("link").textContent = url; $("open").href = url; $("out").hidden = false; $("status").textContent = "";
+    return;
+  }
+  if (!$("code").value.trim()) { $("out").hidden = true; $("mine").hidden = true; alert_(" Enter your access code first."); return; }
+  $("make").disabled = true; $("status").textContent = "";
+  try {
+    const r = await fetch(API + "/messages", { method: "POST", headers: authHeaders(), body: JSON.stringify({ text: s.m, to: s.t, deck: s.d }) });
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 401) { alert_("That access code wasn't recognised."); return; }
+    if (r.status === 429) { alert_("Daily message limit reached. Try again tomorrow."); return; }
+    if (!r.ok) { alert_("Couldn't make the link. Try again."); return; }
+    try { sessionStorage.setItem("sgt-code", $("code").value.trim()); } catch (e2) {}
+    const url = siteBase + "#m=" + data.id;
+    $("link").textContent = url; $("open").href = url; $("open").hidden = false; $("copy").hidden = false; $("out").hidden = false; $("status").textContent = "";
+    loadMine();
+  } catch (err) { alert_("Couldn't reach the message service. Check your connection."); }
+  finally { $("make").disabled = !state().m; }
 });
+function alert_(msg) { $("out").hidden = false; $("link").textContent = ""; $("open").hidden = true; $("copy").hidden = true; $("status").textContent = msg; }
 $("copy").addEventListener("click", async () => {
   try { await navigator.clipboard.writeText($("link").textContent); $("status").textContent = "Copied. Send it to your client."; }
   catch (e) { $("status").textContent = "Couldn't copy here. Select the link above and copy it by hand."; }
 });
 preview();
+loadMine();
 </script>
 </body>
 </html>
