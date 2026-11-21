@@ -52,8 +52,8 @@ h1 { margin: 0; font: 800 clamp(2.3rem, 9.6vw, 3.4rem)/1.02 var(--display); lett
 h1 span { color: var(--accent); }
 .lede { margin: 0; color: var(--muted); max-width: 40ch; }
 
-.decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; padding: 6px; background: var(--line); border-radius: 18px; }
-.deck { display: flex; align-items: center; justify-content: center; gap: 6px; font: 700 .98rem var(--display); color: var(--ink); background: transparent; border: 0; border-radius: 13px; padding: 10px 6px; cursor: pointer; transition: background .2s, color .2s, box-shadow .2s; }
+.decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; padding: 6px; background: var(--line); border-radius: 18px; }
+.deck { display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; font: 700 .98rem var(--display); color: var(--ink); background: transparent; border: 0; border-radius: 13px; padding: 10px 6px; cursor: pointer; transition: background .2s, color .2s, box-shadow .2s; }
 .deck svg { width: 18px; height: 18px; flex: none; }
 .deck:hover { background: color-mix(in srgb, var(--surface) 55%, transparent); }
 .deck[aria-pressed="true"] { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
@@ -106,7 +106,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 .foot { border-top: 1.5px solid var(--line); padding-top: 14px; font-size: .92rem; display: flex; gap: 8px; flex-wrap: wrap; }
 .foot a { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) { .card.deal { animation: none; } body, .deck, .chip, .btn, .bar i, .mark { transition: none; } }
-@media (max-width: 380px) { .deck { font-size: .88rem; } .deck svg { display: none; } }
+@media (max-width: 380px) { .deck { font-size: .92rem; padding: 10px 4px; } }
 </style>
 </head>
 <body>
