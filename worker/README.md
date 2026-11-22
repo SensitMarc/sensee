@@ -45,3 +45,10 @@ the site merges them into the built-in decks when it loads (if the Worker is unr
 - Up to 60 extra cards per deck. 30 suggestion requests per day. Remove a card any time from the admin page.
 - Needs the same `AI` binding as "Draft with Sensee". Admin token required for everything except reading `/cards`.
 - Nourish (food and drink) suggestions get extra filters: anything about calories, diets, weight, fasting, portions, supplements, cutting out foods, or calling foods good/bad is rejected automatically. Keep reviewing each one yourself.
+
+## Cook cards (recipes) and writing your own cards
+
+- A **Cook** card has a one-line idea plus a recipe: `{ time, items (2-8), steps (1-6) }`. The site shows a **See recipe** button on it, and **Copy to send** includes the recipe and an allergy reminder.
+- **Suggest recipes** (Nourish deck, admin page): the small model writes 3 simple recipes. Rejected automatically: meat, poultry, fish, raw or runny eggs, links, calories, diets, weight, portions, health claims, and anything too thin. You still keep or discard each one.
+- **Write your own** (admin page): add any card, including recipes, by hand. Only the structure and links are checked; the wording is up to you. Handwritten Everyday cards may use the "Fact" kind.
+- Needs the Worker code from this version. Cards are stored in the same `cards` KV key, now with an optional third item (the recipe).
