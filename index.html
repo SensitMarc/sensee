@@ -397,7 +397,7 @@ function openDeck(id, first, pid) {
     $("bannerTitle").textContent = msg.title || ("From " + KINE.name); $("bannerText").textContent = msg.text; bn.hidden = false;
   } else if (LINK_MSG) {
     $("bannerTitle").textContent = LINK_MSG.from ? "Message from " + LINK_MSG.from : "A personal message";
-    $("bannerText").textContent = (LINK_MSG.to ? "Hi " + LINK_MSG.to + ". " : "") + LINK_MSG.text;
+    $("bannerText").textContent = (LINK_MSG.to && !/^\s*(?:hi|hello|hey|dear)\b/i.test(LINK_MSG.text) ? "Hi " + LINK_MSG.to + ". " : "") + LINK_MSG.text;
     bn.hidden = false;
   } else { bn.hidden = true; }
   const rx = $("react"); rx.hidden = !(LINK_MSG && LINK_MSG.id && !(deckId === "kine" && msg && msg.text));

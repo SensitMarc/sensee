@@ -24,7 +24,7 @@ const AI_SYSTEM = [
   "Write exactly 3 different versions of the message, each 1 to 3 sentences and under 300 characters.",
   "Use plain, friendly language in the same language as the practitioner's note. Sound human, not corporate. No emojis unless the note uses them. No hashtags, no links.",
   "Only use facts that appear in the note. Never give medical advice, diagnose, name exercises or doses, promise results, or comment on injuries or pain beyond what the note says.",
-  "Do not include the client's name unless one is provided. Do not sign off with a name.",
+  "Never start with a greeting such as Hi, Hello or Hey, and do not start with the client's name: the page already greets the client before the message. Start straight with the message itself. Do not sign off with a name.",
   "Output only the 3 versions, separated by a line containing only ---. No numbering, no quotes, no explanations.",
 ].join(" ");
 const DECKS = ["everyday", "movement", "calm"];
@@ -106,7 +106,7 @@ export default {
         }
         // The model is only a drafting helper: keep plain text, drop links, cap length, never trust its format.
         const drafts = raw.split(/\n\s*-{3,}\s*\n|\n{2,}/).map((t) => clean(t.replace(/^\s*(?:\d+[.)]|[-*])\s*/, "").replace(/^["\u201c]+|["\u201d]+$/g, ""), 300))
-          .filter((t) => t.length >= 8 && !/https?:|www\./i.test(t)).slice(0, 3);
+          .map(stripGreeting).filter((t) => t.length >= 8 && !/https?:|www\./i.test(t)).slice(0, 3);
         if (!drafts.length) { console.error("draft: unusable model output"); return out({ error: "ai_failed", detail: "unusable output" }, 502); }
         return out({ drafts, left: AI_DAILY_LIMIT - used - 1 });
       }
@@ -195,6 +195,11 @@ async function saveIndex(env, pid, idx) {
 }
 async function getJson(env, key) { const raw = await env.SENSEE.get(key); try { return raw ? JSON.parse(raw) : null; } catch { return null; } }
 async function readJson(request) { try { return await request.json(); } catch { return {}; } }
+// The page already says "Hi <name>." above the message, so drafts must not open with their own greeting.
+const stripGreeting = (t) => {
+  const s = t.replace(/^\s*(?:hi|hello|hey|dear|good (?:morning|afternoon|evening))\b[^.!?,:;\n\u2014-]{0,30}[,.!:;\u2014-]+\s*/i, "");
+  return s.length >= 8 ? s.charAt(0).toUpperCase() + s.slice(1) : t;
+};
 const clean = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
 const today = () => new Date().toISOString().slice(0, 10);
 function randomId(n) {
