@@ -28,25 +28,29 @@ const AI_SYSTEM = [
   "Output only the 3 versions, separated by a line containing only ---. No numbering, no quotes, no explanations.",
 ].join(" ");
 // ---- extra cards: suggested by the small model, approved one by one by the admin, then served to the site
-const CARD_LABELS = { everyday: ["Do", "Notice", "Thank"], movement: ["Move", "Mindset", "Habit", "Reflect"], calm: ["Breathe", "Ground", "Soften", "Reset"] };
+const CARD_LABELS = { everyday: ["Do", "Notice", "Thank"], movement: ["Move", "Mindset", "Habit", "Reflect"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel"], calm: ["Breathe", "Ground", "Soften", "Reset"] };
 const CARD_EXAMPLES = {
   everyday: ["Do | Open a window for one minute and let the outside in.", "Notice | Listen for the farthest sound you can hear, then the closest.", "Thank | Name someone who made your week easier. Tell them today."],
   movement: ["Move | Take a two-minute walk, even if it is just around the room.", "Mindset | Progress is built from small, ordinary days. Today is one of them.", "Habit | Lay out your workout clothes tonight so tomorrow's start is easier.", "Reflect | What felt a little easier this week than last week?"],
+  nourish: ["Add | Add one extra vegetable to your next meal, any kind, any way you like it.", "Sip | Pour a full glass of water and drink it slowly.", "Savour | Take your first three bites slowly and notice the taste and texture.", "Prep | Fill a water bottle tonight and leave it where you will see it in the morning.", "Feel | An hour after eating, notice your energy and mood. No judging, just noticing."],
   calm: ["Breathe | Breathe in for four, out for six. Do it three times.", "Ground | Press your feet into the floor and notice the support under you.", "Soften | Take a sip of something warm and notice it all the way down.", "Reset | Look away from every screen for one minute."],
 };
 const CARDS_PER_DECK = 60, SUGGEST_DAILY_LIMIT = 30;
 const CARD_BLOCK = /\b(diagnos\w*|cure[sd]?|heal\w*|treat\w*|injur\w*|pain\w*|medic\w*|doctor\w*|therap\w*|prescri\w*|dose\w*|symptom\w*|disease\w*|cancer|surgery|rehab\w*|guarantee\w*)\b|https?:|www\.|@/i;
+// Food cards: only gentle, additive, mindful ideas. Nothing that counts, restricts, compares or labels foods.
+const NOURISH_BLOCK = /\b(calor\w*|diet\w*|weigh\w*|fat|fats|lose|loss|slim\w*|detox\w*|cleans\w*|fast|fasting|purg\w*|skip\w*|binge\w*|junk|cheat\w*|guilt\w*|restrict\w*|macros?|keto|carbs?|sugar|sugary|clean eating|healthy|unhealthy|bad|good for you|avoid|cut out|eliminate|portion\w*|grams?|ounces?|supplement\w*|vitamin\w*|burn\w*|earn\w*|deserve\w*)\b/i;
 const normCard = (t) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, "").replace(/\s+/g, " ").trim();
 function validCard(deck, label, text) {
   if (!CARD_LABELS[deck] || !CARD_LABELS[deck].includes(label)) return false;
   if (text.length < 15 || text.length > 160) return false;
+  if (deck === "nourish" && NOURISH_BLOCK.test(text)) return false;
   return !CARD_BLOCK.test(text);
 }
 async function aiText(env, system, user, maxTokens, temperature) {
   const res = await env.AI.run(env.AI_MODEL || AI_MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: maxTokens, temperature });
   return String((res && (res.response || (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content))) || "");
 }
-const DECKS = ["everyday", "movement", "calm"];
+const DECKS = ["everyday", "movement", "calm", "nourish"];
 const ID_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
 export default {
@@ -157,6 +161,7 @@ export default {
               "Label must be one of: " + labels.join(", ") + ". Mix the labels.",
               "Text is one or two plain sentences, 15 to 140 characters, friendly and concrete, something a person can do right now with no equipment.",
               "Never give medical advice, mention injuries, pain, conditions or treatment, make promises about results, or include links, names or statistics.",
+              (deck === "nourish" ? "These are food and drink cards. Frame everything as adding, enjoying, noticing and preparing. Never count, measure, weigh, restrict, compare or label foods as good or bad, never mention calories, diets, weight, fasting, portions or supplements, and never suggest skipping or cutting anything. " : "") +
               "Do not repeat the examples. Output only the 8 lines. No numbering, no extra words.",
               "Examples of the style:\n" + CARD_EXAMPLES[deck].join("\n"),
             ].join(" ");
