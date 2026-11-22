@@ -55,6 +55,10 @@ h2 { margin: 0; font: 800 1.2rem var(--display); }
 .mine li { display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: .92rem; }
 .mine li small { color: var(--muted); display: block; }
 .mine li small.reacts { color: var(--ink); font-weight: 700; }
+.aiout { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.aiout button { text-align: left; font: inherit; color: var(--ink); background: transparent; border: 1.5px dashed var(--line); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
+.aiout button:hover, .aiout button:focus-visible { border-style: solid; border-color: var(--accent); }
+#aiBox { margin-top: 8px; }
 .mini { font: 700 .85rem var(--body); color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
 .care { background: color-mix(in srgb, var(--accent) 10%, transparent); border-radius: 14px; padding: 12px 14px; font-size: .92rem; margin: 0; }
 </style>
@@ -80,6 +84,11 @@ h2 { margin: 0; font: 800 1.2rem var(--display); }
       <label for="msg">Message</label>
       <textarea id="msg" maxlength="400" placeholder="Nice work this week. Pick one card a day and tell me how it goes."></textarea>
       <div class="count" id="count">0 / 400</div>
+      <div id="aiBox" hidden>
+        <button type="button" class="mini" id="aiBtn">&#10024; Draft with Sensee</button>
+        <span class="hint" id="aiHint">Type a few rough words above, then tap for three friendly versions. Your note is sent to Cloudflare's AI to write them, so leave out health details.</span>
+        <div id="aiOut" class="aiout"></div>
+      </div>
     </div>
     <fieldset>
       <legend>Deck</legend>
@@ -145,6 +154,27 @@ if (API) {
 }
 const authHeaders = () => ({ "Authorization": "Bearer " + $("code").value.trim(), "Content-Type": "application/json" });
 const daysLeft = ms => Math.max(1, Math.ceil((ms - Date.now()) / 86400000)) + " days left";
+if (API) $("aiBox").hidden = false;
+$("aiBtn").addEventListener("click", async () => {
+  const note = $("msg").value.trim(), out = $("aiOut"), hint = $("aiHint");
+  if (note.length < 3) { hint.textContent = "Type a few rough words first, like: Sam did well, knee a bit sore, keep walking."; return; }
+  const btn = $("aiBtn"); btn.disabled = true; hint.textContent = "Drafting\u2026"; out.textContent = "";
+  try {
+    const r = await fetch(API + "/draft", { method: "POST", headers: authHeaders(), body: JSON.stringify({ note, to: $("to").value.trim() }) });
+    if (r.status === 401) throw new Error("Enter your access code first.");
+    if (r.status === 429) throw new Error("That's today's drafts used up. You can still write your own.");
+    if (r.status === 503) throw new Error("Drafting isn't switched on yet.");
+    if (!r.ok) throw new Error("Couldn't draft just now. Try again, or write your own.");
+    const d = await r.json();
+    hint.textContent = "AI-written. Tap one to use it, then read and edit before you send.";
+    d.drafts.forEach(t => {
+      const b = document.createElement("button"); b.type = "button"; b.textContent = t;
+      b.addEventListener("click", () => { $("msg").value = t; $("msg").dispatchEvent(new Event("input")); out.textContent = ""; hint.textContent = "Edit it so it sounds like you."; $("msg").focus(); });
+      out.appendChild(b);
+    });
+  } catch (e) { hint.textContent = e.message || "Couldn't draft just now."; }
+  btn.disabled = false;
+});
 async function loadMine() {
   if (!API || !$("code").value.trim()) { $("mine").hidden = true; return; }
   try {

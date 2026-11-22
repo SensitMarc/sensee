@@ -20,3 +20,16 @@ Give each practitioner their code; they use it on `/share.html`. You can disable
 - The Worker never logs message text. Cloudflare KV is global storage: check this suits your practice's privacy obligations.
 - 50 messages per practitioner per day. Add a Cloudflare rate-limiting rule for extra protection on `GET /m/*`.
 - Access codes are stored only as hashes.
+
+
+## Draft with Sensee (small language model)
+
+The share page has a "Draft with Sensee" button. It calls `POST /draft`, which runs a small model
+(`@cf/meta/llama-3.2-3b-instruct`) on Cloudflare Workers AI and returns three short drafts for the practitioner to edit.
+
+- **Dashboard:** Worker -> Settings -> Bindings -> Add -> **Workers AI**, variable name exactly `AI`, then Deploy.
+- **Wrangler:** the `[ai]` block in `wrangler.toml` does this.
+- Practitioner access code required. 20 drafts per practitioner per day. Output is plain text only; links are dropped.
+- Only the practitioner's rough note (and the client's first name if typed) is sent to the model. Nothing is stored.
+- Without the binding the route answers 503 and the button says drafting isn't switched on. Everything else keeps working.
+- To try another model, set a plain-text variable `AI_MODEL` (for example `@cf/meta/llama-3.1-8b-instruct-fp8`).

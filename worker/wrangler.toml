@@ -9,4 +9,8 @@ compatibility_date = "2026-11-01"
 binding = "SENSEE"
 id = "REPLACE_WITH_KV_NAMESPACE_ID"
 
+# Small language model for "Draft with Sensee" (Cloudflare Workers AI).
+[ai]
+binding = "AI"
+
 # Secret (never put in this file):  npx wrangler secret put ADMIN_TOKEN
