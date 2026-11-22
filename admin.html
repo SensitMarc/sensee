@@ -22,6 +22,8 @@
   li { border:1.5px solid var(--line); border-radius:10px; padding:8px 12px; display:flex; justify-content:space-between; gap:10px; align-items:center; flex-wrap:wrap; }
   li small { color:var(--muted); display:block; }
   .code { font-family:ui-monospace,Menlo,Consolas,monospace; background:color-mix(in srgb,var(--ink) 8%,transparent); padding:8px 10px; border-radius:8px; word-break:break-all; user-select:all; }
+  select { font:inherit; padding:8px 10px; border:2px solid var(--line); border-radius:8px; background:transparent; color:inherit; }
+  .hint { margin:0; color:var(--muted); font-size:.92rem; }
   #msg { margin:0; min-height:1.5em; color:var(--muted); font-weight:600; }
 </style>
 </head>
@@ -42,6 +44,18 @@
     </div>
   </section>
   <section><h2>Practitioners</h2><ul id="list"></ul></section>
+  <section>
+    <h2>Cards</h2>
+    <p class="hint">The small model suggests cards. Nothing reaches clients until you tap Keep.</p>
+    <div class="row">
+      <select id="cardDeck" aria-label="Deck"><option value="everyday">Everyday</option><option value="movement">Movement</option><option value="calm">Calm</option></select>
+      <button id="suggest" type="button">Suggest cards</button>
+    </div>
+    <ul id="cands"></ul>
+    <h2>Approved extra cards</h2>
+    <ul id="pool"></ul>
+    <p id="cardMsg" aria-live="polite" class="hint"></p>
+  </section>
   <p><a href="./">Back to the cards</a></p>
 </main>
 <script src="api-config.js"></script>
@@ -77,7 +91,40 @@ async function load() {
     $("msg").textContent = rows.length ? "" : "No practitioners yet.";
   } catch (e) { $("msg").textContent = e.message; }
 }
-$("load").addEventListener("click", load);
+$("load").addEventListener("click", () => { load(); loadPool(); });
+const cardRow = (label, text, buttons) => {
+  const li = document.createElement("li");
+  const d = document.createElement("div"); d.textContent = text;
+  const sm = document.createElement("small"); sm.textContent = label; d.prepend(sm);
+  const box = document.createElement("div"); box.className = "row"; buttons.forEach(b => box.appendChild(b)); li.append(d, box); return li;
+};
+const mkBtn = (txt, ghost, fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = txt; if (ghost) b.className = "ghost"; b.addEventListener("click", fn); return b; };
+async function loadPool() {
+  try {
+    const pool = await call("GET", "/admin/cards"), ul = $("pool"); ul.textContent = "";
+    let n = 0;
+    Object.keys(pool).forEach(deck => pool[deck].forEach((c, i) => { n++;
+      ul.appendChild(cardRow(deck + " \u00b7 " + c[0], c[1], [mkBtn("Remove", true, async () => { try { await call("DELETE", "/admin/cards/" + deck + "/" + i); loadPool(); } catch (e) { $("cardMsg").textContent = e.message; } })]));
+    }));
+    if (!n) $("cardMsg").textContent = "No extra cards yet.";
+  } catch (e) { $("cardMsg").textContent = e.message; }
+}
+$("suggest").addEventListener("click", async () => {
+  const deck = $("cardDeck").value, btn = $("suggest"), ul = $("cands"); ul.textContent = "";
+  btn.disabled = true; $("cardMsg").textContent = "Thinking\u2026";
+  try {
+    const r = await call("POST", "/admin/cards/suggest", { deck });
+    $("cardMsg").textContent = r.cards.length + " suggestions. Keep the good ones.";
+    r.cards.forEach(c => {
+      const li = cardRow(c[0], c[1], [
+        mkBtn("Keep", false, async () => { try { await call("POST", "/admin/cards", { deck, label: c[0], text: c[1] }); li.remove(); loadPool(); } catch (e) { $("cardMsg").textContent = e.message === "duplicate" ? "Already kept." : e.message; } }),
+        mkBtn("Discard", true, () => li.remove()),
+      ]);
+      ul.appendChild(li);
+    });
+  } catch (e) { $("cardMsg").textContent = e.message === "ai_unavailable" ? "The AI binding isn't set up on the Worker." : e.message; }
+  btn.disabled = false;
+});
 $("create").addEventListener("click", async () => {
   const name = $("name").value.trim();
   if (!name) { $("msg").textContent = "Enter a name first."; return; }

@@ -33,3 +33,14 @@ The share page has a "Draft with Sensee" button. It calls `POST /draft`, which r
 - Only the practitioner's rough note (and the client's first name if typed) is sent to the model. Nothing is stored.
 - Without the binding the route answers 503 and the button says drafting isn't switched on. Everything else keeps working.
 - To try another model, set a plain-text variable `AI_MODEL` (for example `@cf/meta/llama-3.1-8b-instruct-fp8`).
+
+## Extra cards (small model + admin approval)
+
+`admin.html` has a **Cards** section. Pick a deck, tap **Suggest cards**, and the small model proposes 8 candidates.
+Nothing reaches clients until you tap **Keep**. Kept cards are stored in KV (key `cards`) and served at `GET /cards`;
+the site merges them into the built-in decks when it loads (if the Worker is unreachable, the built-in cards still work).
+
+- Labels are fixed per deck (Everyday: Do/Notice/Thank, Movement: Move/Mindset/Habit/Reflect, Calm: Breathe/Ground/Soften/Reset). "Fact" cards are never generated.
+- Automatic checks reject links, duplicates, wrong length, and medical or promise-style wording before you even see a candidate.
+- Up to 60 extra cards per deck. 30 suggestion requests per day. Remove a card any time from the admin page.
+- Needs the same `AI` binding as "Draft with Sensee". Admin token required for everything except reading `/cards`.

@@ -27,6 +27,25 @@ const AI_SYSTEM = [
   "Never start with a greeting such as Hi, Hello or Hey, and do not start with the client's name: the page already greets the client before the message. Start straight with the message itself. Do not sign off with a name.",
   "Output only the 3 versions, separated by a line containing only ---. No numbering, no quotes, no explanations.",
 ].join(" ");
+// ---- extra cards: suggested by the small model, approved one by one by the admin, then served to the site
+const CARD_LABELS = { everyday: ["Do", "Notice", "Thank"], movement: ["Move", "Mindset", "Habit", "Reflect"], calm: ["Breathe", "Ground", "Soften", "Reset"] };
+const CARD_EXAMPLES = {
+  everyday: ["Do | Open a window for one minute and let the outside in.", "Notice | Listen for the farthest sound you can hear, then the closest.", "Thank | Name someone who made your week easier. Tell them today."],
+  movement: ["Move | Take a two-minute walk, even if it is just around the room.", "Mindset | Progress is built from small, ordinary days. Today is one of them.", "Habit | Lay out your workout clothes tonight so tomorrow's start is easier.", "Reflect | What felt a little easier this week than last week?"],
+  calm: ["Breathe | Breathe in for four, out for six. Do it three times.", "Ground | Press your feet into the floor and notice the support under you.", "Soften | Take a sip of something warm and notice it all the way down.", "Reset | Look away from every screen for one minute."],
+};
+const CARDS_PER_DECK = 60, SUGGEST_DAILY_LIMIT = 30;
+const CARD_BLOCK = /\b(diagnos\w*|cure[sd]?|heal\w*|treat\w*|injur\w*|pain\w*|medic\w*|doctor\w*|therap\w*|prescri\w*|dose\w*|symptom\w*|disease\w*|cancer|surgery|rehab\w*|guarantee\w*)\b|https?:|www\.|@/i;
+const normCard = (t) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, "").replace(/\s+/g, " ").trim();
+function validCard(deck, label, text) {
+  if (!CARD_LABELS[deck] || !CARD_LABELS[deck].includes(label)) return false;
+  if (text.length < 15 || text.length > 160) return false;
+  return !CARD_BLOCK.test(text);
+}
+async function aiText(env, system, user, maxTokens, temperature) {
+  const res = await env.AI.run(env.AI_MODEL || AI_MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: maxTokens, temperature });
+  return String((res && (res.response || (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content))) || "");
+}
 const DECKS = ["everyday", "movement", "calm"];
 const ID_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
@@ -56,6 +75,11 @@ export default {
         if (!m) return out({ error: "not_found" }, 404);
         if (Date.now() - m.created > MAX_AGE_MS) { await env.SENSEE.delete(key); return out({ error: "not_found" }, 404); }
         return out({ text: m.text, from: m.from, to: m.to, deck: m.deck, react: m.react || [] });
+      }
+
+      // ---- public: approved extra cards, merged into the decks by the site
+      if (request.method === "GET" && parts[0] === "cards" && !parts[1]) {
+        return out((await getJson(env, "cards")) || {}, 200, { "Cache-Control": "public, max-age=300" });
       }
 
       // ---- public: client taps a one-tap reaction (no account, no free text)
@@ -114,6 +138,64 @@ export default {
       // ---- admin
       if (parts[0] === "admin") {
         if (!(await isAdmin(bearer, env))) return out({ error: "unauthorized" }, 401);
+        if (parts[1] === "cards") {
+          const pool = (await getJson(env, "cards")) || {};
+          if (request.method === "GET" && !parts[2]) return out(pool);
+          if (request.method === "POST" && parts[2] === "suggest") {
+            if (!env.AI) return out({ error: "ai_unavailable" }, 503);
+            const body = await readJson(request);
+            const deck = body.deck;
+            if (!CARD_LABELS[deck]) return out({ error: "bad_deck" }, 400);
+            const key = "ai:cards:" + today();
+            const used = parseInt((await env.SENSEE.get(key)) || "0", 10);
+            if (used >= SUGGEST_DAILY_LIMIT) return out({ error: "daily_limit" }, 429);
+            await env.SENSEE.put(key, String(used + 1), { expirationTtl: 172800 });
+            const labels = CARD_LABELS[deck];
+            const system = [
+              "You write short cards for Sensee, a gentle app that gives people one small thing to try in under a minute.",
+              "Write exactly 8 new cards. Each card is one line in the form: Label | text",
+              "Label must be one of: " + labels.join(", ") + ". Mix the labels.",
+              "Text is one or two plain sentences, 15 to 140 characters, friendly and concrete, something a person can do right now with no equipment.",
+              "Never give medical advice, mention injuries, pain, conditions or treatment, make promises about results, or include links, names or statistics.",
+              "Do not repeat the examples. Output only the 8 lines. No numbering, no extra words.",
+              "Examples of the style:\n" + CARD_EXAMPLES[deck].join("\n"),
+            ].join(" ");
+            let raw = "";
+            try { raw = await aiText(env, system, "Write 8 new cards for the " + deck + " deck.", 700, 0.9); }
+            catch (e) { console.error("cards model error:", e && e.message); return out({ error: "ai_failed", detail: clean(e && e.message, 160) }, 502); }
+            const seen = new Set((pool[deck] || []).map((c) => normCard(c[1])).concat(CARD_EXAMPLES[deck].map((e) => normCard(e.split("|")[1] || ""))));
+            const found = [];
+            for (const line of raw.split("\n")) {
+              const m = /^\s*(?:\d+[.)]\s*|[-*]\s*)?\**\s*([A-Za-z]+)\s*\**\s*[|:]\s*(.+?)\s*$/.exec(line);
+              if (!m) continue;
+              const label = labels.find((l) => l.toLowerCase() === m[1].toLowerCase());
+              const text = clean(m[2].replace(/^["\u201c]+|["\u201d]+$/g, ""), 160);
+              if (!label || !validCard(deck, label, text) || seen.has(normCard(text))) continue;
+              seen.add(normCard(text)); found.push([label, text]);
+            }
+            if (!found.length) return out({ error: "ai_failed", detail: "no usable cards" }, 502);
+            return out({ deck, cards: found.slice(0, 8) });
+          }
+          if (request.method === "POST" && !parts[2]) {
+            const body = await readJson(request);
+            const deck = body.deck, label = clean(body.label, 20), text = clean(body.text, 160);
+            if (!validCard(deck, label, text)) return out({ error: "invalid_card" }, 400);
+            const list = pool[deck] || [];
+            if (list.some((c) => normCard(c[1]) === normCard(text))) return out({ error: "duplicate" }, 409);
+            if (list.length >= CARDS_PER_DECK) return out({ error: "deck_full" }, 409);
+            pool[deck] = list.concat([[label, text]]);
+            await env.SENSEE.put("cards", JSON.stringify(pool));
+            return out(pool);
+          }
+          if (request.method === "DELETE" && parts[2] && parts[3] !== undefined) {
+            const list = pool[parts[2]], i = parseInt(parts[3], 10);
+            if (!Array.isArray(list) || !(i >= 0 && i < list.length)) return out({ error: "not_found" }, 404);
+            list.splice(i, 1);
+            await env.SENSEE.put("cards", JSON.stringify(pool));
+            return out(pool);
+          }
+          return out({ error: "not_found" }, 404);
+        }
         if (parts[1] !== "practitioners") return out({ error: "not_found" }, 404);
         if (request.method === "GET" && !parts[2]) {
           const list = await env.SENSEE.list({ prefix: "p:" });
