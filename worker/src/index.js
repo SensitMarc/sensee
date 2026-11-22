@@ -28,7 +28,7 @@ const AI_SYSTEM = [
   "Output only the 3 versions, separated by a line containing only ---. No numbering, no quotes, no explanations.",
 ].join(" ");
 // ---- extra cards: suggested by the small model, approved one by one by the admin, then served to the site
-const CARD_LABELS = { everyday: ["Do", "Notice", "Thank"], movement: ["Move", "Mindset", "Habit", "Reflect"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel"], calm: ["Breathe", "Ground", "Soften", "Reset"] };
+const CARD_LABELS = { everyday: ["Do", "Notice", "Thank"], movement: ["Move", "Mindset", "Habit", "Reflect"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel", "Cook"], calm: ["Breathe", "Ground", "Soften", "Reset"] };
 const CARD_EXAMPLES = {
   everyday: ["Do | Open a window for one minute and let the outside in.", "Notice | Listen for the farthest sound you can hear, then the closest.", "Thank | Name someone who made your week easier. Tell them today."],
   movement: ["Move | Take a two-minute walk, even if it is just around the room.", "Mindset | Progress is built from small, ordinary days. Today is one of them.", "Habit | Lay out your workout clothes tonight so tomorrow's start is easier.", "Reflect | What felt a little easier this week than last week?"],
@@ -40,11 +40,29 @@ const CARD_BLOCK = /\b(diagnos\w*|cure[sd]?|heal\w*|treat\w*|injur\w*|pain\w*|me
 // Food cards: only gentle, additive, mindful ideas. Nothing that counts, restricts, compares or labels foods.
 const NOURISH_BLOCK = /\b(calor\w*|diet\w*|weigh\w*|fat|fats|lose|loss|slim\w*|detox\w*|cleans\w*|fast|fasting|purg\w*|skip\w*|binge\w*|junk|cheat\w*|guilt\w*|restrict\w*|macros?|keto|carbs?|sugar|sugary|clean eating|healthy|unhealthy|bad|good for you|avoid|cut out|eliminate|portion\w*|grams?|ounces?|supplement\w*|vitamin\w*|burn\w*|earn\w*|deserve\w*)\b/i;
 const normCard = (t) => t.toLowerCase().replace(/[^a-z0-9 ]+/g, "").replace(/\s+/g, " ").trim();
-function validCard(deck, label, text) {
-  if (!CARD_LABELS[deck] || !CARD_LABELS[deck].includes(label)) return false;
+const RECIPE_BLOCK = /\b(chicken|pork|beef|turkey|lamb|bacon|ham|sausages?|meat|fish|salmon|tuna|shrimp|seafood|raw|runny|undercooked|rare)\b/i;
+const LINKS = /https?:|www\.|@/i;
+const asList = (v, max, len) => (Array.isArray(v) ? v : []).map((x) => clean(x, len)).filter(Boolean).slice(0, max);
+// A recipe is { time, items: [2..8], steps: [1..6] }. Returns the cleaned recipe or null.
+function cleanRecipe(r) {
+  if (!r || typeof r !== "object") return null;
+  const time = clean(r.time, 24), items = asList(r.items, 8, 80), steps = asList(r.steps, 6, 160);
+  if (!time || items.length < 2 || steps.length < 1) return null;
+  return { time, items, steps };
+}
+// trusted = written by the admin by hand: structure and links are checked, wording is the admin's call.
+function validCard(deck, label, text, recipe, trusted) {
+  const labels = (CARD_LABELS[deck] || []).concat(trusted && deck === "everyday" ? ["Fact"] : []);
+  if (!labels.includes(label)) return false;
   if (text.length < 15 || text.length > 160) return false;
-  if (deck === "nourish" && NOURISH_BLOCK.test(text)) return false;
-  return !CARD_BLOCK.test(text);
+  if (label === "Cook" && !recipe) return false;
+  if (recipe && label !== "Cook") return false;
+  const all = [text].concat(recipe ? [recipe.time].concat(recipe.items, recipe.steps) : []);
+  if (all.some((t) => LINKS.test(t))) return false;
+  if (trusted) return true;
+  if (all.some((t) => CARD_BLOCK.test(t))) return false;
+  if (deck === "nourish" && all.some((t) => NOURISH_BLOCK.test(t))) return false;
+  return !(recipe && all.some((t) => RECIPE_BLOCK.test(t)));
 }
 async function aiText(env, system, user, maxTokens, temperature) {
   const res = await env.AI.run(env.AI_MODEL || AI_MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: maxTokens, temperature });
@@ -154,7 +172,37 @@ export default {
             const used = parseInt((await env.SENSEE.get(key)) || "0", 10);
             if (used >= SUGGEST_DAILY_LIMIT) return out({ error: "daily_limit" }, 429);
             await env.SENSEE.put(key, String(used + 1), { expirationTtl: 172800 });
-            const labels = CARD_LABELS[deck];
+            const wantRecipes = deck === "nourish" && body.kind === "Cook";
+            const labels = CARD_LABELS[deck].filter((l) => l !== "Cook");
+            if (wantRecipes) {
+              const rsys = [
+                "You write simple recipe cards for Sensee, a gentle app that gives people one small thing to try.",
+                "Write exactly 3 recipes. Use this exact format for each, with a line containing only --- between recipes:",
+                "IDEA | one friendly sentence under 110 characters that names the dish and the time, for example: Yogurt, berries and oats in a bowl. Two minutes.",
+                "TIME | like 5 min",
+                "INGREDIENTS | 3 to 6 common ingredients separated by semicolons",
+                "STEPS | 2 to 4 short steps separated by semicolons.",
+                "Rules: no meat, poultry, fish or seafood. No raw or runny eggs. Under 15 minutes, no special equipment, at most one pan or the microwave.",
+                "Keep it simple and enjoyable. Never mention calories, diets, weight, nutrients, health claims, portions or calling foods good or bad. Do not use semicolons inside an ingredient or a step. Output only the 3 recipes.",
+                "Example:\nIDEA | Banana toast with peanut butter. Three minutes.\nTIME | 3 min\nINGREDIENTS | Bread; Peanut butter; A banana; A pinch of cinnamon\nSTEPS | Toast the bread; Spread on the peanut butter; Slice the banana on top",
+              ].join(" ");
+              let rraw = "";
+              try { rraw = await aiText(env, rsys, "Write 3 new simple recipes.", 900, 0.9); }
+              catch (e) { console.error("recipes model error:", e && e.message); return out({ error: "ai_failed", detail: clean(e && e.message, 160) }, 502); }
+              const taken = new Set((pool[deck] || []).map((c) => normCard(c[1])));
+              const recipes = [];
+              for (const block of rraw.split(/\n\s*-{3,}\s*\n/)) {
+                const f = {};
+                for (const line of block.split("\n")) { const m = /^\s*\**\s*(IDEA|TIME|INGREDIENTS|STEPS)\s*\**\s*[|:]\s*(.+?)\s*$/i.exec(line); if (m) f[m[1].toUpperCase()] = m[2]; }
+                if (!f.IDEA || !f.TIME || !f.INGREDIENTS || !f.STEPS) continue;
+                const recipe = cleanRecipe({ time: f.TIME, items: f.INGREDIENTS.split(/\s*;\s*/), steps: f.STEPS.split(/\s*;\s*/) });
+                const text = clean(f.IDEA, 160);
+                if (!recipe || !validCard(deck, "Cook", text, recipe, false) || taken.has(normCard(text))) continue;
+                taken.add(normCard(text)); recipes.push(["Cook", text, recipe]);
+              }
+              if (!recipes.length) return out({ error: "ai_failed", detail: "no usable recipes" }, 502);
+              return out({ deck, cards: recipes.slice(0, 3) });
+            }
             const system = [
               "You write short cards for Sensee, a gentle app that gives people one small thing to try in under a minute.",
               "Write exactly 8 new cards. Each card is one line in the form: Label | text",
@@ -184,11 +232,13 @@ export default {
           if (request.method === "POST" && !parts[2]) {
             const body = await readJson(request);
             const deck = body.deck, label = clean(body.label, 20), text = clean(body.text, 160);
-            if (!validCard(deck, label, text)) return out({ error: "invalid_card" }, 400);
+            const recipe = body.recipe ? cleanRecipe(body.recipe) : null;
+            if (body.recipe && !recipe) return out({ error: "invalid_card" }, 400);
+            if (!validCard(deck, label, text, recipe, body.handwritten === true)) return out({ error: "invalid_card" }, 400);
             const list = pool[deck] || [];
             if (list.some((c) => normCard(c[1]) === normCard(text))) return out({ error: "duplicate" }, 409);
             if (list.length >= CARDS_PER_DECK) return out({ error: "deck_full" }, 409);
-            pool[deck] = list.concat([[label, text]]);
+            pool[deck] = list.concat([recipe ? [label, text, recipe] : [label, text]]);
             await env.SENSEE.put("cards", JSON.stringify(pool));
             return out(pool);
           }

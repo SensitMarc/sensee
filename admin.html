@@ -23,6 +23,10 @@
   li small { color:var(--muted); display:block; }
   .code { font-family:ui-monospace,Menlo,Consolas,monospace; background:color-mix(in srgb,var(--ink) 8%,transparent); padding:8px 10px; border-radius:8px; word-break:break-all; user-select:all; }
   select { font:inherit; padding:8px 10px; border:2px solid var(--line); border-radius:8px; background:transparent; color:inherit; }
+  textarea { font:inherit; padding:8px 10px; border:2px solid var(--line); border-radius:8px; background:transparent; color:inherit; width:100%; resize:vertical; }
+  #wRecipe { display:flex; flex-direction:column; gap:8px; }
+  #wRecipe[hidden] { display:none; }
+  li .rec { display:block; color:var(--muted); font-size:.85rem; margin-top:4px; white-space:pre-line; }
   .hint { margin:0; color:var(--muted); font-size:.92rem; }
   #msg { margin:0; min-height:1.5em; color:var(--muted); font-weight:600; }
 </style>
@@ -50,8 +54,22 @@
     <div class="row">
       <select id="cardDeck" aria-label="Deck"><option value="everyday">Everyday</option><option value="movement">Movement</option><option value="calm">Calm</option><option value="nourish">Nourish</option></select>
       <button id="suggest" type="button">Suggest cards</button>
+      <button id="suggestCook" type="button" class="ghost" hidden>Suggest recipes</button>
     </div>
     <ul id="cands"></ul>
+    <h2>Write your own</h2>
+    <p class="hint">Cards you write are added straight away, with no wording filter. Links are not allowed.</p>
+    <div class="row">
+      <select id="wDeck" aria-label="Deck"><option value="everyday">Everyday</option><option value="movement">Movement</option><option value="calm">Calm</option><option value="nourish">Nourish</option></select>
+      <select id="wLabel" aria-label="Kind"></select>
+    </div>
+    <textarea id="wText" maxlength="160" rows="2" placeholder="The card, in one or two sentences (160 characters max)"></textarea>
+    <div id="wRecipe" hidden>
+      <input id="wTime" type="text" maxlength="24" placeholder="Time, like 10 min">
+      <textarea id="wItems" rows="4" placeholder="Ingredients, one per line (2 to 8)"></textarea>
+      <textarea id="wSteps" rows="4" placeholder="Steps, one per line (1 to 6)"></textarea>
+    </div>
+    <div class="row"><button id="wAdd" type="button">Add my card</button></div>
     <h2>Approved extra cards</h2>
     <ul id="pool"></ul>
     <p id="cardMsg" aria-live="polite" class="hint"></p>
@@ -92,10 +110,12 @@ async function load() {
   } catch (e) { $("msg").textContent = e.message; }
 }
 $("load").addEventListener("click", () => { load(); loadPool(); });
-const cardRow = (label, text, buttons) => {
+const recipeText = r => r ? r.time + "\nYou will need: " + r.items.join("; ") + "\nSteps: " + r.steps.map((s, i) => (i + 1) + ") " + s).join(" ") : "";
+const cardRow = (label, text, buttons, recipe) => {
   const li = document.createElement("li");
   const d = document.createElement("div"); d.textContent = text;
   const sm = document.createElement("small"); sm.textContent = label; d.prepend(sm);
+  if (recipe) { const rc = document.createElement("span"); rc.className = "rec"; rc.textContent = recipeText(recipe); d.appendChild(rc); }
   const box = document.createElement("div"); box.className = "row"; buttons.forEach(b => box.appendChild(b)); li.append(d, box); return li;
 };
 const mkBtn = (txt, ghost, fn) => { const b = document.createElement("button"); b.type = "button"; b.textContent = txt; if (ghost) b.className = "ghost"; b.addEventListener("click", fn); return b; };
@@ -104,26 +124,48 @@ async function loadPool() {
     const pool = await call("GET", "/admin/cards"), ul = $("pool"); ul.textContent = "";
     let n = 0;
     Object.keys(pool).forEach(deck => pool[deck].forEach((c, i) => { n++;
-      ul.appendChild(cardRow(deck + " \u00b7 " + c[0], c[1], [mkBtn("Remove", true, async () => { try { await call("DELETE", "/admin/cards/" + deck + "/" + i); loadPool(); } catch (e) { $("cardMsg").textContent = e.message; } })]));
+      ul.appendChild(cardRow(deck + " \u00b7 " + c[0], c[1], [mkBtn("Remove", true, async () => { try { await call("DELETE", "/admin/cards/" + deck + "/" + i); loadPool(); } catch (e) { $("cardMsg").textContent = e.message; } })], c[2]));
     }));
     if (!n) $("cardMsg").textContent = "No extra cards yet.";
   } catch (e) { $("cardMsg").textContent = e.message; }
 }
-$("suggest").addEventListener("click", async () => {
-  const deck = $("cardDeck").value, btn = $("suggest"), ul = $("cands"); ul.textContent = "";
+async function suggest(kind) {
+  const deck = $("cardDeck").value, btn = kind ? $("suggestCook") : $("suggest"), ul = $("cands"); ul.textContent = "";
   btn.disabled = true; $("cardMsg").textContent = "Thinking\u2026";
   try {
-    const r = await call("POST", "/admin/cards/suggest", { deck });
+    const r = await call("POST", "/admin/cards/suggest", kind ? { deck, kind } : { deck });
     $("cardMsg").textContent = r.cards.length + " suggestions. Keep the good ones.";
     r.cards.forEach(c => {
       const li = cardRow(c[0], c[1], [
-        mkBtn("Keep", false, async () => { try { await call("POST", "/admin/cards", { deck, label: c[0], text: c[1] }); li.remove(); loadPool(); } catch (e) { $("cardMsg").textContent = e.message === "duplicate" ? "Already kept." : e.message; } }),
+        mkBtn("Keep", false, async () => { try { await call("POST", "/admin/cards", { deck, label: c[0], text: c[1], recipe: c[2] }); li.remove(); loadPool(); } catch (e) { $("cardMsg").textContent = e.message === "duplicate" ? "Already kept." : e.message; } }),
         mkBtn("Discard", true, () => li.remove()),
-      ]);
+      ], c[2]);
       ul.appendChild(li);
     });
   } catch (e) { $("cardMsg").textContent = e.message === "ai_unavailable" ? "The AI binding isn't set up on the Worker." : e.message; }
   btn.disabled = false;
+}
+$("suggest").addEventListener("click", () => suggest(""));
+$("suggestCook").addEventListener("click", () => suggest("Cook"));
+$("cardDeck").addEventListener("change", () => { $("suggestCook").hidden = $("cardDeck").value !== "nourish"; });
+const LABELS = { everyday: ["Do", "Notice", "Thank", "Fact"], movement: ["Move", "Mindset", "Habit", "Reflect"], calm: ["Breathe", "Ground", "Soften", "Reset"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel", "Cook"] };
+function fillLabels() {
+  const sel = $("wLabel"); sel.textContent = "";
+  LABELS[$("wDeck").value].forEach(l => { const o = document.createElement("option"); o.value = o.textContent = l; sel.appendChild(o); });
+  syncRecipe();
+}
+function syncRecipe() { $("wRecipe").hidden = $("wLabel").value !== "Cook"; }
+$("wDeck").addEventListener("change", fillLabels); $("wLabel").addEventListener("change", syncRecipe); fillLabels();
+const lines = id => $(id).value.split("\n").map(s => s.trim()).filter(Boolean);
+$("wAdd").addEventListener("click", async () => {
+  const deck = $("wDeck").value, label = $("wLabel").value, text = $("wText").value.trim();
+  const body = { deck, label, text, handwritten: true };
+  if (label === "Cook") body.recipe = { time: $("wTime").value.trim(), items: lines("wItems"), steps: lines("wSteps") };
+  try {
+    await call("POST", "/admin/cards", body);
+    $("wText").value = ""; $("wTime").value = ""; $("wItems").value = ""; $("wSteps").value = "";
+    $("cardMsg").textContent = "Added."; loadPool();
+  } catch (e) { $("cardMsg").textContent = ({ invalid_card: "That card didn't pass the checks: text 15 to 160 characters, no links, and recipes need a time, 2+ ingredients and 1+ step.", duplicate: "You already have that card.", deck_full: "That deck has 60 extra cards already." })[e.message] || e.message; }
 });
 $("create").addEventListener("click", async () => {
   const name = $("name").value.trim();
