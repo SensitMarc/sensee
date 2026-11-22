@@ -4,6 +4,7 @@
 // Practitioner:  POST   /messages                   -> { id }            (Authorization: Bearer <pid.secret>)
 //                GET    /messages                   -> [{ id, to, deck, created, expires }]
 //                DELETE /messages/:id
+//                POST   /draft                      { note, to? } -> { drafts: [3 strings] }   (needs the Workers AI binding "AI")
 // Admin:         GET    /admin/practitioners
 //                POST   /admin/practitioners        { name } -> { pid, code }  (code shown once)
 //                POST   /admin/practitioners/:pid   { active: true|false }
@@ -16,6 +17,16 @@ const DAILY_LIMIT = 50;                      // messages per practitioner per da
 const MAX_INDEX = 200;
 const MAX_AGE_MS = TTL_SECONDS * 1000;
 const REACTIONS = ["helpful", "tried", "help"];   // fixed set: no free text is ever accepted from clients
+const AI_DAILY_LIMIT = 20;                   // drafts per practitioner per day
+const AI_MODEL = "@cf/meta/llama-3.2-3b-instruct";   // small model on Cloudflare Workers AI
+const AI_SYSTEM = [
+  "You help a health or movement practitioner (kinesiologist, physiologist, chiropractor and similar) write a short, warm text message to one of their clients.",
+  "Write exactly 3 different versions of the message, each 1 to 3 sentences and under 300 characters.",
+  "Use plain, friendly language in the same language as the practitioner's note. Sound human, not corporate. No emojis unless the note uses them. No hashtags, no links.",
+  "Only use facts that appear in the note. Never give medical advice, diagnose, name exercises or doses, promise results, or comment on injuries or pain beyond what the note says.",
+  "Do not include the client's name unless one is provided. Do not sign off with a name.",
+  "Output only the 3 versions, separated by a line containing only ---. No numbering, no quotes, no explanations.",
+].join(" ");
 const DECKS = ["everyday", "movement", "calm"];
 const ID_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
@@ -64,6 +75,37 @@ export default {
           if (row) { row.react = m.react; await env.SENSEE.put("idx:" + m.pid, JSON.stringify(idx), { expirationTtl: left }); }
         }
         return out({ ok: true, react: m.react || have });
+      }
+
+      // ---- practitioner: draft help from a small language model (Cloudflare Workers AI)
+      if (request.method === "POST" && parts[0] === "draft" && !parts[1]) {
+        const who = await practitioner(bearer, env);
+        if (!who) return out({ error: "unauthorized" }, 401);
+        if (!env.AI) return out({ error: "ai_unavailable" }, 503);
+        const body = await readJson(request);
+        const note = clean(body.note, 300), to = clean(body.to, 40);
+        if (note.length < 3) return out({ error: "note_required" }, 400);
+        const key = "ai:" + who.pid + ":" + today();
+        const used = parseInt((await env.SENSEE.get(key)) || "0", 10);
+        if (used >= AI_DAILY_LIMIT) return out({ error: "daily_limit" }, 429);
+        await env.SENSEE.put(key, String(used + 1), { expirationTtl: 172800 });
+        let raw = "";
+        try {
+          const res = await env.AI.run(env.AI_MODEL || AI_MODEL, {
+            messages: [
+              { role: "system", content: AI_SYSTEM },
+              { role: "user", content: (to ? "Client's first name: " + to + "\n" : "") + "Practitioner's note: " + note },
+            ],
+            max_tokens: 400,
+            temperature: 0.7,
+          });
+          raw = String((res && (res.response || (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content))) || "");
+        } catch (e) { return out({ error: "ai_failed" }, 502); }
+        // The model is only a drafting helper: keep plain text, drop links, cap length, never trust its format.
+        const drafts = raw.split(/\n\s*-{3,}\s*\n|\n{2,}/).map((t) => clean(t.replace(/^\s*(?:\d+[.)]|[-*])\s*/, "").replace(/^["\u201c]+|["\u201d]+$/g, ""), 300))
+          .filter((t) => t.length >= 8 && !/https?:|www\./i.test(t)).slice(0, 3);
+        if (!drafts.length) return out({ error: "ai_failed" }, 502);
+        return out({ drafts, left: AI_DAILY_LIMIT - used - 1 });
       }
 
       // ---- admin
