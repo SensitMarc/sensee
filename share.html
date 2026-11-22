@@ -164,7 +164,7 @@ $("aiBtn").addEventListener("click", async () => {
     if (r.status === 401) throw new Error("Enter your access code first.");
     if (r.status === 429) throw new Error("That's today's drafts used up. You can still write your own.");
     if (r.status === 503) throw new Error("Drafting isn't switched on yet.");
-    if (!r.ok) throw new Error("Couldn't draft just now. Try again, or write your own.");
+    if (!r.ok) { let j = {}; try { j = await r.json(); } catch (x) {} throw new Error("Couldn't draft just now (" + r.status + (j.error ? " " + j.error : "") + (j.detail ? ": " + j.detail : "") + "). Try again, or write your own."); }
     const d = await r.json();
     hint.textContent = "AI-written. Tap one to use it, then read and edit before you send.";
     d.drafts.forEach(t => {
