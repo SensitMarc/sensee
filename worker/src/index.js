@@ -100,11 +100,14 @@ export default {
             temperature: 0.7,
           });
           raw = String((res && (res.response || (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content))) || "");
-        } catch (e) { return out({ error: "ai_failed" }, 502); }
+        } catch (e) {
+          console.error("draft model error:", e && e.message);
+          return out({ error: "ai_failed", detail: clean(e && e.message, 160) }, 502);
+        }
         // The model is only a drafting helper: keep plain text, drop links, cap length, never trust its format.
         const drafts = raw.split(/\n\s*-{3,}\s*\n|\n{2,}/).map((t) => clean(t.replace(/^\s*(?:\d+[.)]|[-*])\s*/, "").replace(/^["\u201c]+|["\u201d]+$/g, ""), 300))
           .filter((t) => t.length >= 8 && !/https?:|www\./i.test(t)).slice(0, 3);
-        if (!drafts.length) return out({ error: "ai_failed" }, 502);
+        if (!drafts.length) { console.error("draft: unusable model output"); return out({ error: "ai_failed", detail: "unusable output" }, 502); }
         return out({ drafts, left: AI_DAILY_LIMIT - used - 1 });
       }
 
@@ -179,6 +182,7 @@ export default {
       }
       return out({ error: "not_found" }, 404);
     } catch (e) {
+      console.error("server error:", e && e.message);
       return out({ error: "server_error" }, 500);
     }
   },
