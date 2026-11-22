@@ -453,6 +453,24 @@ async function route(first) {
 window.addEventListener("hashchange", () => { route(false); });
 showTally(getCount());
 route(true);
+/* Extra cards approved by the admin are served by the Worker and merged into the built-in decks. Failure changes nothing. */
+(async function loadExtraCards() {
+  const api = (window.SENSEE_API || "").replace(/\/$/, ""); if (!api) return;
+  try {
+    const ctl = new AbortController(), t = setTimeout(() => ctl.abort(), 5000);
+    const r = await fetch(api + "/cards", { signal: ctl.signal }); clearTimeout(t);
+    if (!r.ok) return;
+    const extra = await r.json(); let added = 0;
+    DECKS.forEach(d => {
+      if (d.id === "kine" || !Array.isArray(extra[d.id])) return;
+      const have = new Set(d.cards.map(c => c[1]));
+      extra[d.id].forEach(c => {
+        if (Array.isArray(c) && typeof c[0] === "string" && typeof c[1] === "string" && KIND_ICON[c[0]] && c[1].length <= 200 && !have.has(c[1])) { d.cards.push([c[0], c[1]]); have.add(c[1]); added++; }
+      });
+    });
+    if (added) { renderChips(); pile = []; }
+  } catch (e) {}
+})();
 
 /* "My kine" deck: the kinesiologist's own message and cards, from kine.json. Shown only when enabled.
    kine.json is public (this repo is public): keep it free of names and health details. */
