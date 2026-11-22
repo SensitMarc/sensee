@@ -156,6 +156,15 @@ if (API) {
 const authHeaders = () => ({ "Authorization": "Bearer " + $("code").value.trim(), "Content-Type": "application/json" });
 const daysLeft = ms => Math.max(1, Math.ceil((ms - Date.now()) / 86400000)) + " days left";
 if (API) $("aiBox").hidden = false;
+// The client page already says "Hi <name>." above the message, so a draft must not open with a greeting or the name.
+function noHello(t, name) {
+  const esc = x => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const nameRe = name ? new RegExp("^\\s*" + esc(name) + "\\b[\\s,.!:;\u2014-]*", "i") : null;
+  const helloRe = /^\s*(?:hi|hello|hey|dear|good (?:morning|afternoon|evening))\b[^.!?,:;\n\u2014-]{0,30}[,.!:;\u2014-]+\s*/i;
+  let s = t;
+  for (let n = 0; n < 3; n++) { const before = s; s = s.replace(helloRe, ""); if (nameRe) s = s.replace(nameRe, ""); if (s === before) break; }
+  return s.length >= 8 ? s.charAt(0).toUpperCase() + s.slice(1) : t;
+}
 $("aiBtn").addEventListener("click", async () => {
   const note = $("msg").value.trim(), out = $("aiOut"), hint = $("aiHint");
   if (note.length < 3) { hint.textContent = "Type a few rough words first, like: Sam did well, knee a bit sore, keep walking."; return; }
@@ -170,7 +179,7 @@ $("aiBtn").addEventListener("click", async () => {
     hint.textContent = "AI-written. Tap one to use it, then read and edit before you send.";
     d.drafts.forEach(t => {
       const b = document.createElement("button"); b.type = "button"; b.textContent = t;
-      b.addEventListener("click", () => { $("msg").value = t; $("msg").dispatchEvent(new Event("input")); out.textContent = ""; hint.textContent = "Edit it so it sounds like you."; $("msg").focus(); });
+      b.addEventListener("click", () => { $("msg").value = noHello(t, $("to").value.trim()); $("msg").dispatchEvent(new Event("input")); out.textContent = ""; hint.textContent = "Edit it so it sounds like you."; $("msg").focus(); });
       out.appendChild(b);
     });
   } catch (e) { hint.textContent = e.message || "Couldn't draft just now."; }

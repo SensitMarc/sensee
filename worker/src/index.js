@@ -152,7 +152,7 @@ export default {
         }
         // The model is only a drafting helper: keep plain text, drop links, cap length, never trust its format.
         const drafts = raw.split(/\n\s*-{3,}\s*\n|\n{2,}/).map((t) => clean(t.replace(/^\s*(?:\d+[.)]|[-*])\s*/, "").replace(/^["\u201c]+|["\u201d]+$/g, ""), 300))
-          .map(stripGreeting).filter((t) => t.length >= 8 && !/https?:|www\./i.test(t)).slice(0, 3);
+          .map((t) => stripGreeting(t, to)).filter((t) => t.length >= 8 && !/https?:|www\./i.test(t)).slice(0, 3);
         if (!drafts.length) { console.error("draft: unusable model output"); return out({ error: "ai_failed", detail: "unusable output" }, 502); }
         return out({ drafts, left: AI_DAILY_LIMIT - used - 1 });
       }
@@ -333,8 +333,11 @@ async function saveIndex(env, pid, idx) {
 async function getJson(env, key) { const raw = await env.SENSEE.get(key); try { return raw ? JSON.parse(raw) : null; } catch { return null; } }
 async function readJson(request) { try { return await request.json(); } catch { return {}; } }
 // The page already says "Hi <name>." above the message, so drafts must not open with their own greeting.
-const stripGreeting = (t) => {
-  const s = t.replace(/^\s*(?:hi|hello|hey|dear|good (?:morning|afternoon|evening))\b[^.!?,:;\n\u2014-]{0,30}[,.!:;\u2014-]+\s*/i, "");
+const stripGreeting = (t, name) => {
+  const nameRe = name ? new RegExp("^\\s*" + name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b[\\s,.!:;\u2014-]*", "i") : null;
+  const helloRe = /^\s*(?:hi|hello|hey|dear|good (?:morning|afternoon|evening))\b[^.!?,:;\n\u2014-]{0,30}[,.!:;\u2014-]+\s*/i;
+  let s = t;
+  for (let n = 0; n < 3; n++) { const before = s; s = s.replace(helloRe, ""); if (nameRe) s = s.replace(nameRe, ""); if (s === before) break; }
   return s.length >= 8 ? s.charAt(0).toUpperCase() + s.slice(1) : t;
 };
 const clean = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
