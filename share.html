@@ -99,7 +99,7 @@ h2 { margin: 0; font: 800 1.2rem var(--display); }
         <label><input type="radio" name="deck" value="nourish"><span>Nourish</span></label>
       </div>
     </fieldset>
-    <p class="care" id="careApi" hidden><b>Keep it light.</b> Your message is stored by Sensee for 30 days, not placed in the link, and you can delete it below at any time. Use a first name only, and leave out health details and anything private.</p>
+    <p class="care" id="careApi" hidden><b>Keep it light.</b> Your message is stored by Sensee for 1 day, not placed in the link, and you can delete it below at any time. Use a first name only, and leave out health details and anything private.</p>
     <p class="care" id="careLink"><b>Keep it light.</b> The message is carried inside the link. It isn't stored on sensee.ca, but it can stay in chat and browser history. Use a first name only, and leave out health details and anything private.</p>
     <div class="banner" aria-live="polite"><b id="pt">Preview</b><p id="pm">Your message will appear here.</p></div>
     <div class="actions"><button type="submit" class="btn" id="make" disabled>Make my link</button></div>
@@ -154,7 +154,7 @@ if (API) {
   try { $("code").value = sessionStorage.getItem("sgt-code") || ""; } catch (e) {}
 }
 const authHeaders = () => ({ "Authorization": "Bearer " + $("code").value.trim(), "Content-Type": "application/json" });
-const daysLeft = ms => Math.max(1, Math.ceil((ms - Date.now()) / 86400000)) + " days left";
+const daysLeft = ms => { const h = Math.max(1, Math.ceil((ms - Date.now()) / 3600000)); return h + (h === 1 ? " hour left" : " hours left"); };
 if (API) $("aiBox").hidden = false;
 // The client page already says "Hi <name>." above the message, so a draft must not open with a greeting or the name.
 function noHello(t, name) {

@@ -7,7 +7,7 @@
 //   GET    /cards               -> approved extra cards, per deck (cached 5 min)
 //
 // Practitioner (token = access code "pid.secret")
-//   POST   /messages            { text, to?, deck } -> { id, expires }   (50/day, text max 400 chars, kept 30 days)
+//   POST   /messages            { text, to?, deck } -> { id, expires }   (50/day, text max 400 chars, kept 1 day)
 //   GET    /messages            -> [{ id, to, deck, created, expires, react? }], newest first
 //   DELETE /messages/:id
 //   POST   /draft               { note, to? } -> { drafts: [3 strings], left }   (20/day, needs the Workers AI binding "AI")
@@ -27,7 +27,7 @@
 //         409 duplicate | deck_full, 429 daily_limit, 502 ai_failed, 503 ai_unavailable
 
 const ORIGINS = ["https://sensee.ca", "https://www.sensee.ca"];
-const TTL_SECONDS = 60 * 60 * 24 * 30;      // messages expire after 30 days
+const TTL_SECONDS = 60 * 60 * 24;           // messages expire after 1 day
 const DAILY_LIMIT = 50;                      // messages per practitioner per day
 const MAX_INDEX = 200;
 const MAX_AGE_MS = TTL_SECONDS * 1000;
@@ -340,7 +340,7 @@ export default {
   },
 };
 
-const liveIndex = (list) => list.filter((r) => r.expires > Date.now());
+const liveIndex = (list) => list.filter((r) => r.expires > Date.now() && Date.now() - r.created <= MAX_AGE_MS);   // also hides entries saved under an older, longer expiry
 async function saveIndex(env, pid, idx) {
   if (!idx.length) await env.SENSEE.delete("idx:" + pid);
   else await env.SENSEE.put("idx:" + pid, JSON.stringify(idx), { expirationTtl: TTL_SECONDS });

@@ -57,7 +57,7 @@ h2 { margin: 0; font: 800 1.2rem var(--display); }
   <header>
     <p class="brand">sensee.ca &middot; for practitioners</p>
     <h1>Your clients</h1>
-    <p class="lede">Every message you've sent, grouped by client, with how they replied. Messages disappear after 30 days.</p>
+    <p class="lede">Every message you've sent, grouped by client, with how they replied. Messages disappear after 1 day.</p>
   </header>
   <div class="codeCard" id="codeCard">
     <label for="code">Your access code</label>
@@ -77,7 +77,7 @@ const API = (window.SENSEE_API || "").replace(/\/$/, "");
 const LBL = { helpful: "\ud83d\udc4d Helpful", tried: "\u2705 Tried it", help: "\ud83d\ude4b Needs a hand" };
 let rows = [], filter = "all";
 try { $("code").value = sessionStorage.getItem("sgt-code") || ""; } catch (e) {}
-const daysLeft = ms => Math.max(1, Math.ceil((ms - Date.now()) / 86400000)) + " days left";
+const daysLeft = ms => { const h = Math.max(1, Math.ceil((ms - Date.now()) / 3600000)); return h + (h === 1 ? " hour left" : " hours left"); };
 function group() {
   const g = new Map();
   rows.forEach(m => {
