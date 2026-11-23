@@ -28,12 +28,19 @@
   #wRecipe[hidden] { display:none; }
   li .rec { display:block; color:var(--muted); font-size:.85rem; margin-top:4px; white-space:pre-line; }
   .hint { margin:0; color:var(--muted); font-size:.92rem; }
+  .supply li { align-items:flex-start; }
+  .tag { display:inline-block; font-size:.85rem; font-weight:700; padding:1px 8px; border-radius:999px; border:1.5px solid var(--ink); margin-right:6px; }
+  .tag.low { background:#ffd966; color:#3a2c00; } .tag.urgent { background:#ff6b4a; color:#2a0e07; } .tag.ok { background:transparent; }
+  #alert { border-radius:12px; padding:10px 14px; font-weight:600; background:#ffd966; color:#3a2c00; }
+  #alert[hidden] { display:none; }
+  details summary { cursor:pointer; font-weight:600; }
   #msg { margin:0; min-height:1.5em; color:var(--muted); font-weight:600; }
 </style>
 </head>
 <body>
 <main>
   <h1>Sensee admin</h1>
+  <p id="alert" role="status" hidden></p>
   <section>
     <label for="token"><b>Admin token</b></label>
     <div class="row"><input id="token" type="password" autocomplete="off" placeholder="Admin token"><button id="load" class="ghost" type="button">Load accounts</button></div>
@@ -48,6 +55,13 @@
     </div>
   </section>
   <section><h2>Practitioners</h2><ul id="list"></ul></section>
+  <section>
+    <h2>Daily supply</h2>
+    <p class="hint">Clients get one new card per deck each day. This shows how many days are left before a deck starts repeating. Aim for 30.</p>
+    <ul id="supply" class="supply"><li>Load your token above to see the supply.</li></ul>
+    <details><summary>What clients get over the next 7 days</summary><ul id="coming"></ul></details>
+    <p class="hint">Removing an approved card moves the cards after it up one day.</p>
+  </section>
   <section>
     <h2>Cards</h2>
     <p class="hint">The small model suggests cards. Nothing reaches clients until you tap Keep.</p>
@@ -77,6 +91,7 @@
   <p><a href="./">Back to the cards</a></p>
 </main>
 <script src="api-config.js"></script>
+<script src="cards.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 const API = (window.SENSEE_API || "").replace(/\/$/, "");
@@ -127,7 +142,38 @@ async function loadPool() {
       ul.appendChild(cardRow(deck + " \u00b7 " + c[0], c[1], [mkBtn("Remove", true, async () => { try { await call("DELETE", "/admin/cards/" + deck + "/" + i); loadPool(); } catch (e) { $("cardMsg").textContent = e.message; } })], c[2]));
     }));
     if (!n) $("cardMsg").textContent = "No extra cards yet.";
+    renderSupply(pool);
   } catch (e) { $("cardMsg").textContent = e.message; }
+}
+const DECK_NAMES = { everyday: "Everyday", movement: "Movement", calm: "Calm", nourish: "Nourish" };
+const TARGET = 30;
+function renderSupply(pool) {
+  const D = window.SENSEE_DAILY, ul = $("supply"); ul.textContent = "";
+  const low = [];
+  D.IDS.forEach(id => {
+    const extras = pool[id] || [], left = D.daysLeft(id, extras), end = new Date(); end.setDate(end.getDate() + left);
+    const level = left === 0 ? "urgent" : left < 7 ? "urgent" : left < 14 ? "low" : "ok";
+    const word = left === 0 ? "Repeating" : left < 7 ? "Urgent" : left < 14 ? "Low" : "OK";
+    if (level !== "ok") low.push(DECK_NAMES[id] + (left === 0 ? " is repeating" : " has " + left + " day" + (left === 1 ? "" : "s") + " left"));
+    const li = document.createElement("li"), d = document.createElement("div"), t = document.createElement("span"), sm = document.createElement("small");
+    t.className = "tag " + level; t.textContent = word;
+    d.append(t, document.createTextNode(DECK_NAMES[id] + ": " + (left === 0 ? "no fresh cards left" : left + " fresh day" + (left === 1 ? "" : "s") + " left")));
+    sm.textContent = (left ? "Fresh until " + end.toLocaleDateString(undefined, { month: "short", day: "numeric" }) + ". " : "") + (left < TARGET ? "Add " + (TARGET - left) + " more to reach " + TARGET + " days." : "Well stocked.") + " " + D.sequence(id, extras).length + " cards in rotation (" + extras.filter(c => !c[2]).length + " added by you).";
+    d.appendChild(sm);
+    const box = document.createElement("div"); box.className = "row";
+    box.appendChild(mkBtn("Suggest cards", level === "ok", () => { $("cardDeck").value = id; $("cardDeck").dispatchEvent(new Event("change")); suggest(""); $("cands").scrollIntoView({ behavior: "smooth" }); }));
+    li.append(d, box); ul.appendChild(li);
+  });
+  const al = $("alert"); al.hidden = !low.length; al.textContent = low.length ? "New cards needed: " + low.join(", ") + ". Suggest and approve more so clients always get something new." : "";
+  const cm = $("coming"); cm.textContent = "";
+  for (let k = 0; k < 7; k++) {
+    const day = new Date(); day.setDate(day.getDate() + k);
+    const li = document.createElement("li"), d = document.createElement("div"), sm = document.createElement("small");
+    d.textContent = day.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    sm.style.whiteSpace = "pre-line";
+    sm.textContent = D.IDS.map(id => { const c = D.cardFor(id, pool[id], day); return DECK_NAMES[id] + " \u00b7 " + c[0] + ": " + c[1]; }).join("\n");
+    d.appendChild(sm); li.appendChild(d); cm.appendChild(li);
+  }
 }
 async function suggest(kind) {
   const deck = $("cardDeck").value, btn = kind ? $("suggestCook") : $("suggest"), ul = $("cands"); ul.textContent = "";
