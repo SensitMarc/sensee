@@ -194,7 +194,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   </div>
   <div id="seenBox" hidden>
     <ol id="seenList"></ol>
-    <button type="button" class="linkbtn" id="seenClear">Clear this list</button>
+    <button type="button" class="linkbtn" id="seenClear">Clear list</button>
     <p class="seennote">Saved on this device only.</p>
   </div>
   <p class="note" id="note" hidden></p>
@@ -245,7 +245,7 @@ const DECKS = [
   { id: "everyday", name: "Everyday", icon: "sun", blurb: "Little things to do, notice, thank and learn.", note: "",
     cards: EVERYDAY },
   { id: "movement", name: "Movement", icon: "bolt", blurb: "Small nudges to get moving, build the habit and keep going. Made for practitioners to share with their clients.",
-    note: "General encouragement only, not medical advice. Follow your practitioner's plan.",
+    note: "Encouragement, not medical advice. Follow your practitioner's plan.",
     cards: [
       ["Move", "Stand up and roll your shoulders back ten times, slowly."],
       ["Move", "Take a two-minute walk, even if it is just around the room."],
@@ -291,7 +291,7 @@ const DECKS = [
       ["Reset", "Do one thing, then the next. Only the next thing."]
     ] },
   { id: "nourish", name: "Nourish", icon: "leaf", blurb: "Small, kind ideas for eating well and feeling better.",
-    note: "General ideas, not dietary advice. With a medical condition, allergy or worry about eating, follow your practitioner's plan.",
+    note: "Ideas, not dietary advice. With a health condition or allergy, follow your practitioner's plan.",
     cards: [
       ["Add", "Add one extra vegetable to your next meal, any kind, any way you like it."],
       ["Add", "Put a piece of fruit where you will see it first today."],
@@ -398,9 +398,9 @@ function getTried() { try { const r = JSON.parse(localStorage.getItem("sgt-tried
 function bumpTried() { const n = getTried() + 1; try { localStorage.setItem("sgt-tried", JSON.stringify({ day: today(), n })); } catch (e) {} return n; }
 function showTally(n) {
   const t = getTried();
-  const drawn = n === 0 ? "" : n === 1 ? "1 card drawn" : n + " cards drawn";
+  const drawn = n === 0 ? "" : n + " drawn";
   const tried = t === 0 ? "" : t + " tried";
-  $("tally").textContent = [drawn, tried].filter(Boolean).join(" · ") + (drawn || tried ? " today." : "");
+  $("tally").textContent = [drawn, tried].filter(Boolean).join(" · ") + (drawn || tried ? " today" : "");
 }
 
 /* One-minute "Try it now" timer on cards that ask you to do something. */
@@ -633,7 +633,7 @@ fetch("kine.json", { cache: "no-cache" }).then(r => r.ok ? r.json() : null).then
   });
   if (!all.length) return;
   KINE = { name: String(k.name || "your kinesiologist"), message: k.message || null, plans };
-  DECKS.push({ id: "kine", name: "My kine", icon: "heart", blurb: "Cards and messages from " + KINE.name + ".", note: "General encouragement only, not medical advice. Follow your practitioner's plan.", cards: all });
+  DECKS.push({ id: "kine", name: "My kine", icon: "heart", blurb: "Cards and messages from " + KINE.name + ".", note: "Encouragement, not medical advice. Follow your practitioner's plan.", cards: all });
   const h = parseHash(); openDeck(h.d === "kine" ? "kine" : deckId, false, h.p);
 }).catch(() => {});
 </script>
