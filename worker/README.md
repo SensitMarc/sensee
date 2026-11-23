@@ -16,7 +16,7 @@ Open `/admin.html` on the site, enter the admin token, and create a practitioner
 Give each practitioner their code; they use it on `/share.html`. You can disable or delete an account at any time.
 
 ## Privacy and limits
-- Messages are plain text (400 chars), expire after 30 days, and can be deleted early by the practitioner.
+- Messages are plain text (400 chars), expire after 1 day, and can be deleted early by the practitioner.
 - The Worker never logs message text. Cloudflare KV is global storage: check this suits your practice's privacy obligations.
 - 50 messages per practitioner per day. Add a Cloudflare rate-limiting rule for extra protection on `GET /m/*`.
 - Access codes are stored only as hashes.
@@ -69,7 +69,7 @@ Send `Authorization: Bearer <token>` wherever a token is listed. Browsers may on
 
 | Method and path | Body | Returns |
 |---|---|---|
-| `POST /messages` | `{ text, to?, deck }` | `{ id, expires }` (50/day, 400 chars, kept 30 days) |
+| `POST /messages` | `{ text, to?, deck }` | `{ id, expires }` (50/day, 400 chars, kept 1 day) |
 | `GET /messages` | | `[{ id, to, deck, created, expires, react? }]`, newest first |
 | `DELETE /messages/:id` | | `{ ok }` |
 | `POST /draft` | `{ note, to? }` | `{ drafts: [3 strings], left }` (20/day, needs the `AI` binding) |
