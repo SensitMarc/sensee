@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Your clients · Sensee</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gabarito:wght@600;700;800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root { --bg:#d8eaff; --bg2:#c2dcff; --surface:#fff; --ink:#0d2540; --muted:#43607f; --line:rgba(13,37,64,.18); --accent:#2f6bff; --on-accent:#fff; --shadow:0 1px 2px rgba(13,37,64,.08),0 12px 32px rgba(13,37,64,.14); --display:"Gabarito","Trebuchet MS",system-ui,sans-serif; --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif; color-scheme: light; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0c1b2e; --bg2:#11263f; --surface:#162f4d; --ink:#e3efff; --muted:#9db8d9; --line:rgba(227,239,255,.2); --accent:#6a96ff; --on-accent:#08162a; --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px rgba(0,0,0,.35); color-scheme: dark; } }
+:root[data-theme="dark"] { --bg:#0c1b2e; --bg2:#11263f; --surface:#162f4d; --ink:#e3efff; --muted:#9db8d9; --line:rgba(227,239,255,.2); --accent:#6a96ff; --on-accent:#08162a; --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 32px rgba(0,0,0,.35); color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: radial-gradient(120% 70% at 50% 0%, var(--bg2) 0%, var(--bg) 60%) fixed, var(--bg); color: var(--ink); font: 400 17px/1.5 var(--body); min-height: 100vh; }
+main { max-width: 560px; margin: 0 auto; padding: 22px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+a { color: var(--ink); }
+.brand { margin: 0; font: 700 .85rem var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 0; font: 800 clamp(2rem, 8vw, 2.8rem)/1.05 var(--display); letter-spacing: -.02em; text-wrap: balance; }
+.lede { margin: 0; color: var(--muted); }
+label, legend { font: 700 .95rem var(--display); }
+.hint { font: 400 .85rem var(--body); color: var(--muted); }
+input[type=text], input[type=password], textarea { width: 100%; font: inherit; color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btn { font: 800 1.05rem var(--display); border: 0; border-radius: 16px; padding: 14px 20px; cursor: pointer; background: var(--accent); color: var(--on-accent); }
+.btn.ghost { background: transparent; color: var(--ink); border: 1.5px solid var(--line); }
+.btn:disabled { opacity: .55; cursor: not-allowed; }
+.status { min-height: 1.4em; margin: 0; color: var(--muted); font-weight: 600; }
+h2 { margin: 0; font: 800 1.2rem var(--display); }
+.mini { font: 700 .85rem var(--body); color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 999px; padding: 5px 12px; cursor: pointer; }
+.codeCard, .tile, .client { background: var(--surface); border-radius: 24px; box-shadow: var(--shadow); padding: 18px; }
+.codeCard { display: flex; flex-direction: column; gap: 8px; }
+.codeCard[hidden], #list[hidden], #tiles[hidden], #filters[hidden] { display: none; }
+#tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.tile { padding: 12px 14px; border-radius: 16px; }
+.tile b { display: block; font: 800 1.7rem var(--display); }
+.tile span { color: var(--muted); font-size: .85rem; }
+#filters { display: flex; flex-wrap: wrap; gap: 8px; }
+#filters button { font: 600 .92rem var(--body); color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+#filters button[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+#list { display: flex; flex-direction: column; gap: 12px; }
+.client { display: flex; flex-direction: column; gap: 10px; }
+.client h3 { margin: 0; font: 800 1.15rem var(--display); }
+.client .sum { color: var(--muted); font-size: .9rem; margin: 0; }
+.client.needs { border-left: 6px solid var(--accent); }
+.msg { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 12px; font-size: .92rem; display: flex; flex-direction: column; gap: 4px; }
+.msg small { color: var(--muted); overflow-wrap: anywhere; }
+.chip { display: inline-block; font: 700 .82rem var(--body); border-radius: 999px; padding: 2px 10px; background: color-mix(in srgb, var(--ink) 8%, transparent); margin-right: 6px; }
+.chip.help { background: var(--accent); color: var(--on-accent); }
+.empty { color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="brand">sensee.ca &middot; for practitioners</p>
+    <h1>Your clients</h1>
+    <p class="lede">Every message you've sent, grouped by client, with how they replied. Messages disappear after 30 days.</p>
+  </header>
+  <div class="codeCard" id="codeCard">
+    <label for="code">Your access code</label>
+    <input type="password" id="code" autocomplete="off" placeholder="Given to you by Sensee">
+    <div><button class="btn" id="go" type="button">Show my clients</button></div>
+  </div>
+  <p class="status" id="status" aria-live="polite"></p>
+  <div id="tiles" hidden></div>
+  <div id="filters" hidden role="group" aria-label="Filter clients"></div>
+  <div id="list" hidden></div>
+  <p class="hint"><a href="share.html">Send a new message</a> &middot; <a href="./">Back to the cards</a></p>
+</main>
+<script src="api-config.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const API = (window.SENSEE_API || "").replace(/\/$/, "");
+const LBL = { helpful: "\ud83d\udc4d Helpful", tried: "\u2705 Tried it", help: "\ud83d\ude4b Needs a hand" };
+let rows = [], filter = "all";
+try { $("code").value = sessionStorage.getItem("sgt-code") || ""; } catch (e) {}
+const daysLeft = ms => Math.max(1, Math.ceil((ms - Date.now()) / 86400000)) + " days left";
+function group() {
+  const g = new Map();
+  rows.forEach(m => {
+    const name = (m.to || "").trim(), key = name.toLowerCase();
+    if (!g.has(key)) g.set(key, { name: name ? name.charAt(0).toUpperCase() + name.slice(1) : "No name", msgs: [] });
+    g.get(key).msgs.push(m);
+  });
+  const out = [...g.values()].map(c => {
+    const r = c.msgs.flatMap(m => m.react || []);
+    c.help = c.msgs.filter(m => (m.react || []).includes("help")).length;
+    c.tried = c.msgs.filter(m => (m.react || []).includes("tried")).length;
+    c.helpful = c.msgs.filter(m => (m.react || []).includes("helpful")).length;
+    c.none = c.msgs.filter(m => !(m.react || []).length).length;
+    return c;
+  });
+  out.sort((a, b) => (b.help > 0) - (a.help > 0) || a.name.localeCompare(b.name));
+  return out;
+}
+function el(tag, cls, txt) { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
+function render() {
+  const cs = group();
+  const t = $("tiles"); t.textContent = "";
+  [[rows.length, "messages"], [cs.length, "clients"], [rows.filter(m => (m.react || []).includes("tried")).length, "tried it"], [rows.filter(m => (m.react || []).includes("help")).length, "need a hand"]]
+    .forEach(([n, l]) => { const d = el("div", "tile"); d.appendChild(el("b", null, String(n))); d.appendChild(el("span", null, l)); t.appendChild(d); });
+  const F = [["all", "All"], ["help", "Needs a hand"], ["none", "No reply yet"], ["tried", "Tried it"]];
+  const f = $("filters"); f.textContent = "";
+  F.forEach(([k, l]) => { const b = el("button", null, l); b.type = "button"; b.setAttribute("aria-pressed", String(filter === k)); b.onclick = () => { filter = k; render(); }; f.appendChild(b); });
+  const list = $("list"); list.textContent = "";
+  const shown = cs.filter(c => filter === "all" || c[filter] > 0);
+  if (!shown.length) list.appendChild(el("p", "empty", rows.length ? "No clients match this filter." : "No active messages yet. Send one from the message page."));
+  shown.forEach(c => {
+    const card = el("section", "client" + (c.help ? " needs" : ""));
+    card.appendChild(el("h3", null, c.name));
+    const parts = [c.msgs.length + " sent"]; if (c.tried) parts.push(c.tried + " tried it"); if (c.help) parts.push(c.help + " need" + (c.help === 1 ? "s" : "") + " a hand");
+    card.appendChild(el("p", "sum", parts.join(" \u00b7 ")));
+    c.msgs.forEach(m => {
+      const d = el("div", "msg");
+      d.appendChild(el("span", null, m.deck + " \u00b7 " + daysLeft(m.expires)));
+      const rs = el("span"); const r = (m.react || []).filter(x => LBL[x]);
+      if (r.length) r.forEach(x => rs.appendChild(el("span", "chip" + (x === "help" ? " help" : ""), LBL[x]))); else rs.appendChild(el("small", null, "No reply yet"));
+      d.appendChild(rs);
+      d.appendChild(el("small", null, "sensee.ca/#m=" + m.id));
+      card.appendChild(d);
+    });
+    list.appendChild(card);
+  });
+  ["tiles", "filters", "list"].forEach(i => $(i).hidden = false);
+}
+async function load() {
+  const code = $("code").value.trim(), st = $("status");
+  if (!API) { st.textContent = "The message service isn't set up on this site yet."; return; }
+  if (!code) { st.textContent = "Enter your access code."; return; }
+  st.textContent = "Loading\u2026";
+  try {
+    const r = await fetch(API + "/messages", { headers: { "Authorization": "Bearer " + code } });
+    if (r.status === 401 || r.status === 403) { st.textContent = "That access code wasn't recognised."; return; }
+    if (!r.ok) throw 0;
+    rows = await r.json();
+    try { sessionStorage.setItem("sgt-code", code); } catch (e) {}
+    st.textContent = ""; render();
+  } catch (e) { st.textContent = "Couldn't load just now. Try again."; }
+}
+$("go").onclick = load;
+$("code").addEventListener("keydown", e => { if (e.key === "Enter") load(); });
+if ($("code").value) load();
+</script>
+</body>
+</html>
