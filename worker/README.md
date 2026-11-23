@@ -52,3 +52,43 @@ the site merges them into the built-in decks when it loads (if the Worker is unr
 - **Suggest recipes** (Nourish deck, admin page): the small model writes 3 simple recipes. Rejected automatically: meat, poultry, fish, raw or runny eggs, links, calories, diets, weight, portions, health claims, and anything too thin. You still keep or discard each one.
 - **Write your own** (admin page): add any card, including recipes, by hand. Only the structure and links are checked; the wording is up to you. Handwritten Everyday cards may use the "Fact" kind.
 - Needs the Worker code from this version. Cards are stored in the same `cards` KV key, now with an optional third item (the recipe).
+
+## Endpoint reference
+
+Send `Authorization: Bearer <token>` wherever a token is listed. Browsers may only call the API from https://sensee.ca and https://www.sensee.ca.
+
+**Public (no token)**
+
+| Method and path | Body | Returns |
+|---|---|---|
+| `GET /m/:id` | | `{ text, from, to, deck, react }` |
+| `POST /m/:id/react` | `{ r: "helpful" \| "tried" \| "help" }` | `{ ok, react }` |
+| `GET /cards` | | approved extra cards per deck (cached 5 min) |
+
+**Practitioner (token is the access code `pid.secret`)**
+
+| Method and path | Body | Returns |
+|---|---|---|
+| `POST /messages` | `{ text, to?, deck }` | `{ id, expires }` (50/day, 400 chars, kept 30 days) |
+| `GET /messages` | | `[{ id, to, deck, created, expires, react? }]`, newest first |
+| `DELETE /messages/:id` | | `{ ok }` |
+| `POST /draft` | `{ note, to? }` | `{ drafts: [3 strings], left }` (20/day, needs the `AI` binding) |
+
+**Admin (token is `ADMIN_TOKEN`)**
+
+| Method and path | Body | Returns |
+|---|---|---|
+| `GET /admin/practitioners` | | list of practitioners |
+| `POST /admin/practitioners` | `{ name }` | `{ pid, code }` (code shown once) |
+| `POST /admin/practitioners/:pid` | `{ active: true \| false }` | updated practitioner |
+| `DELETE /admin/practitioners/:pid` | | `{ ok }` |
+| `GET /admin/cards` | | approved extra cards |
+| `POST /admin/cards/suggest` | `{ deck, kind?: "Cook" }` | suggested cards (30/day, needs `AI`) |
+| `POST /admin/cards` | `{ deck, label, text, recipe?, handwritten? }` | approves one card |
+| `DELETE /admin/cards/:deck/:index` | | `{ ok }` |
+
+The admin token cannot send messages (`403 practitioner_required`).
+
+**Errors:** 400 `invalid_card` or `bad_reaction`; 401 `unauthorized`; 403 `forbidden` or `practitioner_required`; 404 `not_found`; 409 `duplicate` or `deck_full`; 429 `daily_limit`; 502 `ai_failed`; 503 `ai_unavailable`.
+
+**Pages that use them:** `share.html` (send, draft, my messages), `clients.html` (all clients and replies), `admin.html` (practitioners and cards), `index.html` (read message, react, extra cards).

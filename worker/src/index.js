@@ -1,15 +1,30 @@
 // Sensee messages: practitioner accounts + short-lived personal messages for clients.
+// Every route, with who may call it. Send "Authorization: Bearer <token>" where a token is needed.
 //
-// Public:        GET    /m/:id                      -> { text, from, to, deck }
-// Practitioner:  POST   /messages                   -> { id }            (Authorization: Bearer <pid.secret>)
-//                GET    /messages                   -> [{ id, to, deck, created, expires }]
-//                DELETE /messages/:id
-//                POST   /draft                      { note, to? } -> { drafts: [3 strings] }   (needs the Workers AI binding "AI")
-// Admin:         GET    /admin/practitioners
-//                POST   /admin/practitioners        { name } -> { pid, code }  (code shown once)
-//                POST   /admin/practitioners/:pid   { active: true|false }
-//                DELETE /admin/practitioners/:pid
-//                (Authorization: Bearer <ADMIN_TOKEN>)
+// Public (no token)
+//   GET    /m/:id               -> { text, from, to, deck, react }
+//   POST   /m/:id/react         { r: "helpful"|"tried"|"help" } -> { ok, react }
+//   GET    /cards               -> approved extra cards, per deck (cached 5 min)
+//
+// Practitioner (token = access code "pid.secret")
+//   POST   /messages            { text, to?, deck } -> { id, expires }   (50/day, text max 400 chars, kept 30 days)
+//   GET    /messages            -> [{ id, to, deck, created, expires, react? }], newest first
+//   DELETE /messages/:id
+//   POST   /draft               { note, to? } -> { drafts: [3 strings], left }   (20/day, needs the Workers AI binding "AI")
+//
+// Admin (token = ADMIN_TOKEN)
+//   GET    /admin/practitioners
+//   POST   /admin/practitioners          { name } -> { pid, code }   (code shown once)
+//   POST   /admin/practitioners/:pid     { active: true|false }
+//   DELETE /admin/practitioners/:pid
+//   GET    /admin/cards
+//   POST   /admin/cards/suggest          { deck, kind?: "Cook" } -> suggested cards (30/day, needs AI)
+//   POST   /admin/cards                  { deck, label, text, recipe?, handwritten? } -> approves one card
+//   DELETE /admin/cards/:deck/:index
+//   (the admin token cannot send messages: POST /messages returns 403 practitioner_required)
+//
+// Errors: 400 invalid_card | bad_reaction, 401 unauthorized, 403 forbidden | practitioner_required, 404 not_found,
+//         409 duplicate | deck_full, 429 daily_limit, 502 ai_failed, 503 ai_unavailable
 
 const ORIGINS = ["https://sensee.ca", "https://www.sensee.ca"];
 const TTL_SECONDS = 60 * 60 * 24 * 30;      // messages expire after 30 days
