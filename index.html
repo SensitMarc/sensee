@@ -64,6 +64,7 @@ h1 { margin: 0; font: 800 clamp(2.3rem, 9.6vw, 3.4rem)/1.02 var(--display); lett
 h1 span { color: var(--accent); }
 .lede { margin: 0; color: var(--muted); max-width: 40ch; }
 
+.decklabel { margin: 0 0 -8px; font: 700 1.05rem var(--display); color: var(--muted); }
 .decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; padding: 6px; background: var(--line); border-radius: 18px; }
 .decks:has(> .deck:nth-child(4):last-child) { grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 540px) { .decks:has(> .deck:nth-child(4):last-child) { grid-template-columns: repeat(4, 1fr); } }
@@ -152,7 +153,8 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 
   <div class="banner" id="banner" hidden><b id="bannerTitle"></b><p id="bannerText"></p><div class="react" id="react" hidden><span id="reactAsk">Let them know:</span><button type="button" data-r="helpful">&#x1F44D; Helpful</button><button type="button" data-r="tried">&#x2705; Tried it</button><button type="button" data-r="help">&#x1F64B; Need a hand</button><small id="reactMsg" role="status"></small></div></div>
 
-  <div class="decks" role="group" aria-label="Deck" id="decks"></div>
+  <p class="decklabel" id="deckLabel">New today. Pick one to try.</p>
+  <div class="decks" role="group" aria-labelledby="deckLabel" id="decks"></div>
   <p class="blurb" id="blurb"></p>
 
   <div class="stage">
