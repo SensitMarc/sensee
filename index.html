@@ -64,6 +64,9 @@ h1 { margin: 0; font: 800 clamp(2.3rem, 9.6vw, 3.4rem)/1.02 var(--display); lett
 h1 span { color: var(--accent); }
 .lede { margin: 0; color: var(--muted); max-width: 40ch; }
 
+.toprow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.langbtn { font: 700 1rem var(--display); color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 999px; padding: 8px 16px; min-height: 44px; cursor: pointer; }
+.langbtn:hover { border-color: var(--ink); }
 .decklabel { margin: 0 0 -8px; font: 700 1.05rem var(--display); color: var(--muted); }
 .decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; padding: 6px; background: var(--line); border-radius: 18px; }
 .decks:has(> .deck:nth-child(4):last-child) { grid-template-columns: repeat(2, 1fr); }
@@ -147,11 +150,11 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 <body>
 <main>
   <header>
-    <p class="brand">sensee.ca</p>
-    <h1>Sense it. See it. <span>Do it.</span></h1>
+    <div class="toprow"><p class="brand">sensee.ca</p><button type="button" class="langbtn" id="lang" aria-label="Language">Fran\u00e7ais</button></div>
+    <h1 id="slogan">Sense it. See it. <span>Do it.</span></h1>
   </header>
 
-  <div class="banner" id="banner" hidden><b id="bannerTitle"></b><p id="bannerText"></p><div class="react" id="react" hidden><span id="reactAsk">Let them know:</span><button type="button" data-r="helpful">&#x1F44D; Helpful</button><button type="button" data-r="tried">&#x2705; Tried it</button><button type="button" data-r="help">&#x1F64B; Need a hand</button><small id="reactMsg" role="status"></small></div></div>
+  <div class="banner" id="banner" hidden><b id="bannerTitle"></b><p id="bannerText"></p><div class="react" id="react" hidden><span id="reactAsk">Let them know:</span><button type="button" data-r="helpful" id="rxHelpful">&#x1F44D; Helpful</button><button type="button" data-r="tried" id="rxTried">&#x2705; Tried it</button><button type="button" data-r="help" id="rxHelp">&#x1F64B; Need a hand</button><small id="reactMsg" role="status"></small></div></div>
 
   <p class="decklabel" id="deckLabel">One small thing a day in each category. Pick one to try.</p>
   <div class="decks" role="group" aria-labelledby="deckLabel" id="decks"></div>
@@ -167,9 +170,9 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
       <p class="text" id="text" aria-live="polite"></p>
       <div class="recipe" id="recipe" hidden>
         <p class="rtime" id="rtime"></p>
-        <b>You will need</b><ul id="ritems"></ul>
-        <b>Steps</b><ol id="rsteps"></ol>
-        <p class="rnote">Swap anything you are allergic to or avoiding.</p>
+        <b id="rNeed">You will need</b><ul id="ritems"></ul>
+        <b id="rStepsH">Steps</b><ol id="rsteps"></ol>
+        <p class="rnote" id="rNote">Swap anything you are allergic to or avoiding.</p>
       </div>
       <div class="card-foot">
         <button class="try" id="try" hidden>Try it now · 1 min</button>
@@ -192,14 +195,52 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   <div id="seenBox" hidden>
     <ol id="seenList"></ol>
     <button type="button" class="linkbtn" id="seenClear">Clear list</button>
-    <p class="seennote">Saved on this device only.</p>
+    <p class="seennote" id="seenNote">Saved on this device only.</p>
   </div>
   <p class="note" id="note" hidden></p>
-  <footer class="foot"><a href="share.html">For practitioners</a> <span aria-hidden="true">·</span> <a href="mailto:sensitlabs@gmail.com">Send feedback</a></footer>
+  <footer class="foot"><a href="share.html" id="fPrac">For practitioners</a> <span aria-hidden="true">·</span> <a href="mailto:sensitlabs@gmail.com" id="fFeed">Send feedback</a></footer>
 </main>
 <script src="api-config.js"></script>
 <script src="cards.js"></script>
+<script src="cards.fr.js"></script>
 <script>
+
+/* Language: English by default, French when chosen. The choice is kept on this device and can be set with ?l=fr in a link. */
+const FR = {
+  "Sense it. See it. Do it.": "Sentez-le. Voyez-le. Faites-le.",
+  "One small thing a day in each category. Pick one to try.": "Une petite chose par jour dans chaque catégorie. Choisissez-en une à essayer.",
+  "Everyday": "Au quotidien", "Movement": "Mouvement", "Calm": "Calme", "Nourish": "Nourrir", "My kine": "Ma kiné",
+  "Little things to do, notice, thank and learn.": "De petites choses à faire, à remarquer, à remercier et à apprendre.",
+  "Small nudges to get moving, build the habit and keep going. Made for practitioners to share with their clients.": "De petits coups de pouce pour bouger, créer l'habitude et continuer. Conçu pour que les praticiens le partagent avec leurs clients.",
+  "Quick resets for a busy head.": "De courtes pauses pour un esprit occupé.",
+  "Small, kind ideas for eating well and feeling better.": "De petites idées bienveillantes pour bien manger et se sentir mieux.",
+  "Encouragement, not medical advice. Follow your practitioner's plan.": "Des encouragements, pas des conseils médicaux. Suivez le plan de votre praticien.",
+  "Ideas, not dietary advice. With a health condition or allergy, follow your practitioner's plan.": "Des idées, pas des conseils alimentaires. En cas de problème de santé ou d'allergie, suivez le plan de votre praticien.",
+  "Mark as done": "Marquer fait", "Done": "Fait", "Copy to send": "Copier pour envoyer",
+  "Try it now · 1 min": "Essayer maintenant · 1 min", "Stop": "Arrêter", "Again": "Encore", "Nicely done. That counts.": "Bien joué. Ça compte.",
+  "See recipe": "Voir la recette", "Hide recipe": "Masquer la recette", "Recipe": "Recette", "You will need": "Il vous faut", "Steps": "Étapes",
+  "Swap anything you are allergic to or avoiding.": "Remplacez tout ce à quoi vous êtes allergique ou que vous évitez.",
+  "Today": "Aujourd'hui", "A new card every day.": "Une nouvelle carte chaque jour.", "Today's card": "Carte du jour", "Seen before": "Déjà vue",
+  "Seen cards": "Cartes vues", "Clear list": "Effacer la liste", "Saved on this device only.": "Enregistré sur cet appareil seulement.",
+  "For practitioners": "Pour les praticiens", "Send feedback": "Envoyer un commentaire",
+  "Copied. Send it to someone who could use it.": "Copié. Envoyez-le à quelqu'un à qui il pourrait servir.",
+  "Couldn't copy here. Select the card text and copy it by hand.": "Copie impossible ici. Sélectionnez le texte de la carte et copiez-le à la main.",
+  "A personal message": "Un message personnel", "Let them know:": "Faites-le savoir :",
+  "Helpful": "Utile", "Tried it": "Essayé", "Need a hand": "Besoin d'aide",
+  "Couldn't send that just now. Try again.": "Envoi impossible pour l'instant. Réessayez.",
+  "This message link needs the Sensee message service, which isn't switched on yet.": "Ce lien de message nécessite le service de messages Sensee, qui n'est pas encore activé.",
+  "This message has expired or was removed.": "Ce message a expiré ou a été retiré.",
+  "Couldn't load the message. Check your connection and open the link again.": "Impossible de charger le message. Vérifiez votre connexion et rouvrez le lien.",
+  "You will need:": "Il vous faut :", "Steps:": "Étapes :"
+};
+const KIND_FR = { Do: "Faire", Notice: "Observer", Thank: "Remercier", Fact: "Saviez-vous", Move: "Bouger", Mindset: "État d'esprit", Habit: "Habitude", Reflect: "Réfléchir", Breathe: "Respirer", Ground: "Ancrer", Soften: "Détendre", Reset: "Recentrer", Add: "Ajouter", Sip: "Siroter", Savour: "Savourer", Prep: "Préparer", Feel: "Ressentir", Cook: "Cuisiner" };
+let LANG = "en";
+try { const q = new URLSearchParams(location.search).get("l"); if (q === "fr" || q === "en") localStorage.setItem("sgt-lang", q); LANG = localStorage.getItem("sgt-lang") === "fr" ? "fr" : "en"; } catch (e) {}
+const t = k => (LANG === "fr" && FR[k]) || k;
+const kindName = k => (LANG === "fr" && KIND_FR[k]) || k;
+const FRMAP = new Map();
+Object.keys(window.SENSEE_CARDS).forEach(id => window.SENSEE_CARDS[id].forEach((c, i) => { const f = window.SENSEE_CARDS_FR[id] && window.SENSEE_CARDS_FR[id][i]; if (f) FRMAP.set(c[1], f); }));
+const loc = c => (LANG === "fr" && c && FRMAP.get(c[1])) || c;   // the card as it is shown in the chosen language
 
 const DECKS = [
   { id: "everyday", name: "Everyday", icon: "sun", blurb: "Little things to do, notice, thank and learn.", note: "",
@@ -279,10 +320,10 @@ function validRecipe(r) {
   return !!r && typeof r === "object" && typeof r.time === "string" && r.time.length <= 24 && okList(r.items, 10) && okList(r.steps, 8);
 }
 function showRecipe(open) {
-  const r = current && validRecipe(current[2]) ? current[2] : null, btn = $("seeRecipe"), box = $("recipe");
+  const lc = current && loc(current), r = lc && validRecipe(lc[2]) ? lc[2] : null, btn = $("seeRecipe"), box = $("recipe");
   btn.hidden = !r;
   btn.setAttribute("aria-expanded", String(!!(r && open)));
-  btn.textContent = r && open ? "Hide recipe" : "See recipe";
+  btn.textContent = t(r && open ? "Hide recipe" : "See recipe");
   box.hidden = !(r && open);
   if (r && open) {
     $("rtime").textContent = r.time;
@@ -294,7 +335,7 @@ function resetTry() {
   stopTimer();
   const b = $("try");
   b.hidden = !(current && TRY_KINDS.indexOf(current[0]) >= 0);
-  b.textContent = "Try it now · 1 min";
+  b.textContent = t("Try it now \u00b7 1 min");
   b.dataset.running = "false";
   $("cheer").textContent = "";
 }
@@ -303,23 +344,23 @@ function runTry() {
   if (tick) { resetTry(); return; }
   left = TRY_SECONDS;
   b.dataset.running = "true";
-  b.textContent = "Stop · " + fmt(left);
+  b.textContent = t("Stop") + " \u00b7 " + fmt(left);
   tick = setInterval(() => {
     left--;
     if (left <= 0) {
       stopTimer();
       b.dataset.running = "false";
-      b.textContent = "Again";
-      $("cheer").textContent = "Nicely done. That counts.";
+      b.textContent = t("Again");
+      $("cheer").textContent = t("Nicely done. That counts.");
       const di = dailyIdx(); if (di >= 0 && isTodayCard()) setDone(di, true);
-    } else { b.textContent = "Stop · " + fmt(left); }
+    } else { b.textContent = t("Stop") + " \u00b7 " + fmt(left); }
   }, 1000);
 }
 
 function render(c) {
   current = c;
-  $("kind").textContent = c[0];
-  $("text").textContent = c[1];
+  $("kind").textContent = kindName(c[0]);
+  $("text").textContent = loc(c)[1];
   showRecipe(false);
   $("mark").innerHTML = markSvg(KIND_ICON[c[0]]);
   resetTry();
@@ -339,19 +380,19 @@ function recordSeen(c, d) {
 function renderSeen() {
   const a = loadSeen(), ul = $("seenList"); ul.textContent = "";
   $("seenToggle").hidden = a.length < 2;
-  $("seenToggle").textContent = "Seen cards (" + a.length + ")";
+  $("seenToggle").textContent = t("Seen cards") + " (" + a.length + ")";
   if (a.length < 2) { $("seenBox").hidden = true; $("seenToggle").setAttribute("aria-expanded", "false"); }
   a.forEach(x => {
-    const li = document.createElement("li"), b = document.createElement("button"), s = document.createElement("small"), t = document.createElement("span");
-    b.type = "button"; s.textContent = x.c[0] + (validRecipe(x.c[2]) ? " \u00b7 Recipe" : ""); t.textContent = x.c[1];
-    b.append(s, t); b.addEventListener("click", () => reopen(x)); li.appendChild(b); ul.appendChild(li);
+    const li = document.createElement("li"), b = document.createElement("button"), s = document.createElement("small"), tx = document.createElement("span");
+    b.type = "button"; s.textContent = kindName(x.c[0]) + (validRecipe(x.c[2]) ? " \u00b7 " + t("Recipe") : ""); tx.textContent = loc(x.c)[1];
+    b.append(s, tx); b.addEventListener("click", () => reopen(x)); li.appendChild(b); ul.appendChild(li);
   });
 }
 function reopen(x) {
   quiet = true;
   try { if (x.d !== deckId && DECKS.some(d => d.id === x.d)) openDeck(x.d, true, ""); } finally { quiet = false; }
   render(x.c); recordSeen(x.c);
-  $("count").textContent = isTodayCard() ? dateLabel() : "Seen before"; setBack(); syncDone();
+  $("count").textContent = isTodayCard() ? dateLabel() : t("Seen before"); setBack(); syncDone();
   if (validRecipe(x.c[2])) showRecipe(true);
   $("card").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -369,14 +410,14 @@ function syncDone() {
   const i = dailyIdx(), b = $("done"), on = i >= 0 && isTodayCard();
   b.hidden = !on; if (!on) return;
   const d = !!DAILY.done[i];
-  b.textContent = d ? "Done \u2713" : "Mark as done"; b.setAttribute("aria-pressed", String(d));
+  b.textContent = d ? t("Done") + " \u2713" : t("Mark as done"); b.setAttribute("aria-pressed", String(d));
 }
 function setDone(i, v) { DAILY.done[i] = v; saveDaily(); syncDone(); showTally(); }
 function showTally() {
   const n = DAILY.done.filter(Boolean).length;
-  $("tally").textContent = (n ? n + " of 4 done today. " : "") + "A new card every day.";
+  $("tally").textContent = (n ? (LANG === "fr" ? n + " sur 4 faites aujourd'hui. " : n + " of 4 done today. ") : "") + t("A new card every day.");
 }
-const dateLabel = () => "Today \u00b7 " + new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const dateLabel = () => t("Today") + " \u00b7 " + new Date().toLocaleDateString(LANG === "fr" ? "fr-CA" : undefined, { month: "short", day: "numeric" });
 function showToday() {
   const c = todayCard();
   render(c);
@@ -405,7 +446,7 @@ function renderDecks() {
     const b = document.createElement("button");
     b.className = "deck"; b.setAttribute("aria-pressed", String(d.id === deckId));
     b.innerHTML = ICONS[d.icon] || "";
-    const t = document.createElement("span"); t.textContent = d.name; b.appendChild(t);
+    const nm = document.createElement("span"); nm.textContent = t(d.name); b.appendChild(nm);
     b.addEventListener("click", () => { location.hash = d.id; });
     box.appendChild(b);
   });
@@ -416,21 +457,21 @@ function openDeck(id, first, pid) {
   document.documentElement.dataset.deck = deckId === "kine" ? "movement" : deckId;
   current = null;
   const pl = plan();
-  $("blurb").textContent = pl ? (pl.note || pl.label || "") : deck().blurb;
-  const note = $("note"); note.textContent = deck().note || ""; note.hidden = !deck().note;
+  $("blurb").textContent = pl ? (pl.note || pl.label || "") : t(deck().blurb);
+  const note = $("note"); note.textContent = t(deck().note || ""); note.hidden = !deck().note;
   const bn = $("banner"), msg = KINE && KINE.message;
   if (deckId === "kine" && msg && msg.text) {
-    $("bannerTitle").textContent = msg.title || ("From " + KINE.name); $("bannerText").textContent = msg.text; bn.hidden = false;
+    $("bannerTitle").textContent = msg.title || ((LANG === "fr" ? "De " : "From ") + KINE.name); $("bannerText").textContent = msg.text; bn.hidden = false;
   } else if (LINK_MSG) {
-    $("bannerTitle").textContent = LINK_MSG.from ? "Message from " + LINK_MSG.from : "A personal message";
+    $("bannerTitle").textContent = LINK_MSG.from ? (LANG === "fr" ? "Message de " : "Message from ") + LINK_MSG.from : t("A personal message");
     const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const greeted = LINK_MSG.to && new RegExp("^\\s*(?:(?:hi|hello|hey|dear|good (?:morning|afternoon|evening))\\b|" + esc(LINK_MSG.to) + "\\b)", "i").test(LINK_MSG.text);
-    $("bannerText").textContent = (LINK_MSG.to && !greeted ? "Hi " + LINK_MSG.to + ". " : "") + LINK_MSG.text;
+    const greeted = LINK_MSG.to && new RegExp("^\\s*(?:(?:hi|hello|hey|dear|good (?:morning|afternoon|evening)|bonjour|bonsoir|salut|all\u00f4|cher|ch\u00e8re)\\b|" + esc(LINK_MSG.to) + "\\b)", "i").test(LINK_MSG.text);
+    $("bannerText").textContent = (LINK_MSG.to && !greeted ? (LANG === "fr" ? "Bonjour " : "Hi ") + LINK_MSG.to + ". " : "") + (LINK_MSG.notice ? t(LINK_MSG.text) : LINK_MSG.text);
     bn.hidden = false;
   } else { bn.hidden = true; }
   const rx = $("react"); rx.hidden = !(LINK_MSG && LINK_MSG.id && !(deckId === "kine" && msg && msg.text));
   if (!rx.hidden) {
-    $("reactAsk").textContent = LINK_MSG.from ? "Let " + LINK_MSG.from + " know:" : "Let them know:";
+    $("reactAsk").textContent = LINK_MSG.from ? (LANG === "fr" ? "Faites savoir \u00e0 " + LINK_MSG.from + " :" : "Let " + LINK_MSG.from + " know:") : t("Let them know:");
     rx.querySelectorAll("button").forEach(b => { const on = (LINK_MSG.react || []).indexOf(b.dataset.r) >= 0; b.setAttribute("aria-pressed", on); });
   }
   renderDecks(); showToday();
@@ -444,10 +485,10 @@ $("seenToggle").addEventListener("click", () => {
 $("seenClear").addEventListener("click", () => { saveSeen(current ? [{ d: deckId, c: current }] : []); renderSeen(); });
 $("seeRecipe").addEventListener("click", () => showRecipe($("seeRecipe").getAttribute("aria-expanded") !== "true"));
 $("copy").addEventListener("click", async () => {
-  const link = location.href.split("#")[0] + (deckId === "everyday" ? "" : "#" + deckId + (planId ? "/" + planId : ""));
-  try { const rec = validRecipe(current[2]) ? "\n\n" + current[2].time + "\nYou will need:\n- " + current[2].items.join("\n- ") + "\nSteps:\n" + current[2].steps.map((s, i) => (i + 1) + ". " + s).join("\n") + "\nSwap anything you are allergic to or avoiding." : "";
-    await navigator.clipboard.writeText(current[0] + ": " + current[1] + rec + "\n" + link); $("msg").textContent = "Copied. Send it to someone who could use it."; }
-  catch (e) { $("msg").textContent = "Couldn't copy here. Select the card text and copy it by hand."; }
+  const link = location.origin + location.pathname + (LANG === "fr" ? "?l=fr" : "") + (deckId === "everyday" ? "" : "#" + deckId + (planId ? "/" + planId : ""));
+  try { const lc = loc(current), rec = validRecipe(lc[2]) ? "\n\n" + lc[2].time + "\n" + t("You will need:") + "\n- " + lc[2].items.join("\n- ") + "\n" + t("Steps:") + "\n" + lc[2].steps.map((s, i) => (i + 1) + ". " + s).join("\n") + "\n" + t("Swap anything you are allergic to or avoiding.") : "";
+    await navigator.clipboard.writeText(kindName(current[0]) + ": " + lc[1] + rec + "\n" + link); $("msg").textContent = t("Copied. Send it to someone who could use it."); }
+  catch (e) { $("msg").textContent = t("Couldn't copy here. Select the card text and copy it by hand."); }
 });
 $("react").addEventListener("click", async e => {
   const b = e.target.closest("button"); if (!b || !LINK_MSG || !LINK_MSG.id) return;
@@ -458,8 +499,8 @@ $("react").addEventListener("click", async e => {
     if (!r.ok) throw new Error("bad status");
     LINK_MSG.react = (await r.json()).react || [];
     b.setAttribute("aria-pressed", "true");
-    out.textContent = "Sent" + (LINK_MSG.from ? " to " + LINK_MSG.from : "") + ". Thank you.";
-  } catch (err) { out.textContent = "Couldn't send that just now. Try again."; }
+    out.textContent = LANG === "fr" ? "Envoy\u00e9" + (LINK_MSG.from ? " \u00e0 " + LINK_MSG.from : "") + ". Merci." : "Sent" + (LINK_MSG.from ? " to " + LINK_MSG.from : "") + ". Thank you.";
+  } catch (err) { out.textContent = t("Couldn't send that just now. Try again."); }
   b.disabled = false;
 });
 /* Short link: sensee.ca/#m=ID. The message is stored by the Sensee Worker and fetched here. */
@@ -486,6 +527,28 @@ async function route(first) {
   readMsg(h.q); openDeck(h.d, first, h.p);
 }
 window.addEventListener("hashchange", () => { route(false); });
+/* Apply the chosen language to the fixed text on the page. Dynamic text (card, deck names, banner, tally) is redrawn by openDeck. */
+function applyStatic() {
+  document.documentElement.lang = LANG;
+  document.title = LANG === "fr" ? "Sensee : Sentez-le. Voyez-le. Faites-le." : "Sensee: Sense it. See it. Do it.";
+  $("lang").textContent = LANG === "fr" ? "English" : "Français";
+  $("lang").setAttribute("aria-label", LANG === "fr" ? "Changer la langue : English" : "Change language: Français");
+  $("slogan").innerHTML = LANG === "fr" ? "Sentez-le. Voyez-le. <span>Faites-le.</span>" : "Sense it. See it. <span>Do it.</span>";
+  const set = (id, k) => { $(id).textContent = t(k); };
+  set("deckLabel", "One small thing a day in each category. Pick one to try."); set("rNeed", "You will need"); set("rStepsH", "Steps");
+  set("rNote", "Swap anything you are allergic to or avoiding."); set("copy", "Copy to send"); set("seenClear", "Clear list"); set("seenNote", "Saved on this device only.");
+  set("fPrac", "For practitioners"); set("fFeed", "Send feedback");
+  $("back").textContent = "‹ " + t("Today's card");
+  $("rxHelpful").textContent = "\u{1F44D} " + t("Helpful"); $("rxTried").textContent = "✅ " + t("Tried it"); $("rxHelp").textContent = "\u{1F64B} " + t("Need a hand");
+}
+$("lang").addEventListener("click", () => {
+  LANG = LANG === "fr" ? "en" : "fr";
+  try { localStorage.setItem("sgt-lang", LANG); } catch (e) {}
+  applyStatic(); stopTimer();
+  quiet = true; try { openDeck(deckId, false, planId); } finally { quiet = false; }
+  renderSeen(); showTally();
+});
+applyStatic();
 showTally();
 route(true);
 /* Extra cards approved by the admin are served by the Worker and merged into the built-in decks. Failure changes nothing. */
