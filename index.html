@@ -64,6 +64,24 @@ h1 { margin: 0; font: 800 clamp(2.3rem, 9.6vw, 3.4rem)/1.02 var(--display); lett
 h1 span { color: var(--accent); }
 .lede { margin: 0; color: var(--muted); max-width: 40ch; }
 
+.daily { background: var(--surface); border-radius: 22px; box-shadow: var(--shadow); padding: 4px 16px; }
+.daily[hidden] { display: none; }
+.daily summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 52px; cursor: pointer; font: 800 1.15rem var(--display); list-style: none; }
+.daily summary::-webkit-details-marker { display: none; }
+.daily summary::after { content: "\203A"; font-size: 1.6rem; line-height: 1; transition: transform .2s; margin-left: 4px; }
+.daily[open] summary::after { transform: rotate(90deg); }
+.dcount { margin-left: auto; color: var(--muted); font: 600 1.05rem var(--body); }
+.daily ol { list-style: none; margin: 0; padding: 0 0 8px; display: flex; flex-direction: column; }
+.daily li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+.daily li.done .dtext { opacity: .6; }
+.dwho { grid-column: 1; margin: 0; font: 800 .95rem var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.dwho a { color: inherit; text-decoration: none; }
+.dtext { grid-column: 1; margin: 0; font-size: 1.1rem; line-height: 1.4; }
+.ddone { grid-column: 2; grid-row: 1 / span 2; width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.ddone svg { width: 26px; height: 26px; opacity: 0; }
+.ddone[aria-pressed=true] { background: var(--accent); color: var(--on-accent); }
+.ddone[aria-pressed=true] svg { opacity: 1; }
+.dnote { margin: 0; padding: 0 0 12px; color: var(--muted); font-weight: 600; }
 .decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; padding: 6px; background: var(--line); border-radius: 18px; }
 .decks:has(> .deck:nth-child(4):last-child) { grid-template-columns: repeat(2, 1fr); }
 @media (min-width: 540px) { .decks:has(> .deck:nth-child(4):last-child) { grid-template-columns: repeat(4, 1fr); } }
@@ -153,6 +171,12 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     <p class="brand">sensee.ca</p>
     <h1>Sense it. See it. <span>Do it.</span></h1>
   </header>
+
+  <details class="daily" id="daily" open hidden>
+    <summary><span>Today's four</span><span class="dcount" id="dcount"></span></summary>
+    <ol id="dlist"></ol>
+    <p class="dnote" id="dnote" aria-live="polite"></p>
+  </details>
 
   <div class="decks" role="group" aria-label="Deck" id="decks"></div>
   <p class="blurb" id="blurb"></p>
@@ -390,7 +414,8 @@ function refill() {
   pile = shuffle(pool);
   if (current && pile.length > 1 && pile[pile.length - 1] === current) pile.unshift(pile.pop());
 }
-function today() { return new Date().toISOString().slice(0, 10); }
+function localDay() { const n = new Date(); return n.getFullYear() + "-" + String(n.getMonth() + 1).padStart(2, "0") + "-" + String(n.getDate()).padStart(2, "0"); }
+function today() { return localDay(); }
 function getCount() { try { const r = JSON.parse(localStorage.getItem("sgt") || "{}"); return r.day === today() ? r.n : 0; } catch (e) { return 0; } }
 function bump() { const n = getCount() + 1; try { localStorage.setItem("sgt", JSON.stringify({ day: today(), n })); } catch (e) {} return n; }
 function getTried() { try { const r = JSON.parse(localStorage.getItem("sgt-tried") || "{}"); return r.day === today() ? r.n : 0; } catch (e) { return 0; } }
@@ -463,9 +488,9 @@ const SEEN_MAX = 40;
 let trail = [], quiet = false;
 function loadSeen() { try { const a = JSON.parse(localStorage.getItem("sgt-seen") || "[]"); return Array.isArray(a) ? a.filter(x => x && typeof x.d === "string" && Array.isArray(x.c) && typeof x.c[0] === "string" && typeof x.c[1] === "string") : []; } catch (e) { return []; } }
 function saveSeen(a) { try { localStorage.setItem("sgt-seen", JSON.stringify(a)); } catch (e) {} }
-function recordSeen(c) {
+function recordSeen(c, d) {
   const a = loadSeen().filter(x => x.c[1] !== c[1]);
-  a.unshift({ d: deckId, c: validRecipe(c[2]) ? [c[0], c[1], c[2]] : [c[0], c[1]] });
+  a.unshift({ d: d || deckId, c: validRecipe(c[2]) ? [c[0], c[1], c[2]] : [c[0], c[1]] });
   saveSeen(a.slice(0, SEEN_MAX)); renderSeen();
 }
 function renderSeen() {
@@ -498,6 +523,49 @@ function draw(first) {
   if (!quiet) recordSeen(current);
   setBack();
   if (!first) showTally(bump());
+}
+/* Today's four: one card per deck, the same for everyone on the same local day. Picked from the built-in cards (no recipes),
+   stepping through a seeded shuffle so a card does not repeat until the deck has been used once. Saved for the day on this device. */
+const DAILY_DECKS = ["everyday", "movement", "calm", "nourish"], DAILY_KEY = "sgt-daily";
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function pickDaily(i) {
+  const d = DECKS.find(x => x.id === DAILY_DECKS[i]), pool = d.cards.filter(c => !validRecipe(c[2])), n = pool.length;
+  const t = new Date(), day = Math.floor(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) / 864e5);
+  const r = rng(Math.floor(day / n) * 7919 + i * 104729 + 1), order = pool.map((_, k) => k);
+  for (let k = n - 1; k > 0; k--) { const j = Math.floor(r() * (k + 1)); [order[k], order[j]] = [order[j], order[k]]; }
+  return pool[order[day % n]];
+}
+function loadDaily() {
+  try {
+    const r = JSON.parse(localStorage.getItem(DAILY_KEY) || "{}");
+    if (r.day === localDay() && Array.isArray(r.picks) && r.picks.length === 4 && Array.isArray(r.done) && r.picks.every((p, i) => p && p.d === DAILY_DECKS[i] && Array.isArray(p.c) && typeof p.c[0] === "string" && typeof p.c[1] === "string")) return r;
+  } catch (e) {}
+  return null;
+}
+function saveDaily() { try { localStorage.setItem(DAILY_KEY, JSON.stringify(DAILY)); } catch (e) {} }
+let DAILY = loadDaily();
+if (!DAILY) { DAILY = { day: localDay(), picks: DAILY_DECKS.map((id, i) => ({ d: id, c: pickDaily(i) })), done: [false, false, false, false] }; saveDaily(); }
+function renderDaily() {
+  const box = $("daily"), hide = !!LINK_MSG || deckId === "kine";
+  box.hidden = hide; if (hide) return;
+  const n = DAILY.done.filter(Boolean).length, list = $("dlist"); list.textContent = "";
+  $("dcount").textContent = n + " of 4 done";
+  $("dnote").textContent = n === 4 ? "That's today's four. Nicely done. See you tomorrow." : "";
+  DAILY.picks.forEach((p, i) => {
+    const li = document.createElement("li"), who = document.createElement("p"), a = document.createElement("a"), tx = document.createElement("p"), b = document.createElement("button");
+    li.className = DAILY.done[i] ? "done" : "";
+    who.className = "dwho"; a.href = "#" + p.d; a.textContent = (DECKS.find(x => x.id === p.d) || {}).name + " \u00b7 " + p.c[0]; who.appendChild(a);
+    tx.className = "dtext"; tx.textContent = p.c[1];
+    b.type = "button"; b.className = "ddone"; b.setAttribute("aria-pressed", String(!!DAILY.done[i])); b.setAttribute("aria-label", "Done: " + p.c[1]);
+    b.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+    b.addEventListener("click", () => {
+      DAILY.done[i] = !DAILY.done[i]; saveDaily();
+      if (DAILY.done[i]) recordSeen(p.c, p.d);
+      renderDaily();
+      if (DAILY.done.every(Boolean)) box.open = false;
+    });
+    li.append(who, tx, b); list.appendChild(li);
+  });
 }
 function renderDecks() {
   const box = $("decks"); box.textContent = "";
@@ -543,7 +611,7 @@ function openDeck(id, first, pid) {
     $("reactAsk").textContent = LINK_MSG.from ? "Let " + LINK_MSG.from + " know:" : "Let them know:";
     rx.querySelectorAll("button").forEach(b => { const on = (LINK_MSG.react || []).indexOf(b.dataset.r) >= 0; b.setAttribute("aria-pressed", on); });
   }
-  renderDecks(); renderChips(); draw(first);
+  renderDecks(); renderChips(); draw(first); renderDaily();
 }
 $("next").addEventListener("click", () => draw(false));
 $("try").addEventListener("click", runTry);
