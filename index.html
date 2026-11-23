@@ -181,6 +181,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     <button class="btn ghost" id="copy">Copy to send</button>
   </div>
   <p class="status" id="msg" aria-live="polite"></p>
+  <p class="tally" id="tally"></p>
   <div class="seenbar">
     <button type="button" class="linkbtn" id="back" disabled>&lsaquo; Today's card</button>
     <button type="button" class="linkbtn" id="seenToggle" aria-expanded="false" aria-controls="seenBox" hidden>Seen cards</button>
@@ -191,7 +192,6 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
     <p class="seennote">Saved on this device only.</p>
   </div>
   <p class="note" id="note" hidden></p>
-  <p class="tally" id="tally"></p>
   <footer class="foot"><a href="share.html">For practitioners</a> <span aria-hidden="true">·</span> <a href="mailto:sensitlabs@gmail.com">Send feedback</a></footer>
 </main>
 <script src="api-config.js"></script>
@@ -484,9 +484,9 @@ function syncDone() {
 function setDone(i, v) { DAILY.done[i] = v; saveDaily(); syncDone(); showTally(); }
 function showTally() {
   const n = DAILY.done.filter(Boolean).length;
-  $("tally").textContent = n ? n + " of 4 done today" : "";
+  $("tally").textContent = (n ? n + " of 4 done today. " : "") + "A new card every day.";
 }
-const dateLabel = () => new Date().toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+const dateLabel = () => "Today \u00b7 " + new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" });
 function showToday() {
   const c = todayCard();
   render(c);
