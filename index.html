@@ -509,7 +509,11 @@ async function loadStored(id) {
   if (!api) { LINK_MSG = { text: "This message link needs the Sensee message service, which isn't switched on yet.", from: "", to: "", notice: true }; return "everyday"; }
   try {
     const r = await fetch(api + "/m/" + encodeURIComponent(id));
-    if (r.status === 404) { LINK_MSG = { text: "This message has expired or was removed.", from: "", to: "", notice: true }; return "everyday"; }
+    if (r.status === 404) {   // expired or deleted: show nothing about it, and drop the dead link from the address bar
+      LINK_MSG = null;
+      try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+      return "everyday";
+    }
     if (!r.ok) throw new Error("bad status");
     const m = await r.json();
     const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
