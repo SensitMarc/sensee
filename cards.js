@@ -150,10 +150,42 @@ window.SENSEE_CARDS = {
     ["Dim", "Step outside for a minute after dinner and watch the light fade."],
     ["Unwind", "Think of one good thing from today and let yourself enjoy it for a moment."],
     ["Habit", "Be kind to yourself about last night. Do one easy thing to look after tonight."]
+  ],
+  connect: [
+    ["Reach", "Send a short message to someone you haven't spoken to in a while. \"Thinking of you\" is enough."],
+    ["Ask", "Ask someone how they are, then wait for the real answer."],
+    ["Listen", "In your next conversation, listen without planning what you will say next."],
+    ["Thank", "Tell someone one specific thing they did that you appreciated."],
+    ["Share", "Share a photo or a small moment from your day with someone who would enjoy it."],
+    ["Reach", "Call instead of texting someone today, even for two minutes."],
+    ["Ask", "Ask someone about something they are looking forward to."],
+    ["Listen", "Put your phone face down during your next chat and give your full attention."],
+    ["Reach", "Say hello to a neighbour or someone you often pass."],
+    ["Share", "Pass on a recipe, song or book you enjoyed to someone who might like it."],
+    ["Ask", "Ask a friend or colleague what helped them most this week."],
+    ["Thank", "Thank someone who often goes unnoticed: a cashier, a driver, a cleaner."],
+    ["Reach", "Reply today to a message you have been meaning to answer."],
+    ["Listen", "Next time someone speaks, repeat back one thing you heard before you answer."],
+    ["Share", "Tell someone one small good thing that happened to you today."],
+    ["Ask", "Ask an older relative or friend to tell you a story from their life."],
+    ["Reach", "Invite someone for a short walk or a cup of tea this week."],
+    ["Thank", "Write a two-line note of thanks and send it today."],
+    ["Listen", "Notice when you want to fix something. Try just listening instead."],
+    ["Reach", "Send a friend a message with no question in it, so they do not need to reply."],
+    ["Ask", "Ask someone close to you: \"What would make today easier?\""],
+    ["Share", "Tell someone, in one sentence, something you are learning."],
+    ["Thank", "Think of someone who helped you years ago. Tell them what it meant."],
+    ["Reach", "Smile and make eye contact with the next person you pass today."],
+    ["Ask", "Ask a colleague a question about their work that has nothing to do with yours."],
+    ["Listen", "Let a pause last a little longer in a conversation today."],
+    ["Share", "Offer a small bit of help to someone: carry, hold, lend or point the way."],
+    ["Reach", "Look into one small thing to join: a group, a class or a coffee. Just look."],
+    ["Thank", "Say thank you out loud to someone in your home today."],
+    ["Ask", "Ask someone what they enjoyed most recently and let them tell it at length."]
   ]
 };
 window.SENSEE_DAILY = (function () {
-  const IDS = ["everyday", "movement", "calm", "nourish", "sleep"];
+  const IDS = ["everyday", "movement", "calm", "nourish", "sleep", "connect"];
   const EPOCH = Math.floor(Date.UTC(2026, 10, 23) / 864e5);   // first day of the daily feed (23 Nov 2026)
   const plain = c => Array.isArray(c) && typeof c[0] === "string" && typeof c[1] === "string" && !(c[2] && typeof c[2] === "object");
   function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
