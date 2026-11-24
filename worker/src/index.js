@@ -2,7 +2,7 @@
 // Every route, with who may call it. Send "Authorization: Bearer <token>" where a token is needed.
 //
 // Public (no token)
-//   GET    /m/:id               -> { text, from, to, deck, react }
+//   GET    /m/:id               -> { text, from, clinic, to, deck, react }   (from and clinic come from the practitioner's account, not from the sender)
 //   POST   /m/:id/react         { r: "helpful"|"tried"|"help" } -> { ok, react }
 //   GET    /cards               -> approved extra cards, per deck (cached 5 min)
 //
@@ -14,8 +14,8 @@
 //
 // Admin (token = ADMIN_TOKEN)
 //   GET    /admin/practitioners
-//   POST   /admin/practitioners          { name } -> { pid, code }   (code shown once)
-//   POST   /admin/practitioners/:pid     { active: true|false }
+//   POST   /admin/practitioners          { name, clinic? } -> { pid, code }   (code shown once)
+//   POST   /admin/practitioners/:pid     { active?: true|false, clinic?: string }
 //   DELETE /admin/practitioners/:pid
 //   GET    /admin/cards
 //   POST   /admin/cards/suggest          { deck, kind?: "Cook" } -> suggested cards (30/day, needs AI)
@@ -113,7 +113,7 @@ export default {
         const m = await getJson(env, key);
         if (!m) return out({ error: "not_found" }, 404);
         if (Date.now() - m.created > MAX_AGE_MS) { await env.SENSEE.delete(key); return out({ error: "not_found" }, 404); }
-        return out({ text: m.text, from: m.from, to: m.to, deck: m.deck, react: m.react || [] });
+        return out({ text: m.text, from: m.from, clinic: m.clinic || "", to: m.to, deck: m.deck, react: m.react || [] });
       }
 
       // ---- public: approved extra cards, merged into the decks by the site
@@ -275,21 +275,21 @@ export default {
         if (request.method === "GET" && !parts[2]) {
           const list = await env.SENSEE.list({ prefix: "p:" });
           const rows = [];
-          for (const k of list.keys) { const p = await getJson(env, k.name); if (p) rows.push({ pid: k.name.slice(2), name: p.name, active: p.active, created: p.created }); }
+          for (const k of list.keys) { const p = await getJson(env, k.name); if (p) rows.push({ pid: k.name.slice(2), name: p.name, clinic: p.clinic || "", active: p.active, created: p.created }); }
           return out(rows);
         }
         if (request.method === "POST" && !parts[2]) {
           const body = await readJson(request);
-          const name = clean(body.name, 60);
+          const name = clean(body.name, 60), clinic = clean(body.clinic, 60);
           if (!name) return out({ error: "name_required" }, 400);
           const pid = randomId(8), secret = randomId(24);
-          await env.SENSEE.put("p:" + pid, JSON.stringify({ name, hash: await hashSecret(pid, secret), active: true, created: today() }));
+          await env.SENSEE.put("p:" + pid, JSON.stringify({ name, clinic, hash: await hashSecret(pid, secret), active: true, created: today() }));
           return out({ pid, name, code: pid + "." + secret });
         }
         if (parts[2]) {
           const p = await getJson(env, "p:" + parts[2]);
           if (!p) return out({ error: "not_found" }, 404);
-          if (request.method === "POST") { const body = await readJson(request); p.active = body.active !== false; await env.SENSEE.put("p:" + parts[2], JSON.stringify(p)); return out({ ok: true, active: p.active }); }
+          if (request.method === "POST") { const body = await readJson(request); if ("active" in body) p.active = body.active !== false; if ("clinic" in body) p.clinic = clean(body.clinic, 60); await env.SENSEE.put("p:" + parts[2], JSON.stringify(p)); return out({ ok: true, active: p.active, clinic: p.clinic || "" }); }
           if (request.method === "DELETE") { await env.SENSEE.delete("p:" + parts[2]); return out({ ok: true }); }
         }
         return out({ error: "not_found" }, 404);
@@ -312,7 +312,7 @@ export default {
           await env.SENSEE.put(key, String(used + 1), { expirationTtl: 172800 });
           const id = randomId(8);
           const created = Date.now();
-          await env.SENSEE.put("m:" + id, JSON.stringify({ pid: who.pid, from: who.name, to, text, deck, created }), { expirationTtl: TTL_SECONDS });
+          await env.SENSEE.put("m:" + id, JSON.stringify({ pid: who.pid, from: who.name, clinic: who.clinic, to, text, deck, created }), { expirationTtl: TTL_SECONDS });
           const idx = liveIndex((await getJson(env, "idx:" + who.pid)) || []);
           idx.push({ id, to, deck, created, expires: created + MAX_AGE_MS });
           // The index key expires on its own too, so client first names never outlive the newest message.
@@ -382,5 +382,5 @@ async function practitioner(token, env) {
   if (!p || !p.active) return null;
   const given = await sha(pid + ":" + secret);
   const want = new Uint8Array((p.hash.match(/../g) || []).map((h) => parseInt(h, 16)));
-  return sameBytes(given, want) ? { pid, name: p.name } : null;
+  return sameBytes(given, want) ? { pid, name: p.name, clinic: p.clinic || "" } : null;
 }

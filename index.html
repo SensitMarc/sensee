@@ -73,6 +73,9 @@ h1 span { color: var(--accent); }
 .toprow { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .langbtn { font: 700 1rem var(--display); color: var(--ink); background: transparent; border: 1.5px solid var(--line); border-radius: 999px; padding: 8px 16px; min-height: 44px; cursor: pointer; }
 .langbtn:hover { border-color: var(--ink); }
+.prac { margin: 10px 0 0; color: var(--muted); font-size: 1.05rem; }
+.prac .linkbtn { padding: 4px 6px; font-size: 1rem; font-weight: 600; color: var(--muted); }
+.prac[hidden] { display: none; }
 .decklabel { margin: 0 0 -8px; font: 700 1.05rem var(--display); color: var(--muted); }
 .decks { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; padding: 6px; background: var(--line); border-radius: 18px; }
 .decks:has(> .deck:nth-child(4):last-child) { grid-template-columns: repeat(2, 1fr); }
@@ -181,6 +184,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
   <header>
     <div class="toprow"><p class="brand">sensee.ca</p><button type="button" class="langbtn" id="lang" aria-label="Language">Fran\u00e7ais</button></div>
     <h1 id="slogan">Sense it. See it. <span>Do it.</span></h1>
+    <p class="prac" id="prac" hidden><span id="pracText"></span> <button type="button" class="linkbtn" id="pracX">Remove</button></p>
   </header>
 
   <div class="banner" id="banner" hidden><b id="bannerTitle"></b><p id="bannerText"></p><div class="react" id="react" hidden><span id="reactAsk">Let them know:</span><button type="button" data-r="helpful" id="rxHelpful">&#x1F44D; Helpful</button><button type="button" data-r="tried" id="rxTried">&#x2705; Tried it</button><button type="button" data-r="help" id="rxHelp">&#x1F64B; Need a hand</button><small id="reactMsg" role="status"></small></div></div>
@@ -249,7 +253,7 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 const FR = {
   "Sense it. See it. Do it.": "Sentez-le. Voyez-le. Faites-le.",
   "One small thing a day in each category. Pick one to try.": "Une petite chose par jour dans chaque catégorie. Choisissez-en une à essayer.",
-  "Mind": "Esprit", "Movement": "Mouvement", "Calm": "Calme", "Nourish": "Nourrir", "Sleep": "Sommeil", "Connect": "Lien",
+  "Mind": "Esprit", "Shared by": "Partagé par", "Remove": "Retirer", "Movement": "Mouvement", "Calm": "Calme", "Nourish": "Nourrir", "Sleep": "Sommeil", "Connect": "Lien",
   "Gentle ways to wind down and get ready for the night.": "Des façons douces de ralentir et de vous préparer pour la nuit.",
   "Ideas, not medical advice. If sleep problems continue, talk to your practitioner or doctor.": "Des idées, pas des conseils médicaux. Si vos problèmes de sommeil persistent, parlez-en à votre praticien ou à votre médecin.",
   "Small ways to focus, remember and stay curious.": "De petites façons de vous concentrer, de vous rappeler et de rester curieux.",
@@ -647,6 +651,18 @@ $("react").addEventListener("click", async e => {
   b.disabled = false;
 });
 /* Short link: sensee.ca/#m=ID. The message is stored by the Sensee Worker and fetched here. */
+/* The practitioner who last sent a message (name and clinic come from their account on the server, so they cannot be typed in by a sender).
+   Kept on this device so it stays after the message expires. The client can remove it. */
+const PRAC_KEY = "sgt-prac";
+function showPrac() {
+  let p = null;
+  try { p = JSON.parse(localStorage.getItem(PRAC_KEY) || "null"); } catch (e) {}
+  const ok = p && typeof p.name === "string" && p.name;
+  $("prac").hidden = !ok; if (!ok) return;
+  $("pracText").textContent = t("Shared by") + " " + p.name + (typeof p.clinic === "string" && p.clinic ? " \u00b7 " + p.clinic : "");
+  $("pracX").textContent = t("Remove"); $("pracX").setAttribute("aria-label", t("Remove") + ": " + p.name);
+}
+$("pracX").addEventListener("click", () => { try { localStorage.removeItem(PRAC_KEY); } catch (e) {} showPrac(); });
 async function loadStored(id) {
   const api = (window.SENSEE_API || "").replace(/\/$/, "");
   if (!api) { LINK_MSG = { text: "This message link needs the Sensee message service, which isn't switched on yet.", from: "", to: "", notice: true }; return "mind"; }
@@ -661,6 +677,7 @@ async function loadStored(id) {
     const m = await r.json();
     const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
     LINK_MSG = { id: id, text: clean(m.text, 400), from: clean(m.from, 60), to: clean(m.to, 40), react: Array.isArray(m.react) ? m.react : [] };
+    if (LINK_MSG.from) { try { localStorage.setItem(PRAC_KEY, JSON.stringify({ name: LINK_MSG.from, clinic: clean(m.clinic, 60) })); } catch (e) {} showPrac(); }
     const dk = deckAlias(m.deck);
     return ["mind", "movement", "calm", "nourish", "sleep", "connect"].indexOf(dk) >= 0 ? dk : "mind";
   } catch (e) {
@@ -686,7 +703,7 @@ function applyStatic() {
   set("deckLabel", "One small thing a day in each category. Pick one to try."); set("rNeed", "You will need"); set("rStepsH", "Steps");
   set("rNote", "Swap anything you are allergic to or avoiding."); set("copy", "Copy to send"); set("seenClear", "Clear list"); set("seenNote", "Saved on this device only.");
   set("fPrac", "For practitioners"); set("fFeed", "Send feedback");
-  $("back").textContent = "‹ " + t("Today's card"); $("progToggle").textContent = t("Your progress"); $("progress").setAttribute("aria-label", t("Your progress"));
+  $("back").textContent = "‹ " + t("Today's card"); showPrac(); $("progToggle").textContent = t("Your progress"); $("progress").setAttribute("aria-label", t("Your progress"));
   $("rxHelpful").textContent = "\u{1F44D} " + t("Helpful"); $("rxTried").textContent = "✅ " + t("Tried it"); $("rxHelp").textContent = "\u{1F64B} " + t("Need a hand");
 }
 $("lang").addEventListener("click", () => {

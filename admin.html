@@ -48,7 +48,8 @@
   </section>
   <section>
     <h2>New practitioner</h2>
-    <div class="row"><input id="name" type="text" maxlength="60" placeholder="Practitioner name (shown to clients)"><button id="create" type="button">Create account</button></div>
+    <div class="row"><input id="name" type="text" maxlength="60" placeholder="Practitioner name (shown to clients)"></div>
+    <div class="row"><input id="clinic" type="text" maxlength="60" placeholder="Clinic name (shown to clients, optional)"><button id="create" type="button">Create account</button></div>
     <div id="reveal" hidden>
       <p><b>Access code, shown once.</b> Send it to the practitioner privately. It can't be shown again.</p>
       <div class="code" id="codeOut"></div>
@@ -112,14 +113,16 @@ async function load() {
     const ul = $("list"); ul.textContent = "";
     rows.forEach(p => {
       const li = document.createElement("li");
-      const d = document.createElement("div"); d.textContent = p.name;
+      const d = document.createElement("div"); d.textContent = p.name + (p.clinic ? " \u00b7 " + p.clinic : "");
       const sm = document.createElement("small"); sm.textContent = (p.active ? "Active" : "Disabled") + " · created " + p.created; d.appendChild(sm);
       const box = document.createElement("div"); box.className = "row";
       const t = document.createElement("button"); t.className = "ghost"; t.type = "button"; t.textContent = p.active ? "Disable" : "Enable";
       t.addEventListener("click", async () => { try { await call("POST", "/admin/practitioners/" + p.pid, { active: !p.active }); load(); } catch (e) { $("msg").textContent = e.message; } });
       const x = document.createElement("button"); x.className = "ghost"; x.type = "button"; x.textContent = "Delete";
       x.addEventListener("click", async () => { if (!confirm("Delete " + p.name + "? Their code stops working.")) return; try { await call("DELETE", "/admin/practitioners/" + p.pid); load(); } catch (e) { $("msg").textContent = e.message; } });
-      box.append(t, x); li.append(d, box); ul.appendChild(li);
+      const ed = document.createElement("button"); ed.className = "ghost"; ed.type = "button"; ed.textContent = "Clinic";
+      ed.addEventListener("click", async () => { const v = prompt("Clinic name shown to " + p.name + "'s clients (leave empty for none)", p.clinic || ""); if (v === null) return; try { await call("POST", "/admin/practitioners/" + p.pid, { clinic: v.trim() }); load(); } catch (e) { $("msg").textContent = e.message; } });
+      box.append(ed, t, x); li.append(d, box); ul.appendChild(li);
     });
     $("msg").textContent = rows.length ? "" : "No practitioners yet.";
   } catch (e) { $("msg").textContent = e.message; }
@@ -217,8 +220,8 @@ $("create").addEventListener("click", async () => {
   const name = $("name").value.trim();
   if (!name) { $("msg").textContent = "Enter a name first."; return; }
   try {
-    const r = await call("POST", "/admin/practitioners", { name });
-    $("codeOut").textContent = r.code; $("reveal").hidden = false; $("name").value = ""; $("msg").textContent = "Account created."; load();
+    const r = await call("POST", "/admin/practitioners", { name, clinic: $("clinic").value.trim() });
+    $("codeOut").textContent = r.code; $("reveal").hidden = false; $("name").value = ""; $("clinic").value = ""; $("msg").textContent = "Account created."; load();
   } catch (e) { $("msg").textContent = e.message; }
 });
 </script>
