@@ -93,7 +93,7 @@ h2 { margin: 0; font: 800 1.2rem var(--display); }
     <fieldset>
       <legend>Deck</legend>
       <div class="decks">
-        <label><input type="radio" name="deck" value="everyday"><span>Everyday</span></label>
+        <label><input type="radio" name="deck" value="mind"><span>Mind</span></label>
         <label><input type="radio" name="deck" value="movement" checked><span>Movement</span></label>
         <label><input type="radio" name="deck" value="calm"><span>Calm</span></label>
         <label><input type="radio" name="deck" value="nourish"><span>Nourish</span></label>
@@ -138,7 +138,7 @@ const $ = id => document.getElementById(id);
 const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
 function state() {
   return { f: clean($("from").value, 40), t: clean($("to").value, 40), m: clean($("msg").value, 400),
-           d: (document.querySelector('input[name=deck]:checked') || {}).value || "everyday" };
+           d: (document.querySelector('input[name=deck]:checked') || {}).value || "mind" };
 }
 function preview() {
   const s = state();

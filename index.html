@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-deck="everyday">
+<html lang="en" data-deck="mind">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -249,9 +249,11 @@ button:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
 const FR = {
   "Sense it. See it. Do it.": "Sentez-le. Voyez-le. Faites-le.",
   "One small thing a day in each category. Pick one to try.": "Une petite chose par jour dans chaque catégorie. Choisissez-en une à essayer.",
-  "Everyday": "Au quotidien", "Movement": "Mouvement", "Calm": "Calme", "Nourish": "Nourrir", "Sleep": "Sommeil", "Connect": "Lien",
+  "Mind": "Esprit", "Movement": "Mouvement", "Calm": "Calme", "Nourish": "Nourrir", "Sleep": "Sommeil", "Connect": "Lien",
   "Gentle ways to wind down and get ready for the night.": "Des façons douces de ralentir et de vous préparer pour la nuit.",
   "Ideas, not medical advice. If sleep problems continue, talk to your practitioner or doctor.": "Des idées, pas des conseils médicaux. Si vos problèmes de sommeil persistent, parlez-en à votre praticien ou à votre médecin.",
+  "Small ways to focus, remember and stay curious.": "De petites façons de vous concentrer, de vous rappeler et de rester curieux.",
+  "Ideas, not medical advice. If you are worried about your memory, talk to your practitioner or doctor.": "Des idées, pas des conseils médicaux. Si votre mémoire vous inquiète, parlez-en à votre praticien ou à votre médecin.",
   "Small ways to reach out, listen and feel closer to people.": "De petites façons d'aller vers les autres, d'écouter et de vous sentir plus proche des gens.", "My kine": "Ma kiné",
   "Little things to do, notice, thank and learn.": "De petites choses à faire, à remarquer, à remercier et à apprendre.",
   "Small nudges to get moving, build the habit and keep going. Made for practitioners to share with their clients.": "De petits coups de pouce pour bouger, créer l'habitude et continuer. Conçu pour que les praticiens le partagent avec leurs clients.",
@@ -280,7 +282,7 @@ const FR = {
   "Couldn't load the message. Check your connection and open the link again.": "Impossible de charger le message. Vérifiez votre connexion et rouvrez le lien.",
   "You will need:": "Il vous faut :", "Steps:": "Étapes :"
 };
-const KIND_FR = { Do: "Faire", Notice: "Observer", Thank: "Remercier", Fact: "Saviez-vous", Move: "Bouger", Mindset: "État d'esprit", Habit: "Habitude", Reflect: "Réfléchir", Breathe: "Respirer", Ground: "Ancrer", Soften: "Détendre", Reset: "Recentrer", Add: "Ajouter", Unwind: "Apaiser", Reach: "Contacter", Ask: "Demander", Listen: "Écouter", Share: "Partager", Dim: "Tamiser", Room: "Chambre", Sip: "Siroter", Savour: "Savourer", Prep: "Préparer", Feel: "Ressentir", Cook: "Cuisiner" };
+const KIND_FR = { Do: "Faire", Notice: "Observer", Thank: "Remercier", Fact: "Saviez-vous", Move: "Bouger", Mindset: "État d'esprit", Habit: "Habitude", Reflect: "Réfléchir", Breathe: "Respirer", Ground: "Ancrer", Soften: "Détendre", Reset: "Recentrer", Add: "Ajouter", Unwind: "Apaiser", Focus: "Concentration", Recall: "Se rappeler", Pause: "Pause", Reach: "Contacter", Ask: "Demander", Listen: "Écouter", Share: "Partager", Dim: "Tamiser", Room: "Chambre", Sip: "Siroter", Savour: "Savourer", Prep: "Préparer", Feel: "Ressentir", Cook: "Cuisiner" };
 let LANG = "en";
 try { const q = new URLSearchParams(location.search).get("l"); if (q === "fr" || q === "en") localStorage.setItem("sgt-lang", q); LANG = localStorage.getItem("sgt-lang") === "fr" ? "fr" : "en"; } catch (e) {}
 const t = k => (LANG === "fr" && FR[k]) || k;
@@ -290,8 +292,9 @@ Object.keys(window.SENSEE_CARDS).forEach(id => window.SENSEE_CARDS[id].forEach((
 const loc = c => (LANG === "fr" && c && FRMAP.get(c[1])) || c;   // the card as it is shown in the chosen language
 
 const DECKS = [
-  { id: "everyday", name: "Everyday", icon: "sun", blurb: "Little things to do, notice, thank and learn.", note: "",
-    cards: SENSEE_CARDS.everyday },
+  { id: "mind", name: "Mind", icon: "bulb", blurb: "Small ways to focus, remember and stay curious.",
+    note: "Ideas, not medical advice. If you are worried about your memory, talk to your practitioner or doctor.",
+    cards: SENSEE_CARDS.mind },
   { id: "movement", name: "Movement", icon: "bolt", blurb: "Small nudges to get moving, build the habit and keep going. Made for practitioners to share with their clients.",
     note: "Encouragement, not medical advice. Follow your practitioner's plan.",
     cards: SENSEE_CARDS.movement },
@@ -313,6 +316,7 @@ const ICONS = {
   bolt: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>',
   star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.4 5.3 5.6.6-4.2 3.8 1.2 5.6L12 15.4 7 18.3l1.2-5.6L4 8.9l5.6-.6z"/></svg>',
   chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  bulb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>',
   moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
   heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>'
 };
@@ -335,12 +339,12 @@ const PATHS = {
   cloud: '<path d="M17.5 19H9a7 7 0 1 1 6.7-9h1.8a4.5 4.5 0 1 1 0 9z"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/>'
 };
-const KIND_ICON = { Do: "check", Notice: "eye", Thank: "heart", Fact: "sparkle", Move: "bolt", Mindset: "sprout", Habit: "loop", Reflect: "ripple", Breathe: "wind", Ground: "anchor", Soften: "cloud", Reset: "refresh", Unwind: "cloud", Dim: "sparkle", Room: "bowl", Reach: "heart", Ask: "ripple", Listen: "wind", Share: "sprout", Add: "plus", Sip: "drop", Savour: "leaf", Prep: "bowl", Feel: "ripple", Cook: "pot" };
-const TRY_KINDS = ["Do", "Move", "Notice", "Breathe", "Ground", "Soften", "Reset", "Sip", "Savour"];
+const KIND_ICON = { Do: "check", Notice: "eye", Thank: "heart", Fact: "sparkle", Move: "bolt", Mindset: "sprout", Habit: "loop", Reflect: "ripple", Breathe: "wind", Ground: "anchor", Soften: "cloud", Reset: "refresh", Unwind: "cloud", Focus: "anchor", Recall: "loop", Pause: "wind", Dim: "sparkle", Room: "bowl", Reach: "heart", Ask: "ripple", Listen: "wind", Share: "sprout", Add: "plus", Sip: "drop", Savour: "leaf", Prep: "bowl", Feel: "ripple", Cook: "pot" };
+const TRY_KINDS = ["Do", "Pause", "Move", "Notice", "Breathe", "Ground", "Soften", "Reset", "Sip", "Savour"];
 const TRY_SECONDS = 60;
 const markSvg = name => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' + (PATHS[name] || PATHS.sparkle) + '</svg>';
 const $ = id => document.getElementById(id);
-let deckId = "everyday", planId = "", current = null;
+let deckId = "mind", planId = "", current = null;
 let KINE = null;   // loaded from kine.json when enabled
 const deck = () => DECKS.find(d => d.id === deckId) || DECKS[0];
 const plan = () => (deckId === "kine" && KINE && planId && KINE.plans && KINE.plans[planId]) || null;
@@ -444,7 +448,7 @@ function renderSeen() {
 }
 function reopen(x) {
   quiet = true;
-  try { if (x.d !== deckId && DECKS.some(d => d.id === x.d)) openDeck(x.d, true, ""); } finally { quiet = false; }
+  try { const xd = deckAlias(x.d); if (xd !== deckId && DECKS.some(d => d.id === xd)) openDeck(xd, true, ""); } finally { quiet = false; }
   render(x.c); recordSeen(x.c);
   $("count").textContent = isTodayCard() ? dateLabel() : t("Seen before"); setBack(); syncDone();
   if (validRecipe(x.c[2])) showRecipe(true);
@@ -468,8 +472,10 @@ function syncDone() {
 }
 function setDone(i, v) { DAILY.done[i] = v; saveDaily(); syncHist(); syncDone(); showTally(); renderProgress(); }
 /* Progress: which cards were marked done each day, kept on this device only (90 days). Nothing is sent anywhere unless the client taps Share. */
+/* The Everyday deck became Mind. Old links, saved days, history and seen cards that say "everyday" are read as "mind". */
+const deckAlias = d => (d === "everyday" ? "mind" : d);
 const HIST_KEY = "sgt-history";
-function loadHist() { try { const r = JSON.parse(localStorage.getItem(HIST_KEY) || "{}"); return r && typeof r === "object" && !Array.isArray(r) ? r : {}; } catch (e) { return {}; } }
+function loadHist() { try { const r = JSON.parse(localStorage.getItem(HIST_KEY) || "{}"); if (!r || typeof r !== "object" || Array.isArray(r)) return {}; Object.keys(r).forEach(k => { const e = r[k]; if (e && typeof e === "object" && e.everyday) { e.mind = true; delete e.everyday; } }); return r; } catch (e) { return {}; } }
 function syncHist() {
   const h = loadHist(), e = {};
   DAILY_DECKS.forEach((id, i) => { if (DAILY.done[i]) e[id] = true; });
@@ -487,9 +493,9 @@ function startDay() {
   try { localStorage.setItem(START_KEY, s); } catch (e) {}
   return s;
 }
-const deckTitle = id => t(({ everyday: "Everyday", movement: "Movement", calm: "Calm", nourish: "Nourish", sleep: "Sleep", connect: "Connect" })[id]);
+const deckTitle = id => t(({ mind: "Mind", movement: "Movement", calm: "Calm", nourish: "Nourish", sleep: "Sleep", connect: "Connect" })[id]);
 function progStats() {
-  const h = loadHist(), days = [], per = { everyday: 0, movement: 0, calm: 0, nourish: 0, sleep: 0, connect: 0 };
+  const h = loadHist(), days = [], per = { mind: 0, movement: 0, calm: 0, nourish: 0, sleep: 0, connect: 0 };
   const start = startDay();
   let week = 0, all = 0, full = false, active = 0;
   Object.keys(h).forEach(k => { const n = DAILY_DECKS.filter(id => h[k] && h[k][id]).length; all += n; if (n === DAILY_DECKS.length) full = true; });
@@ -557,12 +563,13 @@ function showToday() {
 }
 /* Today's cards: one card per deck, the same for everyone on the same local day. Picked from the built-in cards (no recipes),
    following the schedule in cards.js, which includes the cards the admin approved (kept from the last visit). Saved for the day on this device. */
-const DAILY_DECKS = ["everyday", "movement", "calm", "nourish", "sleep", "connect"], DAILY_KEY = "sgt-daily";
-const cachedExtras = () => { try { const r = JSON.parse(localStorage.getItem("sgt-extras") || "{}"); return r && typeof r === "object" ? r : {}; } catch (e) { return {}; } };
+const DAILY_DECKS = ["mind", "movement", "calm", "nourish", "sleep", "connect"], DAILY_KEY = "sgt-daily";
+const cachedExtras = () => { try { const r = JSON.parse(localStorage.getItem("sgt-extras") || "{}"); if (!r || typeof r !== "object") return {}; if (Array.isArray(r.everyday)) r.mind = (Array.isArray(r.mind) ? r.mind : []).concat(r.everyday); return r; } catch (e) { return {}; } };
 const pickDaily = i => SENSEE_DAILY.cardFor(DAILY_DECKS[i], cachedExtras()[DAILY_DECKS[i]]);
 function loadDaily() {
   try {
     const r = JSON.parse(localStorage.getItem(DAILY_KEY) || "{}");
+    if (r && Array.isArray(r.picks)) r.picks.forEach(p => { if (p && p.d) p.d = deckAlias(p.d); });
     if (r.day === localDay() && Array.isArray(r.picks) && r.picks.length >= 4 && r.picks.length <= DAILY_DECKS.length && Array.isArray(r.done) && r.picks.every((p, i) => p && p.d === DAILY_DECKS[i] && Array.isArray(p.c) && typeof p.c[0] === "string" && typeof p.c[1] === "string")) {
       for (let i = r.picks.length; i < DAILY_DECKS.length; i++) r.picks.push({ d: DAILY_DECKS[i], c: pickDaily(i) });
       r.done = DAILY_DECKS.map((_, i) => !!r.done[i]);
@@ -587,7 +594,8 @@ function renderDecks() {
   });
 }
 function openDeck(id, first, pid) {
-  deckId = DECKS.some(d => d.id === id) ? id : "everyday";
+  id = deckAlias(id);
+  deckId = DECKS.some(d => d.id === id) ? id : "mind";
   planId = deckId === "kine" && KINE && KINE.plans && KINE.plans[pid] ? pid : "";
   document.documentElement.dataset.deck = deckId === "kine" ? "movement" : deckId;
   current = null;
@@ -620,7 +628,7 @@ $("seenToggle").addEventListener("click", () => {
 $("seenClear").addEventListener("click", () => { saveSeen(current ? [{ d: deckId, c: current }] : []); renderSeen(); });
 $("seeRecipe").addEventListener("click", () => showRecipe($("seeRecipe").getAttribute("aria-expanded") !== "true"));
 $("copy").addEventListener("click", async () => {
-  const link = location.origin + location.pathname + (LANG === "fr" ? "?l=fr" : "") + (deckId === "everyday" ? "" : "#" + deckId + (planId ? "/" + planId : ""));
+  const link = location.origin + location.pathname + (LANG === "fr" ? "?l=fr" : "") + (deckId === "mind" ? "" : "#" + deckId + (planId ? "/" + planId : ""));
   try { const lc = loc(current), rec = validRecipe(lc[2]) ? "\n\n" + lc[2].time + "\n" + t("You will need:") + "\n- " + lc[2].items.join("\n- ") + "\n" + t("Steps:") + "\n" + lc[2].steps.map((s, i) => (i + 1) + ". " + s).join("\n") + "\n" + t("Swap anything you are allergic to or avoiding.") : "";
     await navigator.clipboard.writeText(kindName(current[0]) + ": " + lc[1] + rec + "\n" + link); $("msg").textContent = t("Copied. Send it to someone who could use it."); }
   catch (e) { $("msg").textContent = t("Couldn't copy here. Select the card text and copy it by hand."); }
@@ -641,22 +649,23 @@ $("react").addEventListener("click", async e => {
 /* Short link: sensee.ca/#m=ID. The message is stored by the Sensee Worker and fetched here. */
 async function loadStored(id) {
   const api = (window.SENSEE_API || "").replace(/\/$/, "");
-  if (!api) { LINK_MSG = { text: "This message link needs the Sensee message service, which isn't switched on yet.", from: "", to: "", notice: true }; return "everyday"; }
+  if (!api) { LINK_MSG = { text: "This message link needs the Sensee message service, which isn't switched on yet.", from: "", to: "", notice: true }; return "mind"; }
   try {
     const r = await fetch(api + "/m/" + encodeURIComponent(id));
     if (r.status === 404) {   // expired or deleted: show nothing about it, and drop the dead link from the address bar
       LINK_MSG = null;
       try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
-      return "everyday";
+      return "mind";
     }
     if (!r.ok) throw new Error("bad status");
     const m = await r.json();
     const clean = (v, n) => String(v || "").replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
     LINK_MSG = { id: id, text: clean(m.text, 400), from: clean(m.from, 60), to: clean(m.to, 40), react: Array.isArray(m.react) ? m.react : [] };
-    return ["everyday", "movement", "calm", "nourish", "sleep", "connect"].indexOf(m.deck) >= 0 ? m.deck : "everyday";
+    const dk = deckAlias(m.deck);
+    return ["mind", "movement", "calm", "nourish", "sleep", "connect"].indexOf(dk) >= 0 ? dk : "mind";
   } catch (e) {
     LINK_MSG = { text: "Couldn't load the message. Check your connection and open the link again.", from: "", to: "", notice: true };
-    return "everyday";
+    return "mind";
   }
 }
 async function route(first) {
@@ -699,6 +708,7 @@ route(true);
     const r = await fetch(api + "/cards", { signal: ctl.signal }); clearTimeout(t);
     if (!r.ok) return;
     const extra = await r.json(), keep = {};
+    if (extra && Array.isArray(extra.everyday)) extra.mind = (Array.isArray(extra.mind) ? extra.mind : []).concat(extra.everyday);
     DAILY_DECKS.forEach(id => { keep[id] = (Array.isArray(extra[id]) ? extra[id] : []).filter(c => Array.isArray(c) && typeof c[0] === "string" && typeof c[1] === "string" && c[1].length <= 200 && KIND_ICON[c[0]] && !validRecipe(c[2])).map(c => [c[0], c[1]]); });
     try { localStorage.setItem("sgt-extras", JSON.stringify(keep)); } catch (e) {}
   } catch (e) {}
