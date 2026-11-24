@@ -66,7 +66,7 @@
     <h2>Cards</h2>
     <p class="hint">The small model suggests cards. Nothing reaches clients until you tap Keep.</p>
     <div class="row">
-      <select id="cardDeck" aria-label="Deck"><option value="everyday">Everyday</option><option value="movement">Movement</option><option value="calm">Calm</option><option value="nourish">Nourish</option><option value="sleep">Sleep</option><option value="connect">Connect</option></select>
+      <select id="cardDeck" aria-label="Deck"><option value="mind">Mind</option><option value="movement">Movement</option><option value="calm">Calm</option><option value="nourish">Nourish</option><option value="sleep">Sleep</option><option value="connect">Connect</option></select>
       <button id="suggest" type="button">Suggest cards</button>
       <button id="suggestCook" type="button" class="ghost" hidden>Suggest recipes</button>
     </div>
@@ -74,7 +74,7 @@
     <h2>Write your own</h2>
     <p class="hint">Cards you write are added straight away, with no wording filter. Links are not allowed.</p>
     <div class="row">
-      <select id="wDeck" aria-label="Deck"><option value="everyday">Everyday</option><option value="movement">Movement</option><option value="calm">Calm</option><option value="nourish">Nourish</option><option value="sleep">Sleep</option><option value="connect">Connect</option></select>
+      <select id="wDeck" aria-label="Deck"><option value="mind">Mind</option><option value="movement">Movement</option><option value="calm">Calm</option><option value="nourish">Nourish</option><option value="sleep">Sleep</option><option value="connect">Connect</option></select>
       <select id="wLabel" aria-label="Kind"></select>
     </div>
     <textarea id="wText" maxlength="160" rows="2" placeholder="The card, in one or two sentences (160 characters max)"></textarea>
@@ -145,7 +145,7 @@ async function loadPool() {
     renderSupply(pool);
   } catch (e) { $("cardMsg").textContent = e.message; }
 }
-const DECK_NAMES = { everyday: "Everyday", movement: "Movement", calm: "Calm", nourish: "Nourish", sleep: "Sleep", connect: "Connect" };
+const DECK_NAMES = { mind: "Mind", movement: "Movement", calm: "Calm", nourish: "Nourish", sleep: "Sleep", connect: "Connect" };
 const TARGET = 30;
 function renderSupply(pool) {
   const D = window.SENSEE_DAILY, ul = $("supply"); ul.textContent = "";
@@ -194,7 +194,7 @@ async function suggest(kind) {
 $("suggest").addEventListener("click", () => suggest(""));
 $("suggestCook").addEventListener("click", () => suggest("Cook"));
 $("cardDeck").addEventListener("change", () => { $("suggestCook").hidden = $("cardDeck").value !== "nourish"; });
-const LABELS = { everyday: ["Do", "Notice", "Thank", "Fact"], movement: ["Move", "Mindset", "Habit", "Reflect"], calm: ["Breathe", "Ground", "Soften", "Reset"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel", "Cook"], sleep: ["Unwind", "Dim", "Room", "Habit", "Notice"], connect: ["Reach", "Ask", "Listen", "Share", "Thank"] };
+const LABELS = { mind: ["Focus", "Recall", "Pause", "Habit", "Notice", "Fact"], movement: ["Move", "Mindset", "Habit", "Reflect"], calm: ["Breathe", "Ground", "Soften", "Reset"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel", "Cook"], sleep: ["Unwind", "Dim", "Room", "Habit", "Notice"], connect: ["Reach", "Ask", "Listen", "Share", "Thank"] };
 function fillLabels() {
   const sel = $("wLabel"); sel.textContent = "";
   LABELS[$("wDeck").value].forEach(l => { const o = document.createElement("option"); o.value = o.textContent = l; sel.appendChild(o); });

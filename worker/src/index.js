@@ -43,9 +43,9 @@ const AI_SYSTEM = [
   "Output only the 3 versions, separated by a line containing only ---. No numbering, no quotes, no explanations.",
 ].join(" ");
 // ---- extra cards: suggested by the small model, approved one by one by the admin, then served to the site
-const CARD_LABELS = { everyday: ["Do", "Notice", "Thank"], movement: ["Move", "Mindset", "Habit", "Reflect"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel", "Cook"], calm: ["Breathe", "Ground", "Soften", "Reset"], sleep: ["Unwind", "Dim", "Room", "Habit", "Notice"], connect: ["Reach", "Ask", "Listen", "Share", "Thank"] };
+const CARD_LABELS = { mind: ["Focus", "Recall", "Pause", "Habit", "Notice"], movement: ["Move", "Mindset", "Habit", "Reflect"], nourish: ["Add", "Sip", "Savour", "Prep", "Feel", "Cook"], calm: ["Breathe", "Ground", "Soften", "Reset"], sleep: ["Unwind", "Dim", "Room", "Habit", "Notice"], connect: ["Reach", "Ask", "Listen", "Share", "Thank"] };
 const CARD_EXAMPLES = {
-  everyday: ["Do | Open a window for one minute and let the outside in.", "Notice | Listen for the farthest sound you can hear, then the closest.", "Thank | Name someone who made your week easier. Tell them today."],
+  mind: ["Focus | Pick one thing and give it five minutes with nothing else open.", "Recall | Close your eyes and name three things you did yesterday.", "Pause | Take three slow breaths before your next task.", "Habit | Put your keys in the same place today and leave them there.", "Notice | Look around the room, then close your eyes and name five things you saw."],
   movement: ["Move | Take a two-minute walk, even if it is just around the room.", "Mindset | Progress is built from small, ordinary days. Today is one of them.", "Habit | Lay out your workout clothes tonight so tomorrow's start is easier.", "Reflect | What felt a little easier this week than last week?"],
   nourish: ["Add | Add one extra vegetable to your next meal, any kind, any way you like it.", "Sip | Pour a full glass of water and drink it slowly.", "Savour | Take your first three bites slowly and notice the taste and texture.", "Prep | Fill a water bottle tonight and leave it where you will see it in the morning.", "Feel | An hour after eating, notice your energy and mood. No judging, just noticing."],
   sleep: ["Unwind | Put your phone down 30 minutes before bed and do one slow, quiet thing instead.", "Dim | Turn off one bright light this evening.", "Room | Look around your bedroom. Is it dark, cool and quiet enough? Fix one thing.", "Habit | Go to bed and get up at the same times today.", "Notice | Notice how you feel an hour before bed. No judging."],
@@ -69,7 +69,7 @@ function cleanRecipe(r) {
 }
 // trusted = written by the admin by hand: structure and links are checked, wording is the admin's call.
 function validCard(deck, label, text, recipe, trusted) {
-  const labels = (CARD_LABELS[deck] || []).concat(trusted && deck === "everyday" ? ["Fact"] : []);
+  const labels = (CARD_LABELS[deck] || []).concat(trusted && deck === "mind" ? ["Fact"] : []);
   if (!labels.includes(label)) return false;
   if (text.length < 15 || text.length > 160) return false;
   if (label === "Cook" && !recipe) return false;
@@ -85,7 +85,7 @@ async function aiText(env, system, user, maxTokens, temperature) {
   const res = await env.AI.run(env.AI_MODEL || AI_MODEL, { messages: [{ role: "system", content: system }, { role: "user", content: user }], max_tokens: maxTokens, temperature });
   return String((res && (res.response || (res.choices && res.choices[0] && res.choices[0].message && res.choices[0].message.content))) || "");
 }
-const DECKS = ["everyday", "movement", "calm", "nourish", "sleep", "connect"];
+const DECKS = ["mind", "movement", "calm", "nourish", "sleep", "connect"];
 const ID_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
 export default {
@@ -226,6 +226,7 @@ export default {
               "Label must be one of: " + labels.join(", ") + ". Mix the labels.",
               "Text is one or two plain sentences, 15 to 140 characters, friendly and concrete, something a person can do right now with no equipment.",
               "Never give medical advice, mention injuries, pain, conditions or treatment, make promises about results, or include links, names or statistics.",
+              (deck === "mind" ? "These are small focus, memory and curiosity cards. Frame everything as a friendly habit. Never test, measure or score memory, never mention dementia, Alzheimer's, brain training claims, brain health, or the ageing brain, and never promise sharper thinking. " : "") +
               (deck === "connect" ? "These are small connection cards. Frame everything as an invitation the person can take or leave. Never pressure, never name or assume particular people or relationships, never suggest confronting anyone, and never mention loneliness, isolation, depression, therapy or dating. " : "") +
               (deck === "sleep" ? "These are evening and bedtime cards. Frame everything as winding down, noticing and setting up a calm space. Never mention insomnia, sleep disorders, medication, supplements, naps as a fix, hours of sleep targets or promises of better sleep. " : "") +
               (deck === "nourish" ? "These are food and drink cards. Frame everything as adding, enjoying, noticing and preparing. Never count, measure, weigh, restrict, compare or label foods as good or bad, never mention calories, diets, weight, fasting, portions or supplements, and never suggest skipping or cutting anything. " : "") +
@@ -303,7 +304,7 @@ export default {
         if (request.method === "POST" && !parts[1]) {
           if (!who) return out({ error: "practitioner_required" }, 403);
           const body = await readJson(request);
-          const text = clean(body.text, 400), to = clean(body.to, 40), deck = DECKS.includes(body.deck) ? body.deck : "everyday";
+          const text = clean(body.text, 400), to = clean(body.to, 40), deck = DECKS.includes(body.deck === "everyday" ? "mind" : body.deck) ? (body.deck === "everyday" ? "mind" : body.deck) : "mind";
           if (!text) return out({ error: "text_required" }, 400);
           const key = "rate:" + who.pid + ":" + today();
           const used = parseInt((await env.SENSEE.get(key)) || "0", 10);
