@@ -114,6 +114,8 @@ h1 span { color: var(--accent); }
 .week .l2 { background: color-mix(in srgb, var(--accent) 55%, var(--surface)); border-color: transparent; }
 .week .l3 { background: color-mix(in srgb, var(--accent) 80%, var(--surface)); border-color: transparent; color: var(--on-accent); }
 .week .l4 { background: var(--accent); border-color: transparent; color: var(--on-accent); }
+.week .pre { opacity: .35; }
+.week .pre .dot { border-style: dashed; background: none; }
 .week .today .dot { outline: 2px solid var(--ink); outline-offset: 2px; }
 .ptotal { margin: 0 0 6px; font-size: 1.1rem; }
 .pdecks, .pmiles { margin: 0 0 10px; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px 14px; color: var(--muted); font-size: 1rem; }
@@ -245,7 +247,7 @@ const FR = {
   "Try it now · 1 min": "Essayer maintenant · 1 min", "Stop": "Arrêter", "Again": "Encore", "Nicely done. That counts.": "Bien joué. Ça compte.",
   "See recipe": "Voir la recette", "Hide recipe": "Masquer la recette", "Recipe": "Recette", "You will need": "Il vous faut", "Steps": "Étapes",
   "Swap anything you are allergic to or avoiding.": "Remplacez tout ce à quoi vous êtes allergique ou que vous évitez.",
-  "Your progress": "Votre progression", "Last 7 days": "7 derniers jours", "Share my progress": "Partager ma progression",
+  "Your progress": "Votre progression", "Last 7 days": "7 derniers jours", "Your first days": "Vos premiers jours", "Share my progress": "Partager ma progression",
   "Nothing yet. Mark today's card as done to begin.": "Rien pour l'instant. Marquez la carte du jour comme faite pour commencer.",
   "First card": "Première carte", "10 cards": "10 cartes", "25 cards": "25 cartes", "50 cards": "50 cartes", "A full day of four": "Une journée complète de quatre",
   "Copied. Paste it into a message to your practitioner.": "Copié. Collez-le dans un message à votre praticien.",
@@ -452,40 +454,52 @@ function syncHist() {
   Object.keys(h).sort().slice(0, -90).forEach(k => delete h[k]);
   try { localStorage.setItem(HIST_KEY, JSON.stringify(h)); } catch (x) {}
 }
+/* The day the client first used the app (this device). Progress counts only from then, so day one is "of 4", not "of 28". */
+const START_KEY = "sgt-start";
+function startDay() {
+  const h = loadHist(), first = Object.keys(h).sort()[0]; let s = "";
+  try { s = localStorage.getItem(START_KEY) || ""; } catch (e) {}
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) s = DAILY.day;
+  if (first && first < s) s = first;
+  try { localStorage.setItem(START_KEY, s); } catch (e) {}
+  return s;
+}
 const deckTitle = id => t(({ everyday: "Everyday", movement: "Movement", calm: "Calm", nourish: "Nourish" })[id]);
 function progStats() {
   const h = loadHist(), days = [], per = { everyday: 0, movement: 0, calm: 0, nourish: 0 };
-  let week = 0, all = 0, full = false;
+  const start = startDay();
+  let week = 0, all = 0, full = false, active = 0;
   Object.keys(h).forEach(k => { const n = DAILY_DECKS.filter(id => h[k] && h[k][id]).length; all += n; if (n === 4) full = true; });
   for (let i = 6; i >= 0; i--) {
     const d = new Date(); d.setDate(d.getDate() - i);
     const k = localDay(d), n = DAILY_DECKS.filter(id => h[k] && h[k][id]).length;
     DAILY_DECKS.forEach(id => { if (h[k] && h[k][id]) per[id]++; });
-    week += n; days.push({ d, n, today: i === 0 });
+    const pre = k < start; if (!pre) active++;
+    week += n; days.push({ d, n, pre, today: i === 0 });
   }
-  return { days, week, per, all, full };
+  return { days, week, per, all, full, active, max: active * 4 };
 }
 function shareText(st) {
-  const parts = DAILY_DECKS.filter(id => st.per[id]).map(id => deckTitle(id) + " " + st.per[id]).join(" \u00b7 ");
+  const parts = DAILY_DECKS.filter(id => st.per[id]).map(id => deckTitle(id) + " " + st.per[id]).join(" \u00b7 "), a = st.active;
   const url = "sensee.ca" + (LANG === "fr" ? "/?l=fr" : "");
   return LANG === "fr"
-    ? "Mes 7 derniers jours sur Sensee : " + st.week + " cartes sur 28. " + parts + ". " + url
-    : "My last 7 days on Sensee: " + st.week + " of 28 cards done. " + parts + ". " + url;
+    ? (a < 7 ? (a === 1 ? "Mon premier jour" : "Mes " + a + " premiers jours") : "Mes 7 derniers jours") + " sur Sensee : " + st.week + (st.week > 1 ? " cartes" : " carte") + " sur " + st.max + ". " + parts + ". " + url
+    : "My " + (a < 7 ? (a === 1 ? "first day" : "first " + a + " days") : "last 7 days") + " on Sensee: " + st.week + " of " + st.max + " cards done. " + parts + ". " + url;
 }
 function renderProgress() {
   const box = $("progress"); if (box.hidden) return;
   const st = progStats(), loc2 = LANG === "fr" ? "fr-CA" : undefined, empty = st.all === 0;
-  $("progH").textContent = t("Last 7 days");
+  $("progH").textContent = t(st.active < 7 ? "Your first days" : "Last 7 days");
   const wk = $("week"); wk.textContent = "";
   st.days.forEach(x => {
     const li = document.createElement("li"), dot = document.createElement("span"), lab = document.createElement("span");
-    if (x.today) li.className = "today";
+    li.className = (x.today ? "today " : "") + (x.pre ? "pre" : "");
     dot.className = "dot l" + x.n; dot.textContent = x.n ? String(x.n) : "";
     lab.textContent = x.d.toLocaleDateString(loc2, { weekday: "narrow" });
     li.setAttribute("aria-label", x.d.toLocaleDateString(loc2, { weekday: "long", month: "short", day: "numeric" }) + ": " + (LANG === "fr" ? x.n + " sur 4" : x.n + " of 4"));
     li.append(dot, lab); wk.appendChild(li);
   });
-  $("ptotal").textContent = LANG === "fr" ? st.week + " cartes sur 28" : st.week + " of 28 cards";
+  $("ptotal").textContent = LANG === "fr" ? st.week + (st.week > 1 ? " cartes" : " carte") + " sur " + st.max : st.week + " of " + st.max + " cards";
   const pd = $("pdecks"); pd.textContent = "";
   DAILY_DECKS.forEach(id => { if (st.per[id]) { const li = document.createElement("li"); li.textContent = deckTitle(id) + " " + st.per[id]; pd.appendChild(li); } });
   const ms = [[1, "First card"], [10, "10 cards"], [25, "25 cards"], [50, "50 cards"]].filter(m => st.all >= m[0]).map(m => m[1]);
