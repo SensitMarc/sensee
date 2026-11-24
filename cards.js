@@ -119,9 +119,41 @@ window.SENSEE_CARDS = {
       ["Cook", "Beans on toast with greens. Eight minutes.", { time: "8 min", items: ["1 can of beans in tomato sauce", "Bread", "A handful of spinach or other greens", "Black pepper"], steps: ["Heat the beans in a pot or the microwave until steaming hot.", "Toast the bread.", "Pile the beans and greens on the toast and add pepper."] }],
       ["Feel", "Notice what you reach for when you are tired, bored or stressed. Just notice."]
     ],
+  sleep: [
+    ["Unwind", "Put your phone down 30 minutes before bed and do one slow, quiet thing instead."],
+    ["Dim", "Turn off one bright light this evening. Softer light helps the day feel like it is winding down."],
+    ["Room", "Look around your bedroom. Is it dark, cool and quiet enough? Fix one thing."],
+    ["Habit", "Go to bed and get up at the same times today, even if the evening feels different."],
+    ["Notice", "Notice how you feel an hour before bed. Tired, wired, or somewhere between? No judging."],
+    ["Unwind", "Write tomorrow's top three things on paper. Close the notebook and leave them there."],
+    ["Unwind", "Lying down, breathe in for four and out for six, five times, with your hands on your belly."],
+    ["Habit", "Pick one small bedtime ritual, like a warm drink or a stretch, and repeat it tonight."],
+    ["Room", "Charge your phone across the room tonight, out of arm's reach."],
+    ["Dim", "Switch to warm, low lamps after dinner. Skip the big overhead light."],
+    ["Notice", "Name three sounds you can hear right now. Let each one pass without following it."],
+    ["Habit", "Have your last coffee or tea a little earlier today. Notice how your evening feels."],
+    ["Unwind", "Take a warm shower or wash your face slowly, paying attention to the water."],
+    ["Room", "Tidy one small thing by your bed so the last thing you see is calm."],
+    ["Notice", "In bed, scan from your toes to your head and let each part get a little heavier."],
+    ["Habit", "Get some daylight this morning, even five minutes by a window."],
+    ["Unwind", "Read a few pages of something gentle, on paper if you can."],
+    ["Dim", "Lower the brightness on your screens tonight, or put them away a little earlier."],
+    ["Room", "Smooth the covers or put on fresh sheets so getting into bed feels good."],
+    ["Habit", "Move gently today with a walk or a stretch. Notice how your body feels at bedtime."],
+    ["Notice", "If your mind is busy tonight, tell yourself: \"Thinking can wait until tomorrow.\""],
+    ["Unwind", "Play soft music or a quiet sound for ten minutes while you get ready for bed."],
+    ["Notice", "Notice what helps you feel sleepy. Make a note and do a little more of it."],
+    ["Room", "Open a window for a minute before bed to freshen the air, then close it for the night."],
+    ["Habit", "Plan your wind-down: pick a start time tonight and set a gentle reminder."],
+    ["Unwind", "Stretch your neck, shoulders and back slowly for two minutes before bed."],
+    ["Notice", "Tomorrow morning, notice how rested you feel without judging it. Just collect information."],
+    ["Dim", "Step outside for a minute after dinner and watch the light fade."],
+    ["Unwind", "Think of one good thing from today and let yourself enjoy it for a moment."],
+    ["Habit", "Be kind to yourself about last night. Do one easy thing to look after tonight."]
+  ]
 };
 window.SENSEE_DAILY = (function () {
-  const IDS = ["everyday", "movement", "calm", "nourish"];
+  const IDS = ["everyday", "movement", "calm", "nourish", "sleep"];
   const EPOCH = Math.floor(Date.UTC(2026, 10, 23) / 864e5);   // first day of the daily feed (23 Nov 2026)
   const plain = c => Array.isArray(c) && typeof c[0] === "string" && typeof c[1] === "string" && !(c[2] && typeof c[2] === "object");
   function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
