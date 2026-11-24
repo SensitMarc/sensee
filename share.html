@@ -99,6 +99,14 @@ h2 { margin: 0; font: 800 1.2rem var(--display); }
         <label><input type="radio" name="deck" value="nourish"><span>Nourish</span></label>
       </div>
     </fieldset>
+    <fieldset>
+      <legend>Client's language</legend>
+      <div class="decks">
+        <label><input type="radio" name="lang" value="en" checked><span>English</span></label>
+        <label><input type="radio" name="lang" value="fr"><span>Fran&ccedil;ais</span></label>
+      </div>
+      <span class="hint">The card page opens in this language. Your message stays as you wrote it.</span>
+    </fieldset>
     <p class="care" id="careApi" hidden><b>Keep it light.</b> Your message is stored by Sensee for 1 day, not placed in the link, and you can delete it below at any time. Use a first name only, and leave out health details and anything private.</p>
     <p class="care" id="careLink"><b>Keep it light.</b> The message is carried inside the link. It isn't stored on sensee.ca, but it can stay in chat and browser history. Use a first name only, and leave out health details and anything private.</p>
     <div class="banner" aria-live="polite"><b id="pt">Preview</b><p id="pm">Your message will appear here.</p></div>
@@ -137,15 +145,16 @@ function preview() {
   $("pm").textContent = s.m ? (s.t ? "Hi " + s.t + ". " : "") + s.m : "Your message will appear here.";
   $("make").disabled = !s.m;
 }
+const langQ = () => (document.querySelector("input[name=lang]:checked") || {}).value === "fr" ? "?l=fr" : "";
 function buildLink() {
   const s = state(); const q = new URLSearchParams();
   q.set("m", s.m); if (s.f) q.set("f", s.f); if (s.t) q.set("t", s.t);
   const base = location.href.split("#")[0].replace(/share\.html.*$/, "");
-  return base + "#" + s.d + "?" + q.toString();
+  return base + langQ() + "#" + s.d + "?" + q.toString();
 }
 $("code").addEventListener("change", () => { try { sessionStorage.setItem("sgt-code", $("code").value.trim()); } catch (e) {} loadMine(); });
 ["from", "to", "msg"].forEach(id => $(id).addEventListener("input", preview));
-document.querySelectorAll("input[name=deck]").forEach(r => r.addEventListener("change", () => { $("out").hidden = true; }));
+document.querySelectorAll("input[name=deck], input[name=lang]").forEach(r => r.addEventListener("change", () => { $("out").hidden = true; }));
 const API = (window.SENSEE_API || "").replace(/\/$/, "");
 const siteBase = location.href.split("#")[0].replace(/share\.html.*$/, "");
 if (API) {
@@ -227,7 +236,7 @@ $("f").addEventListener("submit", async e => {
     if (r.status === 429) { alert_("Daily message limit reached. Try again tomorrow."); return; }
     if (!r.ok) { alert_("Couldn't make the link. Try again."); return; }
     try { sessionStorage.setItem("sgt-code", $("code").value.trim()); } catch (e2) {}
-    const url = siteBase + "#m=" + data.id;
+    const url = siteBase + langQ() + "#m=" + data.id;
     $("link").textContent = url; $("open").href = url; $("open").hidden = false; $("copy").hidden = false; $("out").hidden = false; $("status").textContent = "";
     loadMine();
   } catch (err) { alert_("Couldn't reach the message service. Check your connection."); }
