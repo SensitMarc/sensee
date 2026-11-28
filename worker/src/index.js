@@ -5,6 +5,8 @@
 //   GET    /m/:id               -> { text, from, clinic, to, deck, react }   (from and clinic come from the practitioner's account, not from the sender)
 //   POST   /m/:id/react         { r: "helpful"|"tried"|"help" } -> { ok, react }
 //   GET    /cards               -> approved extra cards, per deck (cached 5 min)
+//   POST   /u                   { e: "visit" } or { e: "done", deck } -> 204   (anonymous usage counts, no identifiers)
+//   GET    /stats?days=7        -> [{ day, visits, done: {deck: n}, messages, reactions: {...}, drafts, ... }]   (daily totals only, UTC days)
 //
 // Practitioner (token = access code "pid.secret")
 //   POST   /messages            { text, to?, deck } -> { id, expires }   (50/day, text max 400 chars, kept 1 day)
@@ -89,7 +91,7 @@ const DECKS = ["mind", "movement", "calm", "nourish", "sleep", "connect"];
 const ID_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin") || "";
     const cors = {
       "Access-Control-Allow-Origin": ORIGINS.includes(origin) ? origin : ORIGINS[0],
@@ -102,6 +104,7 @@ export default {
     const out = (data, status = 200, extra = {}) =>
       new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...cors, ...extra } });
 
+    const track = (f) => { const p = bump(env, f); if (ctx && ctx.waitUntil) ctx.waitUntil(p); return p; };
     try {
       const url = new URL(request.url);
       const parts = url.pathname.split("/").filter(Boolean);
@@ -121,6 +124,23 @@ export default {
         return out((await getJson(env, "cards")) || {}, 200, { "Cache-Control": "public, max-age=300" });
       }
 
+      // ---- public: anonymous usage ping from the site (fixed events only, nothing that identifies anyone)
+      if (request.method === "POST" && parts[0] === "u" && !parts[1]) {
+        const body = await readJson(request);
+        if (body.e === "visit") track({ visits: 1 });
+        else if (body.e === "done" && USAGE_DECKS.includes(body.deck)) track({ done: { [body.deck]: 1 } });
+        else return out({ error: "bad_event" }, 400);
+        return new Response(null, { status: 204, headers: cors });
+      }
+
+      // ---- public: daily totals for the usage report (counts only)
+      if (request.method === "GET" && parts[0] === "stats" && !parts[1]) {
+        const n = Math.min(31, Math.max(1, parseInt(url.searchParams.get("days") || "7", 10) || 7));
+        const days = [];
+        for (let i = 0; i < n; i++) { const d = new Date(Date.now() - i * 86400000).toISOString().slice(0, 10); days.push({ day: d, ...((await getJson(env, "u:" + d)) || {}) }); }
+        return out(days);
+      }
+
       // ---- public: client taps a one-tap reaction (no account, no free text)
       if (request.method === "POST" && parts[0] === "m" && parts[1] && parts[2] === "react") {
         const id = parts[1].toLowerCase(), key = "m:" + id;
@@ -130,6 +150,7 @@ export default {
         if (!m || Date.now() - m.created > MAX_AGE_MS) return out({ error: "not_found" }, 404);
         const have = m.react || [];
         if (!have.includes(body.r)) {
+          track({ reactions: { [body.r]: 1 } });
           m.react = have.concat(body.r);
           const left = Math.max(60, Math.ceil((m.created + MAX_AGE_MS - Date.now()) / 1000));   // keep the original expiry
           await env.SENSEE.put(key, JSON.stringify(m), { expirationTtl: left });
@@ -171,6 +192,7 @@ export default {
         const drafts = raw.split(/\n\s*-{3,}\s*\n|\n{2,}/).map((t) => clean(t.replace(/^\s*(?:\d+[.)]|[-*])\s*/, "").replace(/^["\u201c]+|["\u201d]+$/g, ""), 300))
           .map((t) => stripGreeting(t, to)).filter((t) => t.length >= 8 && !/https?:|www\./i.test(t)).slice(0, 3);
         if (!drafts.length) { console.error("draft: unusable model output"); return out({ error: "ai_failed", detail: "unusable output" }, 502); }
+        track({ drafts: 1 });
         return out({ drafts, left: AI_DAILY_LIMIT - used - 1 });
       }
 
@@ -247,6 +269,7 @@ export default {
               seen.add(normCard(text)); found.push([label, text]);
             }
             if (!found.length) return out({ error: "ai_failed", detail: "no usable cards" }, 502);
+            track({ suggestions: 1 });
             return out({ deck, cards: found.slice(0, 8) });
           }
           if (request.method === "POST" && !parts[2]) {
@@ -260,6 +283,7 @@ export default {
             if (list.length >= CARDS_PER_DECK) return out({ error: "deck_full" }, 409);
             pool[deck] = list.concat([recipe ? [label, text, recipe] : [label, text]]);
             await env.SENSEE.put("cards", JSON.stringify(pool));
+            track({ approved: 1 });
             return out(pool);
           }
           if (request.method === "DELETE" && parts[2] && parts[3] !== undefined) {
@@ -317,6 +341,7 @@ export default {
           idx.push({ id, to, deck, created, expires: created + MAX_AGE_MS });
           // The index key expires on its own too, so client first names never outlive the newest message.
           await env.SENSEE.put("idx:" + who.pid, JSON.stringify(idx.slice(-MAX_INDEX)), { expirationTtl: TTL_SECONDS });
+          track({ messages: 1 });
           return out({ id, expires: created + TTL_SECONDS * 1000 });
         }
         if (request.method === "GET" && !parts[1]) {
@@ -362,6 +387,19 @@ const stripGreeting = (t, name) => {
 };
 const clean = (v, n) => String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, n);
 const today = () => new Date().toISOString().slice(0, 10);
+// Daily usage totals, one KV key per UTC day ("u:YYYY-MM-DD"), kept 400 days. Counts only. KV writes are not atomic,
+// so two pings in the same instant can occasionally count as one: fine for a trend report.
+const USAGE_DECKS = ["mind", "movement", "calm", "nourish", "sleep", "connect"];
+async function bump(env, f) {
+  try {
+    const key = "u:" + today(), u = (await getJson(env, key)) || {};
+    for (const [k, v] of Object.entries(f)) {
+      if (v && typeof v === "object") { u[k] = u[k] || {}; for (const [a, b] of Object.entries(v)) u[k][a] = (u[k][a] || 0) + b; }
+      else u[k] = (u[k] || 0) + v;
+    }
+    await env.SENSEE.put(key, JSON.stringify(u), { expirationTtl: 400 * 86400 });
+  } catch (e) { console.error("usage bump failed:", e && e.message); }
+}
 function randomId(n) {
   const bytes = new Uint8Array(n); crypto.getRandomValues(bytes);
   let s = ""; for (const b of bytes) s += ID_CHARS[b % ID_CHARS.length]; return s;

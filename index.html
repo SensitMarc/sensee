@@ -474,7 +474,10 @@ function syncDone() {
   const d = !!DAILY.done[i];
   b.textContent = d ? t("Done") + " \u2713" : t("Mark as done"); b.setAttribute("aria-pressed", String(d));
 }
-function setDone(i, v) { DAILY.done[i] = v; saveDaily(); syncHist(); syncDone(); showTally(); renderProgress(); }
+function setDone(i, v) { DAILY.done[i] = v; saveDaily(); syncHist(); syncDone(); showTally(); renderProgress(); if (v) usagePing({ e: "done", deck: DAILY_DECKS[i] }); }
+/* Anonymous usage counts for the daily report: one "visit" per device per day, one "done" per card marked done. Nothing identifies the person. */
+function usagePing(body) { const api = (window.SENSEE_API || "").replace(/\/$/, ""); if (!api) return; try { fetch(api + "/u", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), keepalive: true }).catch(() => {}); } catch (e) {} }
+try { if (localStorage.getItem("sgt-ping") !== localDay()) { localStorage.setItem("sgt-ping", localDay()); usagePing({ e: "visit" }); } } catch (e) {}
 /* Progress: which cards were marked done each day, kept on this device only (90 days). Nothing is sent anywhere unless the client taps Share. */
 /* The Everyday deck became Mind. Old links, saved days, history and seen cards that say "everyday" are read as "mind". */
 const deckAlias = d => (d === "everyday" ? "mind" : d);
